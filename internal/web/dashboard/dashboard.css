@@ -28,3 +28,14 @@
 .dash-gloss{border-bottom:1px dotted currentColor;cursor:help}
 .dash-mono{font-family:var(--tblr-font-monospace,monospace);font-size:.85em}
 .dash-idle summary{cursor:pointer}
+[data-bs-theme=dark] .dash-banner-bad{background:rgba(214,57,57,.14)}
+[data-bs-theme=dark] .dash-banner-hold{background:rgba(245,159,0,.14)}
+[data-bs-theme=dark] .dash-banner-info{background:rgba(66,153,225,.14)}
+[data-bs-theme=dark] .dash-banner-note{background:rgba(138,148,166,.12);color:#b4bccb}
+[data-bs-theme=dark] .chip-neutral,[data-bs-theme=dark] .dash-reason{color:#b4bccb}
+[data-bs-theme=dark] .dash-meter::-webkit-progress-bar{background:rgba(255,255,255,.14)}
+[data-bs-theme=dark] .dash-meter::-webkit-progress-value{background:var(--tblr-primary)}
+[data-bs-theme=dark] .dash-meter::-moz-progress-bar{background:var(--tblr-primary)}
+[data-bs-theme=dark] .dash-meter-warn::-webkit-progress-value{background:#f59f00}[data-bs-theme=dark] .dash-meter-warn::-moz-progress-bar{background:#f59f00}
+[data-bs-theme=dark] .dash-meter-bad::-webkit-progress-value{background:#e05252}[data-bs-theme=dark] .dash-meter-bad::-moz-progress-bar{background:#e05252}
+[data-bs-theme=dark] .dash-meter-ok::-webkit-progress-value{background:#2fb344}[data-bs-theme=dark] .dash-meter-ok::-moz-progress-bar{background:#2fb344}

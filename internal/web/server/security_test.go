@@ -447,9 +447,55 @@ func TestStaticAssets(t *testing.T) {
 func TestThemeCookie(t *testing.T) {
 	h := newH(t)
 	h.Login()
-	r := h.Get("/theme?set=dark")
-	if r.Code != 303 || !strings.Contains(r.Header.Get("Set-Cookie"), "slai_theme=dark") {
-		t.Fatalf("theme = %d %q", r.Code, r.Header.Get("Set-Cookie"))
+	for set, want := range map[string]string{"dark": "slai_theme=dark", "light": "slai_theme=light"} {
+		r := h.Get("/theme?set=" + set)
+		c := r.Header.Get("Set-Cookie")
+		if r.Code != 303 || !strings.Contains(c, want) || !strings.Contains(c, "SameSite=Strict") || !strings.Contains(c, "Max-Age=") {
+			t.Fatalf("theme set=%s = %d %q", set, r.Code, c)
+		}
+	}
+	// system (and anything unrecognised) clears the cookie
+	for _, set := range []string{"system", "", "purple"} {
+		c := h.Get("/theme?set=" + set).Header.Get("Set-Cookie")
+		if !strings.Contains(c, "slai_theme=system") || !strings.Contains(c, "Max-Age=0") || !strings.Contains(c, "SameSite=Strict") {
+			t.Errorf("theme set=%q cookie = %q, want a cleared cookie", set, c)
+		}
+	}
+}
+
+// With no cookie the page is in system mode: the server forces no theme and theme.js picks it
+// from the OS; an explicit cookie is rendered server-side.
+func TestThemeRendering(t *testing.T) {
+	h := newH(t)
+	h.Login()
+	get := func(cookie string) string {
+		req := h.Raw("GET", "/", nil)
+		req.AddCookie(h.Cookie)
+		if cookie != "" {
+			req.AddCookie(&http.Cookie{Name: "slai_theme", Value: cookie})
+		}
+		return h.Do(req).Body
+	}
+	sys := get("")
+	if !strings.Contains(sys, `data-slai-theme="system"`) || strings.Contains(sys, `data-bs-theme=`) || !strings.Contains(sys, `src="/static/theme.js"`) {
+		t.Error("default page should be in system mode: data-slai-theme=system, no data-bs-theme, theme.js loaded")
+	}
+	if got := get("bogus"); !strings.Contains(got, `data-slai-theme="system"`) {
+		t.Error("an unknown cookie value should mean system")
+	}
+	for _, th := range []string{"dark", "light"} {
+		if b := get(th); !strings.Contains(b, `data-bs-theme="`+th+`"`) || !strings.Contains(b, `data-slai-theme="`+th+`"`) {
+			t.Errorf("cookie %s not rendered server-side", th)
+		}
+	}
+	// the refusal page honours the stored theme too (a POST without the CSRF header is refused)
+	req := h.Raw("POST", "/tasks/T-0001/cancel", nil)
+	req.AddCookie(&http.Cookie{Name: "slai_theme", Value: "dark"})
+	if r := h.Do(req); r.Code < 400 || !strings.Contains(r.Body, `data-bs-theme="dark"`) {
+		t.Errorf("refusal page: %d, dark cookie not rendered", r.Code)
+	}
+	if r := h.Get("/static/theme.js"); r.Code != 200 || !strings.Contains(r.Header.Get("Content-Type"), "text/javascript") {
+		t.Errorf("theme.js = %d %q", r.Code, r.Header.Get("Content-Type"))
 	}
 }
 

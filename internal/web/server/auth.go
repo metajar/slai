@@ -151,13 +151,13 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request) bool {
 		got := r.URL.Query().Get("token")
 		if r.URL.Path != "/" || got == "" || subtle.ConstantTimeCompare([]byte(got), []byte(s.token)) != 1 {
 			s.denied(r, nil, "no_valid_token")
-			s.refuse(w, http.StatusUnauthorized, "Sign in", signInDetail)
+			s.refuse(w, r, http.StatusUnauthorized, "Sign in", signInDetail)
 			return false
 		}
 	}
 	sess, err := s.sessions.create()
 	if err != nil {
-		s.refuse(w, http.StatusInternalServerError, "Server error", "Could not start a session.")
+		s.refuse(w, r, http.StatusInternalServerError, "Server error", "Could not start a session.")
 		return false
 	}
 	s.setCookie(w, r, sess)

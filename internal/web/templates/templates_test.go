@@ -57,3 +57,30 @@ func TestLayoutConfiguresHtmxSafely(t *testing.T) {
 		t.Fatalf("htmx-config = %v, want allowEval=false and selfRequestsOnly=true", cfg)
 	}
 }
+
+// The theme toggle is plain links (it works without JS), each with an aria-label, and marks
+// the current choice; system mode leaves data-bs-theme off for theme.js to set.
+func TestLayoutThemeToggle(t *testing.T) {
+	tpl, err := PageTemplate("dashboard")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for theme, current := range map[string]string{"system": "system", "light": "light", "dark": "dark"} {
+		var b bytes.Buffer
+		if err := tpl.ExecuteTemplate(&b, "layout", Page{Title: "x", Theme: theme, Data: map[string]any{"Agents": []int{}, "Tasks": []int{}, "Orchestrator": ""}}); err != nil {
+			t.Fatal(err)
+		}
+		out := b.String()
+		for _, set := range []string{"system", "light", "dark"} {
+			if !strings.Contains(out, `href="/theme?set=`+set+`" aria-label="Theme: `) {
+				t.Errorf("%s: no labelled link to set=%s", theme, set)
+			}
+		}
+		if n := strings.Count(out, `aria-current="true"`); n != 1 || !strings.Contains(out, `href="/theme?set=`+current+`" aria-label`) {
+			t.Errorf("%s: want exactly one current marker", theme)
+		}
+		if hasBS := strings.Contains(out, `data-bs-theme=`); hasBS == (theme == "system") {
+			t.Errorf("%s: data-bs-theme present = %v", theme, hasBS)
+		}
+	}
+}

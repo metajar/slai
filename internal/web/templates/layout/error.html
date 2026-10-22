@@ -1,6 +1,6 @@
 {{define "error"}}<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{.Heading}} · slai</title><link rel="stylesheet" href="/static/tabler.min.css"></head>
+<html lang="en" data-slai-theme="{{.Theme}}"{{if ne .Theme "system"}} data-bs-theme="{{.Theme}}"{{end}}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark">
+<title>{{.Heading}} · slai</title><script src="/static/theme.js"></script><link rel="stylesheet" href="/static/tabler.min.css"><link rel="stylesheet" href="/static/slai.css"></head>
 <body><main class="container-tight py-4"><div class="card card-md"><div class="card-body">
 <h1 class="h2">{{.Heading}}</h1><p class="text-secondary">{{.Detail}}</p>
 </div></div></main></body></html>{{end}}

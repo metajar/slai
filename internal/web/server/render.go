@@ -65,7 +65,7 @@ func (d *Deps) Render(w http.ResponseWriter, r *http.Request, tpl *template.Temp
 	}
 	var b bytes.Buffer
 	if err := tpl.ExecuteTemplate(&b, "layout", p); err != nil {
-		d.s.refuse(w, http.StatusInternalServerError, "Template error", err.Error())
+		d.s.refuse(w, r, http.StatusInternalServerError, "Template error", err.Error())
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -86,7 +86,7 @@ func (d *Deps) Fail(w http.ResponseWriter, r *http.Request, err error) {
 		template.Must(template.New("e").Parse(`<div class="alert alert-danger" role="alert">{{.}}</div>`)).Execute(w, err.Error())
 		return
 	}
-	d.s.refuse(w, http.StatusUnprocessableEntity, "That did not work", err.Error())
+	d.s.refuse(w, r, http.StatusUnprocessableEntity, "That did not work", err.Error())
 }
 
 // OK answers a successful write: an htmx request gets a one-line confirmation fragment, a
@@ -121,11 +121,13 @@ func (s *Server) nav() []templates.NavItem {
 	return out
 }
 
+// themeOf is the stored preference: "light", "dark", or "system" (no cookie, the default), which
+// leaves the choice to theme.js and the OS.
 func themeOf(r *http.Request) string {
-	if c, err := r.Cookie("slai_theme"); err == nil && c.Value == "dark" {
-		return "dark"
+	if c, err := r.Cookie("slai_theme"); err == nil && (c.Value == "dark" || c.Value == "light") {
+		return c.Value
 	}
-	return "light"
+	return "system"
 }
 
 var (

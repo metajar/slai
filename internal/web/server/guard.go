@@ -36,7 +36,7 @@ func (s *Server) chain() http.Handler {
 		setSecurityHeaders(w)
 		if !s.hostAllowed(r.Host) {
 			s.denied(r, nil, "bad_host")
-			s.refuse(w, http.StatusForbidden, "Host not allowed", "This server answers only to the address it is listening on. If you reached it through a name, restart it with --listen set to that name.")
+			s.refuse(w, r, http.StatusForbidden, "Host not allowed", "This server answers only to the address it is listening on. If you reached it through a name, restart it with --listen set to that name.")
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/static/") {
@@ -46,7 +46,7 @@ func (s *Server) chain() http.Handler {
 		sess := s.sessions.fromRequest(r)
 		if !s.originOK(r) {
 			s.denied(r, sess, "bad_origin")
-			s.refuse(w, http.StatusForbidden, "Origin not allowed", "The request came from another origin.")
+			s.refuse(w, r, http.StatusForbidden, "Origin not allowed", "The request came from another origin.")
 			return
 		}
 		write := r.Method != http.MethodGet && r.Method != http.MethodHead
@@ -58,7 +58,7 @@ func (s *Server) chain() http.Handler {
 			}
 		case write:
 			s.denied(r, nil, "no_session")
-			s.refuse(w, http.StatusForbidden, "No session", "Open the page in your browser first; a write needs the session cookie.")
+			s.refuse(w, r, http.StatusForbidden, "No session", "Open the page in your browser first; a write needs the session cookie.")
 			return
 		default:
 			if !s.startSession(w, r) {
@@ -68,21 +68,21 @@ func (s *Server) chain() http.Handler {
 		if write {
 			if r.Header.Get("X-Slai-Request") != "1" {
 				s.denied(r, sess, "missing_csrf_header")
-				s.refuse(w, http.StatusForbidden, "Missing X-Slai-Request", "Writes must carry the X-Slai-Request: 1 header the page sends itself.")
+				s.refuse(w, r, http.StatusForbidden, "Missing X-Slai-Request", "Writes must carry the X-Slai-Request: 1 header the page sends itself.")
 				return
 			}
 			if s.opts.ReadOnly {
 				s.denied(r, sess, "read_only")
-				s.refuse(w, http.StatusForbidden, "Read-only", "This server was started with --read-only: it refuses every write.")
+				s.refuse(w, r, http.StatusForbidden, "Read-only", "This server was started with --read-only: it refuses every write.")
 				return
 			}
 			body, ok, err := readBody(r)
 			if err != nil {
-				s.refuse(w, http.StatusBadRequest, "Bad request", "The request body could not be read.")
+				s.refuse(w, r, http.StatusBadRequest, "Bad request", "The request body could not be read.")
 				return
 			}
 			if !ok {
-				s.refuse(w, http.StatusRequestEntityTooLarge, "Request too large", "A request body may be at most 64 KB.")
+				s.refuse(w, r, http.StatusRequestEntityTooLarge, "Request too large", "A request body may be at most 64 KB.")
 				return
 			}
 			replaceBody(r, body)
@@ -92,11 +92,11 @@ func (s *Server) chain() http.Handler {
 }
 
 // refuse answers with a small HTML error page.
-func (s *Server) refuse(w http.ResponseWriter, code int, heading, detail string) {
+func (s *Server) refuse(w http.ResponseWriter, r *http.Request, code int, heading, detail string) {
 	tpl, err := templates.PageTemplate("layout")
 	var b bytes.Buffer
 	if err == nil {
-		err = tpl.ExecuteTemplate(&b, "error", map[string]string{"Heading": heading, "Detail": detail})
+		err = tpl.ExecuteTemplate(&b, "error", map[string]string{"Heading": heading, "Detail": detail, "Theme": themeOf(r)})
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
@@ -170,7 +170,7 @@ func (s *Server) originOK(r *http.Request) bool {
 // Host check; ETag + no-cache so an upgraded binary is picked up at once.
 func (s *Server) static(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
-		s.refuse(w, http.StatusMethodNotAllowed, "Method not allowed", "")
+		s.refuse(w, r, http.StatusMethodNotAllowed, "Method not allowed", "")
 		return
 	}
 	name := strings.TrimPrefix(r.URL.Path, "/static/")

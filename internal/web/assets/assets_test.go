@@ -30,8 +30,8 @@ func vendorRows(t *testing.T) map[string]string {
 // P1 AC5 / security AC9: VENDOR.md pins the sha256 of every vendored file.
 func TestVendorHashesMatch(t *testing.T) {
 	rows := vendorRows(t)
-	if len(rows) != 4 {
-		t.Fatalf("VENDOR.md should pin tabler, htmx, sortable and slai.js, got %v", rows)
+	if len(rows) != 5 {
+		t.Fatalf("VENDOR.md should pin tabler, htmx, sortable, slai.js and theme.js, got %v", rows)
 	}
 	for name, want := range rows {
 		b, err := FS.ReadFile(name)
@@ -46,8 +46,8 @@ func TestVendorHashesMatch(t *testing.T) {
 }
 
 // Security AC9 (amended: the principal allowed one first-party script on conditions): exactly
-// htmx.min.js, sortable.min.js and slai.js are embedded, and all three are pinned. A fourth fails.
-func TestExactlyThreeJavaScriptFiles(t *testing.T) {
+// htmx.min.js, sortable.min.js, slai.js and theme.js are embedded, and all are pinned. A fifth fails.
+func TestExactlyFourJavaScriptFiles(t *testing.T) {
 	var js []string
 	_ = fs.WalkDir(FS, ".", func(p string, d fs.DirEntry, err error) error {
 		if err == nil && !d.IsDir() && strings.HasSuffix(p, ".js") {
@@ -56,8 +56,8 @@ func TestExactlyThreeJavaScriptFiles(t *testing.T) {
 		return nil
 	})
 	sort.Strings(js)
-	if got := strings.Join(js, " "); got != "htmx.min.js slai.js sortable.min.js" {
-		t.Fatalf("want exactly htmx.min.js, slai.js and sortable.min.js embedded, got %v", js)
+	if got := strings.Join(js, " "); got != "htmx.min.js slai.js sortable.min.js theme.js" {
+		t.Fatalf("want exactly htmx.min.js, slai.js, sortable.min.js and theme.js embedded, got %v", js)
 	}
 	rows := vendorRows(t)
 	for _, p := range js {
