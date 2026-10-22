@@ -33,7 +33,7 @@ type Page struct {
 	Active   string // the Key of the NavItem to mark current
 	Nav      []NavItem
 	ReadOnly bool   // the server was started with --read-only: hide write controls
-	Theme    string // "light" or "dark"
+	Theme    string // "system" (default), "light" or "dark"
 	Notice   string // a banner for the whole app, e.g. the supervisor is not running
 	// Refused counts the requests refused for this session; RefusedUnauth those refused
 	// with no session since the server started. Both are shown in the footer.

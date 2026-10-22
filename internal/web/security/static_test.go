@@ -43,10 +43,10 @@ func TestStaticPathTraversal(t *testing.T) {
 	}
 }
 
-// W8 / security AC9: exactly three JavaScript files are embedded (htmx, SortableJS, our
-// slai.js), each pinned in VENDOR.md, each served byte for byte; and every script any page
+// W8 / security AC9: exactly four JavaScript files are embedded (htmx, SortableJS, our
+// slai.js and theme.js), each pinned in VENDOR.md, each served byte for byte; and every script any page
 // loads is one of them.
-func TestExactlyTheThreePinnedScriptsAreServed(t *testing.T) {
+func TestExactlyTheFourPinnedScriptsAreServed(t *testing.T) {
 	s := newSeeded(t)
 	s.Login()
 	var js []string
@@ -56,8 +56,8 @@ func TestExactlyTheThreePinnedScriptsAreServed(t *testing.T) {
 		}
 		return nil
 	})
-	if len(js) != 3 {
-		t.Fatalf("want exactly 3 embedded JS files, got %v", js)
+	if len(js) != 4 {
+		t.Fatalf("want exactly 4 embedded JS files, got %v", js)
 	}
 	vendor, _ := assets.FS.ReadFile("VENDOR.md")
 	for _, name := range js {
@@ -74,7 +74,7 @@ func TestExactlyTheThreePinnedScriptsAreServed(t *testing.T) {
 		}
 		sum := sha256.Sum256(embedded)
 		pinned := strings.Contains(string(vendor), hex.EncodeToString(sum[:]))
-		ours := name == "slai.js"
+		ours := name == "slai.js" || name == "theme.js"
 		if !pinned && !ours {
 			t.Errorf("%s is not pinned in VENDOR.md", name)
 		}
@@ -82,7 +82,7 @@ func TestExactlyTheThreePinnedScriptsAreServed(t *testing.T) {
 	if !strings.Contains(string(vendor), "slai.js") {
 		t.Error("VENDOR.md does not mention slai.js (ours)")
 	}
-	// every <script src> of every page is one of the three
+	// every <script src> of every page is one of the four
 	allowed := map[string]bool{}
 	for _, n := range js {
 		allowed["/static/"+n] = true

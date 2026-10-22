@@ -221,3 +221,49 @@ pre.plan .c2{color:#4ade80}
 .slai-fact-invalid td:first-child { border-left: 3px solid #d63939; }
 .slai-changed { border-color: rgba(245, 159, 0, .5); }
 .slai-card-meta .slai-chip-waiting { white-space: normal; overflow-wrap: anywhere; border-radius: 12px; max-width: 100%; } /* "waiting on" lists every id in full and wraps, never truncates */
+
+/* ---- dark mode completions (T-0001): every hardcoded light-theme colour gets a dark pair ---- */
+[data-bs-theme=dark]{
+  --sl-pane-fg:#d6deeb; --sl-idle:#9aa4b8;
+  --tblr-secondary:#a3adbd; --tblr-secondary-rgb:163,173,189; /* Tabler's #6c7a91 is 3.6:1 on the card surface */
+}
+[data-bs-theme=dark] .agent-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.45)}
+[data-bs-theme=dark] .tcard{box-shadow:0 1px 2px rgba(0,0,0,.35)}
+[data-bs-theme=dark] .tcard.sortable-chosen{box-shadow:0 10px 28px rgba(0,0,0,.55)}
+[data-bs-theme=dark] .toast{box-shadow:0 10px 30px rgba(0,0,0,.5)}
+[data-bs-theme=dark] .prio.hi,[data-bs-theme=dark] .slai-prio-hi{color:#f28b8b}
+[data-bs-theme=dark] .slai-add{color:#6fd484}[data-bs-theme=dark] .slai-del{color:#f28b8b}
+[data-bs-theme=dark] .slai-chip-prio,[data-bs-theme=dark] .slai-chip-round{color:var(--tblr-body-color)}
+[data-bs-theme=dark] .banner-hint{background:linear-gradient(135deg,rgba(129,140,248,.14),rgba(167,139,250,.1));border-color:rgba(129,140,248,.4)}
+[data-bs-theme=dark] .pane,[data-bs-theme=dark] pre.plan,[data-bs-theme=dark] .slai-pane{border-color:var(--tblr-border-color)}
+[data-bs-theme=dark] .slai-pane{background:var(--sl-pane-bg);color:var(--sl-pane-fg)}
+[data-bs-theme=dark] .slai-code{background:rgba(255,255,255,.06)}
+[data-bs-theme=dark] .diff-file>summary,[data-bs-theme=dark] .slai-diff-file>summary{background:rgba(255,255,255,.05)}
+[data-bs-theme=dark] .diff .add,[data-bs-theme=dark] .slai-ln-add{background:rgba(47,179,68,.2)}
+[data-bs-theme=dark] .diff .del,[data-bs-theme=dark] .slai-ln-del{background:rgba(214,57,57,.22)}
+[data-bs-theme=dark] .diff .hunk,[data-bs-theme=dark] .slai-ln-hunk{background:rgba(66,153,225,.18)}
+[data-bs-theme=dark] .slai-card,[data-bs-theme=dark] .tcard{background:var(--tblr-bg-surface)}
+[data-bs-theme=dark] .slai-col,[data-bs-theme=dark] .kcol{background:rgba(255,255,255,.03)}
+[data-bs-theme=dark] .navbar-brand-autodark a{color:var(--tblr-body-color)}
+
+/* theme toggle (navbar) */
+.slai-theme{display:flex;flex-direction:column;gap:.3rem;align-items:flex-start}
+.slai-theme-label{font-size:.75rem;color:var(--tblr-secondary)}
+.slai-theme-group .btn{min-width:2.25rem;line-height:1.4}
+.slai-theme-group .btn.active{background:rgba(var(--tblr-primary-rgb),.15);color:var(--tblr-primary);border-color:rgba(var(--tblr-primary-rgb),.5)}
+[data-bs-theme=dark] .navbar-vertical .nav-link{color:#c3cad6}
+[data-bs-theme=dark] .navbar-vertical .nav-link:hover{color:#fff}
+[data-bs-theme=dark] .navbar-vertical .nav-link.active{color:var(--tblr-primary)}
+[data-bs-theme=dark] .slai-nav-disabled{color:#98a2b3}
+[data-bs-theme=dark] .slai-theme-group .btn{color:var(--tblr-body-color);border-color:#4a5568}
+[data-bs-theme=dark] .slai-theme-group .btn.active{color:#fff}
+/* Tabler's -lt badges and outline buttons keep their light-theme text colour in dark mode (2.9:1) */
+[data-bs-theme=dark] .badge.bg-blue-lt{color:#8ec2ed!important}[data-bs-theme=dark] .badge.bg-orange-lt{color:#f9a86b!important}
+[data-bs-theme=dark] .badge.bg-yellow-lt{color:#f6c453!important}[data-bs-theme=dark] .badge.bg-red-lt{color:#f28b8b!important}
+[data-bs-theme=dark] .badge.bg-secondary-lt{color:#c3cad6!important}[data-bs-theme=dark] .badge.bg-green-lt{color:#6fd484!important}
+[data-bs-theme=dark] .text-red,[data-bs-theme=dark] .text-danger{color:#f28b8b!important}
+[data-bs-theme=dark] .text-warning{color:#f6c453!important}
+[data-bs-theme=dark] .btn-outline-danger{--tblr-btn-color:#f28b8b;--tblr-btn-border-color:#b84a4a}
+[data-bs-theme=dark] .btn-outline-success{--tblr-btn-color:#6fd484;--tblr-btn-border-color:#2f8f44}
+[data-bs-theme=dark] .btn-outline-primary{--tblr-btn-color:#a5b4fc;--tblr-btn-border-color:#6366f1}
+[data-bs-theme=dark] .btn-outline-secondary{--tblr-btn-color:#c3cad6;--tblr-btn-border-color:#4a5568}

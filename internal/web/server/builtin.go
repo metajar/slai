@@ -15,7 +15,7 @@ import (
 func builtinRoutes(d *Deps) []Route {
 	return []Route{
 		{Method: http.MethodGet, Pattern: "/{$}", Calls: "reads agents and open tasks from the store", Handler: d.dashboard},
-		{Method: http.MethodGet, Pattern: "/theme", Calls: "sets the light/dark cookie; changes no team state", Handler: d.theme},
+		{Method: http.MethodGet, Pattern: "/theme", Calls: "sets the light/dark/system cookie; changes no team state", Handler: d.theme},
 		{Method: http.MethodPost, Pattern: "/agents/{id}/send", Action: "send",
 			Calls: "the supervisor's SendUser, the same call as `slai send`, after the 4000-character check", Handler: d.send},
 	}
@@ -106,13 +106,14 @@ func (d *Deps) dashboard(w http.ResponseWriter, r *http.Request) {
 	d.Render(w, r, tpl, templates.Page{Title: "Dashboard", Active: "dashboard", Data: data})
 }
 
-// theme sets the light/dark cookie (cosmetic; the only state a GET changes).
+// theme stores the light/dark/system preference (cosmetic; the only state a GET changes).
+// "system", or anything unrecognised, clears the cookie so the page follows the OS.
 func (d *Deps) theme(w http.ResponseWriter, r *http.Request) {
-	v := "light"
-	if r.URL.Query().Get("set") == "dark" {
-		v = "dark"
+	c := &http.Cookie{Name: "slai_theme", Value: "system", Path: "/", MaxAge: -1, SameSite: http.SameSiteStrictMode, Secure: secureRequest(r)}
+	if v := r.URL.Query().Get("set"); v == "dark" || v == "light" {
+		c.Value, c.MaxAge = v, 365*24*3600
 	}
-	http.SetCookie(w, &http.Cookie{Name: "slai_theme", Value: v, Path: "/", MaxAge: 365 * 24 * 3600, SameSite: http.SameSiteStrictMode, Secure: secureRequest(r)})
+	http.SetCookie(w, c)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 

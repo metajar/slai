@@ -1,11 +1,12 @@
 {{define "layout"}}<!doctype html>
-<html lang="en" data-bs-theme="{{.Theme}}">
+<html lang="en" data-slai-theme="{{.Theme}}"{{if ne .Theme "system"}} data-bs-theme="{{.Theme}}"{{end}}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <meta name="htmx-config" content='{"allowEval":false,"selfRequestsOnly":true,"allowScriptTags":false,"includeIndicatorStyles":false,"historyCacheSize":0,"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"422","swap":true,"error":false},{"code":"[45]..","swap":false,"error":true}]}'>
 <title>{{if .Needs}}({{.Needs}}) {{end}}{{block "title" .}}{{.Title}}{{end}} · slai</title>
+<script src="/static/theme.js"></script>
 <link rel="stylesheet" href="/static/tabler.min.css">
 <link rel="stylesheet" href="/static/slai.css">
 <script src="/static/htmx.min.js" defer></script>
@@ -24,9 +25,16 @@
           {{else}}<span class="nav-link slai-nav-disabled" aria-disabled="true" title="not available yet"><span class="nav-link-title">{{.Label}}</span></span>{{end}}
         </li>{{end}}
       </ul>
-      <div class="mt-auto pt-3">
+      <div class="mt-auto pt-3 px-3 pb-3">
         {{if .ReadOnly}}<span class="badge bg-secondary-lt slai-readonly" title="started with --read-only: every write is refused">read-only</span>{{end}}
-        <a class="btn btn-sm btn-ghost-secondary" href="/theme?set={{if eq .Theme "dark"}}light{{else}}dark{{end}}">{{if eq .Theme "dark"}}Light{{else}}Dark{{end}} theme</a>
+        <nav class="slai-theme" aria-label="Colour theme">
+          <span class="slai-theme-label">Theme: {{if eq .Theme "dark"}}dark{{else if eq .Theme "light"}}light{{else}}auto (follows your system){{end}}</span>
+          <span class="btn-group slai-theme-group">
+            <a class="btn btn-sm btn-outline-secondary{{if eq .Theme "system"}} active{{end}}" href="/theme?set=system" aria-label="Theme: auto, follow system"{{if eq .Theme "system"}} aria-current="true"{{end}} title="Auto (follow system)"><span aria-hidden="true">◐</span></a>
+            <a class="btn btn-sm btn-outline-secondary{{if eq .Theme "light"}} active{{end}}" href="/theme?set=light" aria-label="Theme: light"{{if eq .Theme "light"}} aria-current="true"{{end}} title="Light"><span aria-hidden="true">☀</span></a>
+            <a class="btn btn-sm btn-outline-secondary{{if eq .Theme "dark"}} active{{end}}" href="/theme?set=dark" aria-label="Theme: dark"{{if eq .Theme "dark"}} aria-current="true"{{end}} title="Dark"><span aria-hidden="true">☾</span></a>
+          </span>
+        </nav>
       </div>
     </div>
   </aside>
