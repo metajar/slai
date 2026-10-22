@@ -1,0 +1,35 @@
+{{define "content"}}
+<form class="card mb-3" method="get" action="/log">
+  <div class="card-body"><div class="row g-2 align-items-end">
+    <div class="col-6 col-md-2"><label class="form-label" for="la">Agent</label>
+      <select class="form-select" id="la" name="agent"><option value="">All</option>{{range .Data.Agents}}<option{{if eq . $.Data.Agent}} selected{{end}}>{{.}}</option>{{end}}</select></div>
+    <div class="col-6 col-md-3"><label class="form-label" for="lk">Kind</label>
+      <select class="form-select" id="lk" name="kind"><option value="">All</option>{{range .Data.Kinds}}<option{{if eq . $.Data.Kind}} selected{{end}}>{{.}}</option>{{end}}</select></div>
+    <div class="col-6 col-md-2"><label class="form-label" for="lt">Task</label><input class="form-control" id="lt" name="task" value="{{.Data.Task}}" placeholder="T-0080"></div>
+    <div class="col-6 col-md-3"><label class="form-label" for="lq">Text</label><input class="form-control" id="lq" name="q" value="{{.Data.Text}}" placeholder="search"></div>
+    <div class="col-8 col-md-1"><label class="form-check"><input class="form-check-input" type="checkbox" name="hooks" value="1"{{if .Data.Hooks}} checked{{end}}><span class="form-check-label">Hook events</span></label></div>
+    <div class="col-4 col-md-1"><button class="btn btn-primary" type="submit">Filter</button></div>
+  </div><div class="reason mt-2">Hook and usage events are hidden unless you tick Hook events, like <kbd>h</kbd> in the TUI.</div></div>
+</form>
+{{template "log-live" .Data}}
+{{end}}
+
+{{/* The live region: refetched by slai.js on an events notice (any event), and every 30 s only
+   while the event stream is down. The filters and page number are in data-live-src. */}}
+{{define "log-live"}}<div id="log-body" data-live="events" data-live-src="{{.LiveSrc}}">{{template "log-body" .}}</div>{{end}}
+
+{{define "log-body"}}
+<div class="card">
+  {{if .Rows}}<div class="table-responsive"><table class="table table-vcenter table-sl card-table">
+    <thead><tr><th scope="col">time</th><th scope="col">agent</th><th scope="col">kind</th><th scope="col">task</th><th scope="col">what</th></tr></thead>
+    <tbody>{{range .Rows}}<tr><td class="mono text-nowrap">{{.Time}}</td><td>{{.Agent}}</td><td><span class="chip {{.Chip}}">{{.Kind}}</span></td><td class="mono">{{if .Task}}<a href="/tasks/{{.Task}}">{{.Task}}</a>{{else}}—{{end}}</td><td>{{.What}}</td></tr>{{end}}</tbody>
+  </table></div>
+  <div class="card-footer d-flex align-items-center flex-wrap gap-2"><span class="text-secondary small">Showing {{.From}}–{{.To}} of {{.Total}} · newest first · 100 per page</span>
+    <ul class="pagination m-0 ms-auto">
+      {{if .Prev}}<li class="page-item"><a class="page-link" href="{{.Prev}}">prev</a></li>{{else}}<li class="page-item disabled"><span class="page-link">prev</span></li>{{end}}
+      {{range .Numbers}}<li class="page-item{{if .Current}} active{{end}}"><a class="page-link" href="{{.URL}}"{{if .Current}} aria-current="page"{{end}}>{{.Label}}</a></li>{{end}}
+      {{if .Next}}<li class="page-item"><a class="page-link" href="{{.Next}}">next</a></li>{{else}}<li class="page-item disabled"><span class="page-link">next</span></li>{{end}}
+    </ul></div>
+  {{else}}<div class="empty-hint m-3">No event matches these filters.{{if not .Hooks}} Hook events are hidden; tick Hook events to include them.{{end}}</div>{{end}}
+</div>
+{{end}}

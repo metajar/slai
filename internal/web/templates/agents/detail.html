@@ -1,0 +1,79 @@
+{{define "detail"}}
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+  {{template "chips" .Data.Row}}
+  <span class="text-secondary">{{.Data.Row.Role}} · {{.Data.Row.Harness}}{{if .Data.Row.Tag}} ({{.Data.Row.Tag}}){{end}} · {{.Data.Row.Model}}</span>
+  <a class="ms-auto btn btn-sm btn-outline-secondary" href="/agents">All agents</a>
+</div>
+<div class="row row-cards">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="card-title">Terminal</h3></div>
+      <div class="card-body">
+        <p class="text-secondary small mb-2"><strong>May contain secrets.</strong> Secret-looking tokens are hidden on a best-effort basis; anything else the agent printed is shown as-is. Read-only: nothing typed here reaches the terminal.</p>
+        {{template "pane" .Data.Pane}}
+        {{if gt .Data.Pane.Redacted 0}}<div class="text-secondary small mt-1">{{.Data.Pane.Redacted}} secret-looking value(s) hidden.</div>{{end}}
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="card-title">Messages</h3></div>
+      {{if .Data.History}}<ul class="list-group list-group-flush">{{range .Data.History}}
+        <li class="list-group-item"><span class="text-secondary small">{{.Ago}} ago · {{.From}} → {{.To}} · {{.Kind}}{{if .TaskID}} · {{.TaskID}}{{end}}</span><div class="slai-msg">{{.Body}}</div></li>{{end}}</ul>
+      {{else}}<div class="card-body text-secondary">No messages to or from {{.Data.Row.ID}} yet.</div>{{end}}
+    </div>
+  </div>
+  <div class="col-lg-5">
+    {{if .Data.CanAct}}
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="card-title">Talk to {{.Data.Row.ID}}</h3></div>
+      <div class="card-body">
+        <form hx-post="/agents/{{.Data.Row.ID}}/send" hx-target="#send-result" hx-swap="innerHTML" class="mb-3">
+          <label class="form-label" for="send-body">Send a message</label>
+          <textarea class="form-control" id="send-body" name="body" rows="3" maxlength="4000" required></textarea>
+          <div class="form-hint">Delivered when the agent is next free.</div>
+          <button class="btn btn-primary mt-2" type="submit">Send</button>
+        </form>
+        <form hx-post="/agents/{{.Data.Row.ID}}/redirect" hx-target="#send-result" hx-swap="innerHTML" class="mb-3">
+          <label class="form-label" for="redirect-body">Interrupt and redirect</label>
+          <input class="form-control" id="redirect-body" name="body" maxlength="4000" required>
+          <div class="form-hint">Stops the agent's current turn, then delivers this. Refused when the agent is not busy, paused, or has a permission dialog open.</div>
+          <button class="btn btn-outline-danger mt-2" type="submit">Interrupt and send</button>
+        </form>
+        <div id="send-result" role="status"></div>
+        <div class="d-flex gap-2">
+          {{if .Data.Row.Paused}}<button class="btn btn-outline-secondary" hx-post="/agents/{{.Data.Row.ID}}/resume" hx-target="#send-result">Resume {{.Data.Row.ID}}</button>
+          {{else}}<button class="btn btn-outline-secondary" hx-post="/agents/{{.Data.Row.ID}}/pause" hx-target="#send-result">Pause {{.Data.Row.ID}}</button>{{end}}
+        </div>
+      </div>
+    </div>
+    {{else}}<div class="alert alert-secondary" role="status">Read-only mode: actions are hidden.</div>{{end}}
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="card-title">Not in the web UI</h3></div>
+      <ul class="list-group list-group-flush">{{range .Data.CLIOnly}}
+        <li class="list-group-item"><button class="btn btn-sm btn-outline-secondary" type="button" disabled>{{.Name}}</button>
+          <span class="text-secondary small">{{.Why}}.
+          {{if .Key}}Press <kbd>{{.Key}}</kbd> in the TUI{{end}}{{if and .Key .Cmd}}, or run{{else if .Cmd}}Use:{{end}} {{if .Cmd}}<code>{{.Cmd}}</code>{{end}}</span></li>{{end}}</ul>
+    </div>
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="card-title">Health</h3></div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-5">Degraded features</dt><dd class="col-7">{{.Data.Degraded}}</dd>
+          <dt class="col-5">5h / weekly</dt><dd class="col-7">{{.Data.Row.Gauges}}</dd>
+          <dt class="col-5">Liveness</dt><dd class="col-7">{{.Data.Row.Liveness}}{{if .Data.Row.Reason}}: {{.Data.Row.Reason}}{{end}}</dd>
+        </dl>
+      </div>
+      <div class="card-header"><h3 class="card-title">Recent health events</h3></div>
+      {{if .Data.HealthEvents}}<ul class="list-group list-group-flush">{{range .Data.HealthEvents}}
+        <li class="list-group-item"><strong>{{.Kind}}</strong> <span class="text-secondary small">{{.Ago}} ago</span>{{if .Cause}}<div class="small">{{.Cause}}</div>{{end}}</li>{{end}}</ul>
+      {{else}}<div class="card-body text-secondary">None.</div>{{end}}
+      <div class="card-header"><h3 class="card-title">Lane denials</h3></div>
+      {{if or .Data.DenialCount .Data.Denials}}<div class="card-body"><p class="mb-1">{{.Data.DenialCount}} in the last 24h</p>
+        <ul class="list-unstyled mb-0">{{range .Data.Denials}}<li class="small">{{.Ago}} ago · {{.What}}</li>{{end}}</ul></div>
+      {{else}}<div class="card-body text-secondary">None in the last 24h.</div>{{end}}
+      <div class="card-header"><h3 class="card-title">Course corrections</h3></div>
+      {{if .Data.Corrections}}<ul class="list-group list-group-flush">{{range .Data.Corrections}}<li class="list-group-item small">{{.Ago}} ago · {{.Text}}</li>{{end}}</ul>
+      {{else}}<div class="card-body text-secondary">None.</div>{{end}}
+    </div>
+  </div>
+</div>
+{{end}}

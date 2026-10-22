@@ -1,0 +1,6 @@
+> [slai] You have 1 new items. Call get_inbox.
+
+  eng-1 has been stuck on a prompt only the user can answer: Do you want to proceed? | ❯ 1. Yes
+  The user has been told.
+
+✻ Reassigning… (8s · esc to interrupt)

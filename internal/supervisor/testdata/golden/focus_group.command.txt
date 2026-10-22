@@ -1,0 +1,1 @@
+claude --model 'haiku' --append-system-prompt "$(cat '<PROJ>/.slai/run/fg-newbie/system.md')" --settings '<PROJ>/.slai/run/fg-newbie/settings.json' --permission-mode 'manual' --mcp-config '<PROJ>/.slai/run/fg-newbie/mcp.json'

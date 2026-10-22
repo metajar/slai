@@ -1,0 +1,28 @@
+{{define "content"}}{{if eq .Data.View "list"}}{{template "list" .}}{{else if eq .Data.View "detail"}}{{template "detail" .}}{{else}}{{template "new" .}}{{end}}{{end}}
+
+{{define "list"}}
+<div class="d-flex mb-3">
+  <p class="text-secondary mb-0">Everything here is read from the same store as the terminal UI.</p>
+  {{if not .ReadOnly}}<a class="btn btn-primary ms-auto" href="/agents/new">New agent</a>{{end}}
+</div>
+{{if and .Data.Limits (not .Data.Empty)}}<p class="text-secondary small mb-3" id="plan-limits"><strong>Plan limits</strong> (shared by every agent on the plan, so shown once): {{.Data.Limits}}</p>{{end}}
+{{if .Data.Empty}}<div class="card"><div class="card-body text-secondary">No agents yet: run <code>slai up</code>, or add one with the New agent button.</div></div>
+{{else}}{{range .Data.Groups}}
+<div class="card mb-3">
+  <div class="card-header"><h3 class="card-title">{{.Title}}</h3></div>
+  <div class="table-responsive"><table class="table table-vcenter card-table">
+    <thead><tr><th scope="col">Agent</th><th scope="col">Status</th><th scope="col">Current task</th><th scope="col">In this status</th><th scope="col">Harness · model</th></tr></thead>
+    <tbody>{{range .Rows}}<tr>
+      <td><a href="/agents/{{.ID}}"><strong>{{.ID}}</strong></a><div class="text-secondary small">{{.Role}}</div></td>
+      <td>{{template "chips" .}}</td>
+      <td>{{if .Task}}<span class="text-nowrap">{{.Task}}</span> <span class="text-secondary small">{{.TaskTitle}}</span>{{else}}<span class="text-secondary small">{{.Activity}}</span>{{end}}</td>
+      <td class="text-nowrap">{{if .Ago}}{{.Ago}} ago{{else}}<span class="text-secondary">never</span>{{end}}</td>
+      <td class="text-nowrap">{{.Harness}}{{if .Tag}} <span class="badge bg-secondary-lt">{{.Tag}}</span>{{end}} · {{.Model}}{{if .NoGauges}}<div class="text-secondary small">{{.Gauges}}</div>{{end}}</td>
+    </tr>{{end}}</tbody>
+  </table></div>
+</div>{{end}}{{end}}
+{{end}}
+
+{{define "chips"}}<span class="badge{{if .Waiting}} bg-yellow-lt{{else if eq .Status "working"}} bg-blue-lt{{else if or (eq .Status "dead") (eq .Status "errored") (eq .Status "")}} bg-red-lt{{else}} bg-secondary-lt{{end}}">{{if .Waiting}}⚑ {{else if eq .Status "working"}}● {{else if or (eq .Status "dead") (eq .Status "errored") (eq .Status "")}}✖ {{else}}○ {{end}}{{.StatusLabel}}</span>
+{{if .Paused}} <span class="badge bg-orange-lt" title="not woken until resumed">⏸ paused</span>{{end}}
+{{if .ChipLabel}} <span class="badge bg-orange-lt" title="{{.Reason}}">{{.ChipLabel}}</span>{{if .Reason}} <span class="text-secondary small">{{.Reason}}</span>{{end}}{{end}}{{end}}

@@ -1,0 +1,36 @@
+{{define "content"}}
+{{with .Data}}
+<div class="card mb-3"><div class="card-body">
+  <p class="mb-2 fw-semibold" id="mem-summary">{{.Summary}}</p>
+  <dl class="row mb-0 slai-legend">
+    {{range .States}}<dt class="col-sm-3"><a class="slai-chip slai-chip-{{.Class}}" href="{{index $.Data.Hrefs .Name}}"><span aria-hidden="true">{{.Glyph}}</span> {{.Name}}{{with index $.Data.Counts .Name}} · {{.}}{{end}}</a></dt><dd class="col-sm-9">{{.Meaning}}</dd>{{end}}
+  </dl>
+  {{if .Warn}}<p class="text-warning mb-0 mt-2">{{.Warn}}</p>{{end}}
+</div></div>
+
+<div class="card mb-3"><div class="card-body">
+  <form class="row g-2 align-items-end" method="get" action="/memory" role="search" aria-label="Filter the facts">
+    <div class="col-12 col-md-5"><label class="form-label" for="m-q">Search facts</label><input class="form-control" id="m-q" type="search" name="q" value="{{.Filter.Q}}" placeholder="text, file path, id…"></div>
+    <div class="col-6 col-md-3"><label class="form-label" for="m-s">State</label><select class="form-select" id="m-s" name="status"><option value="">All</option>
+      {{range .States}}<option value="{{.Name}}"{{if eq .Name $.Data.Filter.Status}} selected{{end}}>{{.Name}}</option>{{end}}</select></div>
+    <div class="col-6 col-md-2"><label class="form-label" for="m-k">Kind</label><select class="form-select" id="m-k" name="kind"><option value="">All</option>
+      {{range .Kinds}}<option{{if eq . $.Data.Filter.Kind}} selected{{end}}>{{.}}</option>{{end}}</select></div>
+    <div class="col-12 col-md-2 d-flex gap-2"><button class="btn btn-primary" type="submit">Filter</button><a class="btn" href="/memory">Clear</a></div>
+  </form>
+</div></div>
+
+<div class="card">
+  {{if .Rows}}<div class="table-responsive"><table class="table table-vcenter card-table slai-memory">
+    <thead><tr><th scope="col">Fact</th><th scope="col">State</th><th scope="col">Cites</th><th scope="col">Used by</th><th scope="col">Age</th></tr></thead>
+    <tbody>{{range .Rows}}<tr class="slai-fact slai-fact-{{.State}}" data-state="{{.State}}">
+      <td><a class="fw-semibold" href="/memory/{{.ID}}">{{.Text}}</a><div class="text-secondary small"><code>{{.ID}}</code> · {{.Kind}}</div></td>
+      <td><span class="slai-chip slai-chip-{{.Class}}"><span aria-hidden="true">{{.Glyph}}</span> {{.State}}</span>{{if .Reason}}<div class="text-secondary small">{{.Reason}}</div>{{end}}</td>
+      <td class="small">{{if .FirstPath}}<code class="text-break">{{.FirstPath}}</code>{{if .MorePaths}} <span class="text-secondary">+{{.MorePaths}}</span>{{end}}{{else if .Invalid}}<span class="text-secondary">unreadable</span>{{else}}<span class="text-secondary">no file cited</span>{{end}}</td>
+      <td class="small">{{range .UsedBy}}<a href="/tasks/{{.}}">{{.}}</a> {{else}}<span class="text-secondary">not used yet</span>{{end}}</td>
+      <td class="small text-nowrap">{{.Age}}</td>
+    </tr>{{end}}</tbody></table></div>
+  {{else}}<div class="card-body text-secondary">{{if .Total}}No fact matches this filter. <a href="/memory">Clear it</a>.{{else}}No facts yet. Agents propose facts with <code>remember</code>; the principal verifies them when approving a task.{{end}}</div>{{end}}
+</div>
+<p class="text-secondary small mt-2">Read-only: edit, re-verify or delete a fact with <code>slai memory</code> (or the TUI). Each page view checks every cited file against the integration branch with one git call.</p>
+{{end}}
+{{end}}

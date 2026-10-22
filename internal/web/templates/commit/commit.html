@@ -1,0 +1,30 @@
+{{define "content"}}
+<div class="banner banner-info mb-3" role="status"><div class="flex-fill"><strong>Read-only plans.</strong>
+  Applying <span class="mono">slai commit</span> or <span class="mono">slai revert</span> stays on the command line, where you can see exactly what it does. These are the plans those commands print with <span class="mono">--dry-run</span>.</div></div>
+<div class="row row-cards">
+  <div class="col-lg-7"><div class="card mb-3">
+    <div class="card-header"><h3 class="card-title">What slai commit would do</h3><div class="card-actions"><a class="btn btn-sm" href="/commit-preview">Refresh</a></div></div>
+    <div class="card-body">
+      {{if .Data.CommitErr}}<div class="alert alert-warning mb-0" role="status">{{.Data.CommitErr}}</div>
+      {{else}}<pre class="plan mb-0"><span class="c2">$ slai commit --dry-run</span>
+{{.Data.Commit}}</pre>{{end}}
+    </div>
+  </div></div>
+  <div class="col-lg-5"><div class="card mb-3">
+    <div class="card-header"><h3 class="card-title">What slai revert would do</h3></div>
+    <div class="card-body">
+      {{if .Data.Merged}}<form method="get" action="/commit-preview" class="mb-3">
+        <label class="form-label" for="rv">Merged task</label>
+        <select class="form-select mb-2" id="rv" name="revert">
+          <option value="">Choose a merged task…</option>
+          {{range .Data.Merged}}<option value="{{.ID}}"{{if eq .ID $.Data.Chosen}} selected{{end}}>{{.ID}} · {{.Title}}</option>{{end}}
+        </select>
+        <button class="btn" type="submit">Show the plan</button>
+      </form>{{else}}<p class="text-secondary">No task has been merged yet, so there is nothing to revert.</p>{{end}}
+      {{if .Data.RevertErr}}<div class="alert alert-warning mb-0" role="status">{{.Data.RevertErr}}</div>{{end}}
+      {{if .Data.Revert}}<pre class="plan mb-0"><span class="c2">$ slai revert {{.Data.Chosen}} --dry-run</span>
+{{.Data.Revert}}</pre>{{end}}
+    </div>
+  </div></div>
+</div>
+{{end}}

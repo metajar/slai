@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reviews · slai</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<script src="assets/theme.js"></script>
+<link rel="stylesheet" href="vendor/tabler/css/tabler.min.css">
+<link rel="stylesheet" href="vendor/icons/tabler-icons.min.css">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="page">
+  <aside class="navbar navbar-vertical navbar-expand-lg" aria-label="Main navigation">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+      <h1 class="navbar-brand navbar-brand-autodark mb-0"><a href="index.html" class="d-flex align-items-center text-reset text-decoration-none"><span class="brand-mark">s</span><span><span class="brand-name">slai</span><span class="brand-sub">demo-project</span></span></a></h1>
+      <div class="d-lg-none"><a class="btn btn-sm btn-ghost-secondary" href="inbox.html" aria-label="Inbox"><i class="ti ti-message-question"></i><span class="badge bg-red text-red-fg ms-1" data-needs-badge>5</span></a></div>
+      <div class="collapse navbar-collapse" id="sidebar-menu">
+        <ul class="navbar-nav pt-lg-3"><li class="nav-item"><a class="nav-link" href="index.html"><span class="nav-link-icon"><i class="ti ti-layout-dashboard"></i></span><span class="nav-link-title">Dashboard</span></a></li><li class="nav-item"><a class="nav-link" href="agents.html"><span class="nav-link-icon"><i class="ti ti-robot"></i></span><span class="nav-link-title">Agents</span></a></li><li class="nav-item"><a class="nav-link" href="board.html"><span class="nav-link-icon"><i class="ti ti-layout-kanban"></i></span><span class="nav-link-title">Board</span></a></li><li class="nav-item"><a class="nav-link active" aria-current="page" href="reviews.html"><span class="nav-link-icon"><i class="ti ti-eye-check"></i></span><span class="nav-link-title">Reviews</span><span class="badge bg-azure text-azure-fg">2</span></a></li><li class="nav-item"><a class="nav-link" href="inbox.html"><span class="nav-link-icon"><i class="ti ti-message-question"></i></span><span class="nav-link-title">Inbox</span><span class="badge bg-red text-red-fg" data-needs-badge>5</span></a></li><li class="nav-item"><a class="nav-link" href="stats.html"><span class="nav-link-icon"><i class="ti ti-chart-bar"></i></span><span class="nav-link-title">Stats</span></a></li><li class="nav-item"><a class="nav-link" href="memory.html"><span class="nav-link-icon"><i class="ti ti-brain"></i></span><span class="nav-link-title">Memory</span></a></li><li class="nav-item"><a class="nav-link" href="doctor.html"><span class="nav-link-icon"><i class="ti ti-stethoscope"></i></span><span class="nav-link-title">Doctor</span></a></li><li class="nav-item"><a class="nav-link" href="log.html"><span class="nav-link-icon"><i class="ti ti-list-details"></i></span><span class="nav-link-title">Log</span></a></li><li class="nav-item"><a class="nav-link" href="commit.html"><span class="nav-link-icon"><i class="ti ti-git-pull-request"></i></span><span class="nav-link-title">Commit preview</span></a></li></ul>
+        <div class="mt-auto p-3 d-none d-lg-block">
+          <div class="card card-sm"><div class="card-body">
+            <div class="d-flex align-items-center gap-2"><span class="dot ok pulse"></span><strong class="small">Supervisor running</strong></div>
+            <div class="reason mt-1">heartbeat 2s ago · pid 41873 · up 3h12m</div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="page-wrapper">
+    <div class="proto-ribbon">Prototype · fake data · nothing here talks to a real team</div>
+    <header class="navbar navbar-expand-md d-print-none sticky-top" style="background:var(--tblr-bg-surface);border-bottom:1px solid var(--tblr-border-color)">
+      <div class="container-xl">
+        <div class="d-flex align-items-center gap-2 flex-wrap w-100">
+          <span class="chip chip-ok"><i class="ti ti-heartbeat"></i>Supervisor ok</span>
+          <a class="chip chip-user text-decoration-none" href="inbox.html"><i class="ti ti-hand-stop"></i><span id="needs-count">5</span> need you</a>
+          <div class="ms-auto d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#hold-modal" data-hold-open><i class="ti ti-player-pause me-1"></i>Hold team</button>
+            <button class="btn btn-sm btn-warning" data-hold-release hidden><i class="ti ti-player-play me-1"></i>Release hold</button>
+            <button class="btn btn-sm btn-icon btn-ghost-secondary" id="theme-toggle" type="button" aria-label="Switch theme"><i class="ti ti-moon"></i></button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div class="page-header d-print-none"><div class="container-xl"><div class="row g-2 align-items-center">
+      <div class="col"><div class="page-pretitle">Principal’s queue, read-only</div><h2 class="page-title">Reviews</h2></div>
+      <div class="col-auto ms-auto"><div class="btn-list"></div></div>
+    </div></div></div>
+    <div class="page-body"><div class="container-xl">
+      
+      <div id="hold-banner" class="banner banner-hold mb-3" hidden role="status"><i class="ti ti-player-pause text-warning"></i><div><strong>Team on hold: <span id="hold-name">hold</span></strong> since 11:44 (just now). No wake-ups are being delivered, nothing is nudged or restarted; sessions stay up. <a href="#" data-hold-release-link>Use “Release hold” to resume.</a></div></div>
+      <div class="banner banner-info mb-3" role="status"><i class="ti ti-info-circle text-azure"></i><div class="flex-fill"><strong>Approving and merging happen through the principal.</strong> This page has no approve or merge button on purpose: the web UI never has more power than the TUI. The principal uses <span class='mono'>approve_review</span> / <span class='mono'>request_changes</span>.</div></div>
+<div class="row row-cards"><div class="col-lg-7">
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">In-review queue · oldest first</h3><div class="card-actions"></div></div><div class="card-body p-0 "><div class="table-responsive"><table class="table table-vcenter table-sl card-table"><thead><tr><th>Task</th><th>Title</th><th>Engineer</th><th>Reviewer</th><th>Waiting</th><th>Round</th></tr></thead><tbody><tr><td><a class="mono fw-semibold" href="task.html">T-0075</a></td><td>TUI stats panel: per-agent / per-model quality numbers</td><td>eng-2</td><td>principal</td><td class="text-nowrap">38m</td><td>r2</td></tr><tr><td><a class="mono fw-semibold" href="task.html">T-0079</a></td><td>Team memory M1: fact store and index <span class="chip chip-warn"><i class="ti ti-plug-connected-x"></i>spec rewritten</span></td><td>eng-1</td><td>principal</td><td class="text-nowrap">12m</td><td>r1</td></tr></tbody></table></div></div></div>
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">T-0075 · diff and claims</h3><div class="card-actions"><a href="task.html" class="small">Open task</a></div></div><div class="card-body p-0"><div class="diff" style="padding:0"><details class="diff-file" open><summary><i class="ti ti-file-code"></i>internal/tui/stats.go<span class="ms-auto text-secondary">+104 −0</span></summary><div class="diff" style="border:0;border-radius:0"><span class="ln hunk">@@ -0,0 +1,104 @@</span><span class="ln add">+package tui</span><span class="ln add">+</span><span class="ln add">+// statsMedianMinW is the narrowest terminal that still shows the median-time column.</span><span class="ln add">+const statsMedianMinW = 100</span><span class="ln add">+</span><span class="ln add">+func renderStats(rep service.StatsReport, w int) []string {</span><span class="ln add">+	if statsEmpty(rep) {</span><span class="ln add">+		return []string{styleDim.Render(&quot;no finished tasks yet&quot;)}</span><span class="ln add">+	}</span><span class="ln ctx"> …</span></div></details><details class="diff-file" ><summary><i class="ti ti-file-code"></i>internal/tui/model.go<span class="ms-auto text-secondary">+19 −1</span></summary><div class="diff" style="border:0;border-radius:0"><span class="ln hunk">@@ -81,6 +81,7 @@ const (</span><span class="ln ctx"> 	ovLog</span><span class="ln ctx"> 	ovUsage</span><span class="ln add">+	ovStats</span><span class="ln ctx"> )</span><span class="ln hunk">@@ -1070,6 +1076,9 @@ func (m *Model) listKey(</span><span class="ln ctx"> 	case &quot;l&quot;:</span><span class="ln ctx"> 		m.ov = ovLog</span><span class="ln add">+	case &quot;s&quot;:</span><span class="ln add">+		m.ov = ovStats</span><span class="ln add">+		return m, m.refreshCmd()</span></div></details></div></div></div>
+</div><div class="col-lg-5">
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">Latest merge_refused</h3><div class="card-actions"></div></div><div class="card-body  "><pre class="plan mb-0">merge_refused T-0074 · 11:31:47
+test gate failed (go test ./... -count=1)
+
+--- FAIL: TestSpendHeaderShowsCaps (0.02s)
+    header_test.go:88: header = "spend $12.00"
+        want "spend $12.00 / $120.00 (10%)"
+FAIL	github.com/oorbt/slai/internal/tui	0.412s
+ok  	github.com/oorbt/slai/internal/store	1.204s
+FAIL</pre></div></div>
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">Verdict history</h3><div class="card-actions"></div></div><div class="card-body  "><ul class="timeline"><li><span class="dot warn"></span><div class="small"><strong>T-0075 round 1: changes requested</strong><div class="reason">“isOpenTask treats only merged and cancelled as closed” · principal · 11:12</div></div></li><li><span class="dot ok"></span><div class="small"><strong>T-0071 approved</strong><div class="reason">round 1 · merged 10:02</div></div></li><li><span class="dot bad"></span><div class="small"><strong>T-0074 merge refused</strong><div class="reason">test gate failed · fixed in the next commit</div></div></li></ul></div></div>
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">Warnings</h3><div class="card-actions"></div></div><div class="card-body  "><p class="small mb-0"><span class="chip chip-warn"><i class="ti ti-file-diff"></i>spec addendum</span> T-0083’s spec gained an addendum after it was assigned. Its engineer is told at the next wake.</p></div></div>
+</div></div>
+    </div></div>
+    <footer class="footer footer-transparent d-print-none"><div class="container-xl"><div class="small text-secondary">slai serve · same privileges as the TUI · it never approves, merges or types keystrokes into a pane · <a href="signin.html">sign-in page</a> · <a href="index-readonly.html">read-only mode</a></div></div></footer>
+  </div>
+</div>
+<div class="modal modal-blur fade" id="hold-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h3 class="modal-title">Hold the team</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body"><p class="text-secondary">Nothing is woken, nudged or restarted while the team is on hold. Sessions stay up and work in progress is untouched. Same as <span class="mono">slai hold</span> and <kbd>H</kbd> in the TUI.</p>
+    <label class="form-label" for="hold-input">Name (optional)</label><input class="form-control" id="hold-input" type="text" placeholder="release-window"></div>
+  <div class="modal-footer"><button class="btn" data-bs-dismiss="modal">Cancel</button><button class="btn btn-warning" data-hold-confirm><i class="ti ti-player-pause me-1"></i>Hold team</button></div>
+</div></div></div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3 mt-5" id="toasts" aria-live="polite"></div>
+<script src="vendor/tabler/js/tabler.min.js"></script>
+<script src="vendor/sortable/Sortable.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

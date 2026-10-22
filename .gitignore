@@ -1,0 +1,8 @@
+.slai/state.db*
+.slai/run/
+.slai/worktrees/
+/slai
+/testdata/fakeclaude/fakeclaude
+./slai
+.mex/
+.slai/

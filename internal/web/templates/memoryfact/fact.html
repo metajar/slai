@@ -1,0 +1,45 @@
+{{define "content"}}
+{{with .Data}}
+<p><a href="/memory">← All facts</a></p>
+<div class="row row-cards">
+  <div class="col-lg-8">
+    <div class="card mb-3"><div class="card-body">
+      <span class="slai-chip slai-chip-{{.Class}}"><span aria-hidden="true">{{.Glyph}}</span> {{.State}}</span> <span class="text-secondary small">{{.Meaning}}</span>
+      <p class="fs-3 mt-3 mb-0 slai-prose">{{.Text}}</p>
+    </div></div>
+
+    {{if .Changes}}<div class="card mb-3 slai-changed" id="fact-changes"><div class="card-header"><h3 class="card-title">What changed</h3></div>
+      <div class="card-body"><ul class="mb-2">{{range .Changes}}<li>{{.}}</li>{{end}}</ul>
+        <p class="text-secondary small mb-0">The page shows what moved under the fact, not a replacement. Rewrite or delete it with <code>slai memory</code>.</p></div></div>{{end}}
+
+    <div class="card mb-3" id="fact-paths"><div class="card-header"><h3 class="card-title">Cited files</h3></div>
+      {{if .Paths}}<div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th scope="col">File</th><th scope="col">Recorded blob</th><th scope="col">Now on integration</th><th scope="col">Result</th></tr></thead>
+        <tbody>{{range .Paths}}<tr><td><code class="text-break">{{.Path}}</code></td><td><code>{{.Recorded}}</code></td><td><code>{{.Current}}</code></td>
+          <td><span class="slai-chip slai-chip-{{.Class}}">{{.Result}}</span>{{if .Note}}<div class="text-secondary small">{{.Note}}</div>{{end}}</td></tr>{{end}}</tbody></table></div>
+      {{else}}<div class="card-body text-secondary">This fact cites no file, so it cannot be grounded.</div>{{end}}</div>
+
+    <div class="card mb-3" id="fact-file"><div class="card-header"><h3 class="card-title">The file</h3><div class="card-actions text-secondary small"><code>.slai/memory/{{.ID}}.md</code></div></div>
+      <div class="card-body"><pre class="slai-code mb-0">{{.File}}</pre></div></div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-3"><div class="card-header"><h3 class="card-title">Fact</h3></div><div class="card-body">
+      <dl class="row mb-0 small">
+        <dt class="col-5">Id</dt><dd class="col-7"><code>{{.ID}}</code></dd>
+        <dt class="col-5">Kind</dt><dd class="col-7">{{.Kind}}</dd>
+        {{if .Stored}}<dt class="col-5">Recorded as</dt><dd class="col-7">{{.Stored}}{{if .VerifiedBy}} by {{.VerifiedBy}}{{end}}</dd>{{end}}
+        {{if .Author}}<dt class="col-5">Author</dt><dd class="col-7">{{.Author}}</dd>{{end}}
+        {{if .Created}}<dt class="col-5">Created</dt><dd class="col-7">{{.Created}} ({{.Age}} ago)</dd>{{end}}
+        {{if .SHA}}<dt class="col-5">Grounded at</dt><dd class="col-7"><code>{{.SHA}}</code></dd>{{end}}
+        {{if .Decision}}<dt class="col-5">Decision</dt><dd class="col-7">{{.Decision}}</dd>{{end}}
+        {{if .Check}}<dt class="col-5">Check</dt><dd class="col-7"><code class="text-break">{{.Check}}</code><div class="text-secondary">Shown, never run: only a person runs it, with <code>slai memory verify</code>.</div></dd>{{end}}
+      </dl></div></div>
+
+    <div class="card mb-3" id="fact-used"><div class="card-header"><h3 class="card-title">Used by</h3></div><div class="card-body">
+      {{if .Uses}}<p class="small text-secondary">Given to {{len .UsedBy}} task{{if ne (len .UsedBy) 1}}s{{end}} ({{.Total}} deliver{{if eq .Total 1}}y{{else}}ies{{end}}).</p>
+        <ul class="list-unstyled mb-0 small">{{range .Uses}}<li class="mb-1">{{if .Task}}<a href="/tasks/{{.Task}}">{{.Task}}</a>{{else}}(no task){{end}} <span class="text-secondary">· {{.Agent}} · {{.At}} · {{.Tokens}} tokens</span></li>{{end}}</ul>
+      {{else}}<p class="text-secondary mb-0">No task has been given this fact yet.</p>{{end}}</div></div>
+  </div>
+</div>
+{{end}}
+{{end}}

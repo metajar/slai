@@ -1,0 +1,19 @@
+{{define "content"}}
+<div class="card mb-3"><div class="card-body">
+  <p class="mb-2"><strong>This server never approves a review, requests changes, merges, applies a commit, reverts, or types keystrokes into a terminal.</strong>
+  It can only do what is listed here, and this list is generated from the server's route table: every route the server answers is a row, nothing else exists.</p>
+  <p class="mb-0 text-secondary">Reads change nothing. Every write needs your session, the <code>X-Slai-Request</code> header and a same-origin request, and writes one <code>web_action</code> event.
+  {{if .ReadOnly}}<strong>This server was started with --read-only: every write below is refused.</strong>{{else}}Start the server with <code>--read-only</code> to refuse them all.{{end}}</p>
+</div></div>
+{{template "caps-table" (dict "Title" "Writes" "Rows" .Data.Writes "Empty" "No write routes.")}}
+{{template "caps-table" (dict "Title" "Reads" "Rows" .Data.Reads "Empty" "No read routes.")}}
+{{end}}
+
+{{define "caps-table"}}
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">{{.Title}} ({{len .Rows}})</h3></div>
+{{if .Rows}}<div class="table-responsive"><table class="table table-vcenter card-table">
+  <thead><tr><th scope="col">Method</th><th scope="col">Path</th><th scope="col">Changes state?</th><th scope="col">Action</th><th scope="col">What it calls</th></tr></thead>
+  <tbody>{{range .Rows}}<tr><td><code>{{.Method}}</code></td><td><code>{{.Pattern}}</code></td><td>{{if .Writes}}yes{{else}}no (read-only){{end}}</td><td>{{.Action}}</td><td>{{.Calls}}</td></tr>{{end}}</tbody>
+</table></div>{{else}}<div class="card-body text-secondary">{{.Empty}}</div>{{end}}
+</div>
+{{end}}

@@ -1,0 +1,5 @@
+{{define "pane"}}<div id="pane-view" class="slai-pane-wrap" data-live="pane:{{.AgentID}}" data-live-src="/agents/{{.AgentID}}/pane">
+{{if .Note}}<div class="alert alert-secondary mb-0" role="status">{{.Note}}</div>
+{{else}}{{if .Result.Truncated}}<div class="text-secondary small mb-1">Older output was cut: showing the last {{len .Result.Lines}} lines.</div>{{end}}<pre class="slai-pane" aria-label="Terminal output of {{.AgentID}}" tabindex="0">{{range .Result.Lines}}{{range .Spans}}{{if .Class}}<span class="{{.Class}}">{{.Text}}</span>{{else}}{{.Text}}{{end}}{{end}}
+{{end}}</pre>{{end}}
+</div>{{end}}

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en" data-readonly>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Read-only · eng-2 · slai</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<script src="assets/theme.js"></script>
+<link rel="stylesheet" href="vendor/tabler/css/tabler.min.css">
+<link rel="stylesheet" href="vendor/icons/tabler-icons.min.css">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="page">
+  <aside class="navbar navbar-vertical navbar-expand-lg" aria-label="Main navigation">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+      <h1 class="navbar-brand navbar-brand-autodark mb-0"><a href="index.html" class="d-flex align-items-center text-reset text-decoration-none"><span class="brand-mark">s</span><span><span class="brand-name">slai</span><span class="brand-sub">demo-project</span></span></a></h1>
+      <div class="d-lg-none"><a class="btn btn-sm btn-ghost-secondary" href="inbox.html" aria-label="Inbox"><i class="ti ti-message-question"></i><span class="badge bg-red text-red-fg ms-1" data-needs-badge>5</span></a></div>
+      <div class="collapse navbar-collapse" id="sidebar-menu">
+        <ul class="navbar-nav pt-lg-3"><li class="nav-item"><a class="nav-link" href="index.html"><span class="nav-link-icon"><i class="ti ti-layout-dashboard"></i></span><span class="nav-link-title">Dashboard</span></a></li><li class="nav-item"><a class="nav-link active" aria-current="page" href="agents.html"><span class="nav-link-icon"><i class="ti ti-robot"></i></span><span class="nav-link-title">Agents</span></a></li><li class="nav-item"><a class="nav-link" href="board.html"><span class="nav-link-icon"><i class="ti ti-layout-kanban"></i></span><span class="nav-link-title">Board</span></a></li><li class="nav-item"><a class="nav-link" href="reviews.html"><span class="nav-link-icon"><i class="ti ti-eye-check"></i></span><span class="nav-link-title">Reviews</span><span class="badge bg-azure text-azure-fg">2</span></a></li><li class="nav-item"><a class="nav-link" href="inbox.html"><span class="nav-link-icon"><i class="ti ti-message-question"></i></span><span class="nav-link-title">Inbox</span><span class="badge bg-red text-red-fg" data-needs-badge>5</span></a></li><li class="nav-item"><a class="nav-link" href="stats.html"><span class="nav-link-icon"><i class="ti ti-chart-bar"></i></span><span class="nav-link-title">Stats</span></a></li><li class="nav-item"><a class="nav-link" href="memory.html"><span class="nav-link-icon"><i class="ti ti-brain"></i></span><span class="nav-link-title">Memory</span></a></li><li class="nav-item"><a class="nav-link" href="doctor.html"><span class="nav-link-icon"><i class="ti ti-stethoscope"></i></span><span class="nav-link-title">Doctor</span></a></li><li class="nav-item"><a class="nav-link" href="log.html"><span class="nav-link-icon"><i class="ti ti-list-details"></i></span><span class="nav-link-title">Log</span></a></li><li class="nav-item"><a class="nav-link" href="commit.html"><span class="nav-link-icon"><i class="ti ti-git-pull-request"></i></span><span class="nav-link-title">Commit preview</span></a></li></ul>
+        <div class="mt-auto p-3 d-none d-lg-block">
+          <div class="card card-sm"><div class="card-body">
+            <div class="d-flex align-items-center gap-2"><span class="dot ok pulse"></span><strong class="small">Supervisor running</strong></div>
+            <div class="reason mt-1">heartbeat 2s ago · pid 41873 · up 3h12m</div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="page-wrapper">
+    <div class="proto-ribbon">Prototype · fake data · nothing here talks to a real team</div>
+    <header class="navbar navbar-expand-md d-print-none sticky-top" style="background:var(--tblr-bg-surface);border-bottom:1px solid var(--tblr-border-color)">
+      <div class="container-xl">
+        <div class="d-flex align-items-center gap-2 flex-wrap w-100">
+          <span class="chip chip-ok"><i class="ti ti-heartbeat"></i>Supervisor ok</span>
+          <a class="chip chip-user text-decoration-none" href="inbox.html"><i class="ti ti-hand-stop"></i><span id="needs-count">5</span> need you</a>
+          <div class="ms-auto d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#hold-modal" data-hold-open><i class="ti ti-player-pause me-1"></i>Hold team</button>
+            <button class="btn btn-sm btn-warning" data-hold-release hidden><i class="ti ti-player-play me-1"></i>Release hold</button>
+            <button class="btn btn-sm btn-icon btn-ghost-secondary" id="theme-toggle" type="button" aria-label="Switch theme"><i class="ti ti-moon"></i></button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div class="page-header d-print-none"><div class="container-xl"><div class="row g-2 align-items-center">
+      <div class="col"><div class="page-pretitle">Agent · engineer · claude/sonnet</div><h2 class="page-title">eng-2</h2></div>
+      <div class="col-auto ms-auto"><div class="btn-list"><button class="btn" data-write data-toast="eng-2 is resumed: wake-ups are delivered again." data-kind="ok" data-title="Resumed"><i class="ti ti-player-play me-1"></i>Resume</button>
+<button class="btn" data-write data-toast="eng-2 is paused: no wakes until you resume." data-kind="warn" data-title="Paused"><i class="ti ti-player-pause me-1"></i>Pause</button></div></div>
+    </div></div></div>
+    <div class="page-body"><div class="container-xl">
+      <div class="banner banner-info mb-3" role="status"><i class="ti ti-eye text-azure"></i><div><strong>Read-only mode.</strong> <span class="mono">slai serve --read-only</span> is on: you can look at everything, but every action is switched off and the server answers 403 to any write. Restart <span class="mono">slai serve</span> without the flag to act from here.</div></div>
+      
+      <div id="hold-banner" class="banner banner-hold mb-3" hidden role="status"><i class="ti ti-player-pause text-warning"></i><div><strong>Team on hold: <span id="hold-name">hold</span></strong> since 11:44 (just now). No wake-ups are being delivered, nothing is nudged or restarted; sessions stay up. <a href="#" data-hold-release-link>Use “Release hold” to resume.</a></div></div>
+      <div class="row row-cards">
+<div class="col-lg-8">
+ <div class="card mb-3"><div class="card-header"><div class="d-flex align-items-center gap-3"><span class="avatar avatar-md avatar-eng" aria-hidden="true">EN</span><div><h3 class="card-title mb-0">eng-2 <span class="chip chip-ok"><i class="ti ti-activity"></i>working</span></h3><div class="reason">hook 6s ago · Write(docs/serve-prototype/…)</div></div></div>
+  <div class="card-actions pane-bar"><span class="chip chip-ok"><i class="ti ti-broadcast"></i>updates when the pane changes</span><span>last change 6s ago</span></div></div>
+ <div class="card-body"><div class="pane" role="log" aria-label="Read-only copy of eng-2's terminal" tabindex="0"><span class="c5">✻</span> <span class="b">Welcome to Claude Code</span>  <span class="dim">· /help for help · cwd: .slai/worktrees/eng-2</span>
+
+<span class="c2">●</span> <span class="b">Read</span>(docs/serve-prototype/tools/data.py)
+  <span class="dim">└  Read 119 lines</span>
+
+<span class="c2">●</span> <span class="b">Write</span>(docs/serve-prototype/assets/app.js)
+  <span class="dim">└  Wrote 214 lines to</span> docs/serve-prototype/assets/app.js
+      <span class="c2">+ var board = $("#board");</span>
+      <span class="c2">+ var TERMINAL = { merged: 1, cancelled: 1, reverted: 1 };</span>
+
+<span class="c2">●</span> <span class="b">Bash</span>(node --check docs/serve-prototype/assets/app.js)
+  <span class="dim">└  (No output)</span>
+
+<span class="c2">●</span> The kanban drag rules now mirror <span class="c6">store.CanTransition</span>: only cancel,
+  unblock and in-column reorder are accepted; everything else is refused
+  with the reason. Next: the agents pages.
+
+<span class="c1">✗</span> a literal <span class="c3">&lt;script&gt;alert(1)&lt;/script&gt;</span> printed by the agent stays text,
+  and <span class="dim">\x1b]52;c;…</span> clipboard escapes are dropped by the renderer.
+
+<span class="c5">✽</span> <span class="c3">Moonwalking…</span> <span class="dim">(31s · ↓ 1.7k tokens)</span>
+<span class="dim">────────────────────────────────────────────────────────────────</span>
+<span class="inv"> &gt; </span>
+<span class="dim">────────────────────────────────────────────────────────────────</span>
+  <span class="dim">⏵⏵ accept edits on (shift+tab to cycle)</span></div>
+  <div class="reason mt-2"><i class="ti ti-eye"></i> Read-only and escaped: colour and bold only, the last 200 lines / 64 KB. The server pushes a new copy when the pane changes (no polling). Nothing typed here reaches the pane; use the boxes below, which go through the same safe-to-type check as the TUI.</div></div></div>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title">Talk to eng-2</h3></div><div class="card-body">
+  <form data-fake="Delivered to eng-2 when it is safe to type (same path as the TUI send box)." data-title="Message queued" class="sendbox">
+<label class="visually-hidden" for="msg-eng-2">Message eng-2</label>
+<input class="form-control" id="msg-eng-2" type="text" placeholder="Message for eng-2…" autocomplete="off">
+<button class="btn btn-primary" type="submit"><i class="ti ti-send me-1"></i>Send</button></form>
+  <hr>
+  <form class="sendbox" data-fake="Interrupted with Escape, then your correction was queued. Same as c in the TUI." data-title="Course correction sent">
+   <label class="visually-hidden" for="redir">Interrupt and redirect eng-2</label>
+   <input class="form-control" id="redir" type="text" placeholder="Interrupt the current turn and tell it…">
+   <button class="btn btn-warning" type="submit"><i class="ti ti-arrow-back-up me-1"></i>Interrupt + redirect</button></form>
+  <div class="mt-2 d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-sm btn-outline-danger" data-write data-toast="Refused: a permission dialog is open in eng-4’s pane (“Do you want to proceed?”). Nothing was typed. Answer it in the TUI first." data-kind="bad" data-title="Not safe to type"><i class="ti ti-flask me-1"></i>Demo: try on a pane with a dialog open</button>
+</div>
+ </div></div>
+</div>
+<div class="col-lg-4">
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title">Recent health events</h3><div class="card-actions"></div></div><div class="card-body  "><ul class="timeline"><li><span class="dot ok"></span><div class="small"><strong>hook</strong> healthy<div class="reason">hook event 6s ago (posttooluse) · 11:42:03</div></div></li><li><span class="dot info"></span><div class="small"><strong>restart</strong> restarted fresh<div class="reason">cause: context_full (92% of window) · 10:58:21</div></div></li><li><span class="dot warn"></span><div class="small"><strong>health</strong> hooks failing → ok<div class="reason">cause: hook events resumed after 4m (spinner ticks, not a stall) · 10:31:09</div></div></li><li><span class="dot idle"></span><div class="small"><strong>wake</strong> woken<div class="reason">2 new items, idle for 3m, safe to type · 09:12:44</div></div></li><li><span class="dot ok"></span><div class="small"><strong>start</strong> started<div class="reason">cause: slai up · 08:40:02</div></div></li></ul></div></div>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title">Lane denials</h3><div class="card-actions"></div></div><div class="card-body  "><div class="d-flex align-items-baseline gap-2 mb-2"><span class="kpi">2</span><span class="reason">lane denials in the last 24h</span></div>
+<ul class="list-unstyled small mb-0"><li class="mb-2"><span class="chip chip-bad"><i class="ti ti-ban"></i>denied</span> <span class="mono">Write</span> <span class="mono">internal/supervisor/loop.go</span><div class="reason">outside this agent’s lane (frontend). Coordinate with eng-1 first · 10:12</div></li>
+<li><span class="chip chip-bad"><i class="ti ti-ban"></i>denied</span> <span class="mono">Bash</span> <span class="mono">cat &gt; $D/file</span><div class="reason">redirect to an unresolved shell variable · 09:47</div></li></ul></div></div>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title">Message history</h3><div class="card-actions"></div></div><div class="card-body  "><ul class="timeline">
+<li><span class="dot info"></span><div class="small"><strong>orch → eng-2</strong> <span class="text-secondary">11:30</span><div>New task T-0087: slai serve Phase 1 prototype. Call get_task for details.</div></div></li>
+<li><span class="dot ok"></span><div class="small"><strong>eng-2 → orch</strong> <span class="text-secondary">11:12</span><div>T-0075 in review; waiting for the principal.</div></div></li>
+<li><span class="dot user"></span><div class="small"><strong>you → eng-2</strong> <span class="text-secondary">10:05</span><div>Course correction from user: make it look like a polished product, not a wireframe.</div></div></li></ul></div></div>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title">Harness and session</h3><div class="card-actions"></div></div><div class="card-body  "><dl class="row mb-0 small"><dt class="col-5">Harness</dt><dd class="col-7">claude 2.1.307</dd><dt class="col-5">Model</dt><dd class="col-7">sonnet</dd>
+<dt class="col-5">Session</dt><dd class="col-7 mono">slai_a76018_eng-2</dd><dt class="col-5">Worktree</dt><dd class="col-7 mono text-break">.slai/worktrees/eng-2</dd>
+<dt class="col-5">Branch</dt><dd class="col-7 mono text-break">slai/eng-2/T-0087</dd><dt class="col-5">Context</dt><dd class="col-7">63% of window</dd></dl>
+<hr><div class="small fw-semibold mb-1">Degraded features</div><ul class="small mb-0 ps-3"><li>none for this harness</li></ul>
+<div class="reason mt-2">opencode agents list e.g. “no rate-limit data”, “no hook for Notification”.</div></div></div>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title">TUI only in v1</h3><div class="card-actions"></div></div><div class="card-body  "><p class="small text-secondary">These need the supervisor and tmux, so in v1 they stay in the TUI where you see exactly what happens.</p><div class="d-grid gap-2"><span class="d-inline-flex align-items-center gap-2 flex-wrap"><button class="btn btn-outline-secondary" disabled aria-disabled="true" title="Not available in the web UI in v1"><i class="ti ti-refresh me-1"></i>Restart fresh</button><span class="cmd-hint"><i class="ti ti-terminal-2"></i><span>TUI: select eng-2, press <kbd>R</kbd> (asks first)</span></span></span><span class="d-inline-flex align-items-center gap-2 flex-wrap"><button class="btn btn-outline-secondary" disabled aria-disabled="true" title="Not available in the web UI in v1"><i class="ti ti-heart-plus me-1"></i>Revive</button><span class="cmd-hint"><i class="ti ti-terminal-2"></i><span>TUI: select a dead agent, press <kbd>v</kbd></span></span></span><span class="d-inline-flex align-items-center gap-2 flex-wrap"><button class="btn btn-outline-secondary" disabled aria-disabled="true" title="Not available in the web UI in v1"><i class="ti ti-arrows-exchange me-1"></i>Reassign task</button><span class="cmd-hint"><i class="ti ti-terminal-2"></i><span>orch reassigns through its tools</span></span></span></div></div></div>
+</div></div>
+    </div></div>
+    <footer class="footer footer-transparent d-print-none"><div class="container-xl"><div class="small text-secondary">slai serve · same privileges as the TUI · it never approves, merges or types keystrokes into a pane · <a href="signin.html">sign-in page</a> · <a href="index-readonly.html">read-only mode</a></div></div></footer>
+  </div>
+</div>
+<div class="modal modal-blur fade" id="hold-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h3 class="modal-title">Hold the team</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body"><p class="text-secondary">Nothing is woken, nudged or restarted while the team is on hold. Sessions stay up and work in progress is untouched. Same as <span class="mono">slai hold</span> and <kbd>H</kbd> in the TUI.</p>
+    <label class="form-label" for="hold-input">Name (optional)</label><input class="form-control" id="hold-input" type="text" placeholder="release-window"></div>
+  <div class="modal-footer"><button class="btn" data-bs-dismiss="modal">Cancel</button><button class="btn btn-warning" data-hold-confirm><i class="ti ti-player-pause me-1"></i>Hold team</button></div>
+</div></div></div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3 mt-5" id="toasts" aria-live="polite"></div>
+<script src="vendor/tabler/js/tabler.min.js"></script>
+<script src="vendor/sortable/Sortable.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+{
+  "env": {
+    "SLAI_AGENT_ID": "pm",
+    "SLAI_PROJECT": "<PROJ>"
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook notification --agent pm",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook pretooluse --agent pm",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook sessionstart --agent pm",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook stop --agent pm",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook userpromptsubmit --agent pm",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "mcp__slai__get_board",
+      "mcp__slai__get_task",
+      "mcp__slai__report",
+      "mcp__slai__send_message",
+      "mcp__slai__ask",
+      "mcp__slai__ask_user",
+      "mcp__slai__get_inbox",
+      "mcp__slai__pong",
+      "mcp__slai__reply",
+      "mcp__slai__remember",
+      "mcp__slai__recall",
+      "mcp__slai__get_memory",
+      "Edit(.slai/specs/**)"
+    ],
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "EnterWorktree",
+      "Bash(rm -rf:*)",
+      "Bash(rm -fr:*)",
+      "Bash(rm -r:*)"
+    ]
+  },
+  "statusLine": {
+    "command": "slai statusline --agent pm",
+    "type": "command"
+  }
+}

@@ -1,0 +1,40 @@
+  My main worry is that the lane guard depends on a plugin that Pi might not load, might fail open on, or might bypass. To be convinced, I'd want a test where Pi attempts an out-of-lane write and gets
+  blocked, every denied call logged, and a plugin crash that blocks the call instead of allowing it. I said this is based on the description only, not the plugin code.
+
+✻ Baked for 6s · done Wednesday 12:05 PM
+
+❯ [slai] You have 1 new items. Call get_inbox.
+
+  Called slai 2 times
+
+● I answered pm's request (inbox item 462) and the reply was delivered to pm.
+
+  I did not read the repo, README, TUI, or doctor output, because my role only lets me use the inbox, reply, and board tools. The five gaps I listed are inferred from the commit history and earlier
+  messages, and I told pm to check them against the current build. The one I said would stop me adopting slai is the lack of any visible spending cap.
+
+✻ Baked for 7s · done Wednesday 11:50 PM
+
+❯ [slai] You have 1 new items. Call get_inbox.
+
+  Called slai 2 times
+
+● I sent round 2 to orch (inbox item 471) and it was delivered. The reply stayed under the 350-word limit.
+
+  The main points:
+  - Claim to test: slai finishes multi-task features with fewer defects than one Claude Code session on the same specs. Evidence would be a hidden acceptance suite run both ways, with all five runs
+    reported.
+  - Silent failure modes: a reviewer from the same model family agreeing with the code it checks, the orchestrator marking done before acceptance criteria pass, PM spec drift, and tests that check the
+    implementation rather than the spec.
+  - Benchmark: a single Claude Code session with the same specs, budget, time cap, and hidden tests, plus a worktrees-and-terminals arm to isolate the orchestration's contribution.
+  - Recommend or reject: I'd recommend it if it catches a bug a single session missed and the trace shows which agent caught it. I'd reject it if the doctor check reads healthy while MCP errors sit
+    at 2.
+
+  I did not inspect the repo; I only used the messages and my role's tools, so these points rest on the description orch gave.
+
+✻ Worked for 9s · done Wednesday 11:58 PM
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ [slai] You have 1 new items. Call get_inbox.
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  $52.64 today
+  ⏸ manual mode on

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sign in · slai</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<script src="assets/theme.js"></script>
+<link rel="stylesheet" href="vendor/tabler/css/tabler.min.css">
+<link rel="stylesheet" href="vendor/icons/tabler-icons.min.css">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body class="d-flex flex-column">
+<div class="proto-ribbon">Prototype · fake data · this is the page a non-loopback visitor sees without a valid session</div>
+<div class="page page-center"><div class="container container-tight py-4">
+  <div class="text-center mb-4"><a href="index.html" class="d-inline-flex align-items-center text-reset text-decoration-none"><span class="brand-mark">s</span><span class="brand-name fs-2">slai</span></a></div>
+  <div class="card card-md"><div class="card-body">
+    <h2 class="h2 text-center mb-1">Enter the access token</h2>
+    <p class="text-secondary text-center mb-4">This <span class="mono">slai serve</span> listens on <span class="mono">0.0.0.0:8080</span>, so it needs the token it printed when it started (<span class="mono">slai status</span> shows it too).</p>
+    <div class="alert alert-danger" id="si-error" role="alert" hidden><i class="ti ti-alert-octagon me-1"></i>That token was not accepted. Copy it again from the terminal; it is 64 characters.</div>
+    <form id="signin-form" novalidate>
+      <div class="mb-3"><label class="form-label" for="si-token">Access token</label>
+        <div class="input-group input-group-flat"><input class="form-control" id="si-token" type="password" autocomplete="off" placeholder="paste the token from your terminal"><span class="input-group-text"><button class="btn btn-sm btn-icon btn-ghost-secondary" type="button" id="si-eye" aria-label="Show token"><i class="ti ti-eye"></i></button></span></div></div>
+      <button class="btn btn-primary w-100" type="submit"><i class="ti ti-key me-1"></i>Sign in</button>
+    </form>
+  </div></div>
+  <div class="banner banner-hold mt-3"><i class="ti ti-alert-triangle text-warning"></i><div class="small"><strong>Anyone with this token can see every agent’s pane</strong> (their terminal output, including file contents and anything typed). Treat it like a password. The connection is plain HTTP: use it only on a network you trust, or behind a reverse proxy with TLS.</div></div>
+  <div class="text-center text-secondary small mt-3">On the same machine (<span class="mono">127.0.0.1</span>) there is no token page: the first visit simply starts a session. <a href="index.html">See the dashboard</a> · <a href="signin.html#demo-error">wrong-token state</a></div>
+</div></div>
+<div class="toast-container position-fixed top-0 end-0 p-3 mt-5" id="toasts" aria-live="polite"></div>
+<script src="vendor/tabler/js/tabler.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

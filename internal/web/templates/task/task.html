@@ -1,0 +1,84 @@
+{{define "content"}}
+{{with .Data}}
+<div id="task-msg" class="mb-3" role="status" aria-live="polite"></div>
+<div class="row row-cards">
+  <div class="col-lg-8">
+    <div class="card mb-3"><div class="card-header"><h3 class="card-title">Description</h3></div>
+      <div class="card-body slai-prose">{{if .Task.Description}}{{.Task.Description}}{{else}}<span class="text-secondary">No description.</span>{{end}}</div></div>
+
+    <div class="card mb-3" id="task-ac"><div class="card-header"><h3 class="card-title">Acceptance criteria</h3></div>
+      <div class="card-body pb-0"><p class="slai-ac-summary mb-2" id="ac-summary">{{.Summary}}</p></div>
+      {{if .ACs}}<div class="table-responsive"><table class="table table-vcenter card-table slai-ac">
+        <thead><tr><th scope="col">Criterion</th><th scope="col">Engineer’s claim</th><th scope="col">Reviewer’s verdict</th></tr></thead>
+        <tbody>{{range .ACs}}<tr>
+          <td class="fw-semibold">{{.AC}}</td>
+          <td><span class="slai-chip {{if .Claimed}}slai-chip-ok{{else}}slai-chip-bad{{end}}">{{if .Claimed}}met{{else}}not met{{end}}</span>{{if .ClaimNote}}<div class="text-secondary small">{{.ClaimNote}}</div>{{end}}</td>
+          <td><span class="slai-chip {{if eq .Verdict "pass"}}slai-chip-ok{{else if eq .Verdict "fail"}}slai-chip-bad{{else}}slai-chip-waiting{{end}}">{{.Verdict}}</span>{{if .VerdictNote}}<div class="text-secondary small">{{.VerdictNote}}{{if .By}} · {{.By}}{{end}}</div>{{else if eq .Verdict "unanswered"}}<div class="text-secondary small">the reviewer has not answered this claim yet</div>{{end}}</td>
+        </tr>{{end}}</tbody></table></div>{{end}}</div>
+
+    <div class="card mb-3" id="task-diff"><div class="card-header"><h3 class="card-title">Diff</h3>{{with .Diff}}<div class="card-actions text-secondary small">against {{.Against}}{{if .Truncated}} · truncated{{end}}</div>{{end}}</div>
+      {{if .Diff}}<div class="card-body p-0">
+        {{range .Diff.Files}}<details class="slai-diff-file"{{if .Open}} open{{end}}>
+          <summary><span class="slai-diff-name">{{.Name}}</span><span class="slai-diff-stat"><span class="slai-add">+{{.Add}}</span> <span class="slai-del">−{{.Del}}</span></span></summary>
+          <pre class="slai-diff">{{range .Lines}}<span class="slai-ln slai-ln-{{.Kind}}">{{.Text}}
+</span>{{end}}</pre>
+        </details>{{end}}
+        {{if gt (len .Diff.Files) 30}}<p class="p-3 mb-0 text-secondary small">{{len .Diff.Files}} files: only the first starts open.</p>{{end}}
+      </div>{{else}}<div class="card-body text-secondary">{{.DiffNote}}</div>{{end}}</div>
+
+    <div class="card mb-3" id="task-spec"><div class="card-header"><h3 class="card-title">Spec</h3>{{if .Spec.Path}}<div class="card-actions text-secondary small"><code>{{.Spec.Path}}</code></div>{{end}}</div>
+      <div class="card-body slai-prose">
+        {{if .Spec.Message}}<p class="text-secondary mb-0">{{.Spec.Message}}</p>{{end}}
+        {{range .Spec.Blocks}}{{if eq .Kind "h1"}}<h4>{{template "spans" .Spans}}</h4>
+          {{else if eq .Kind "h2"}}<h5>{{template "spans" .Spans}}</h5>
+          {{else if eq .Kind "h3"}}<h6>{{template "spans" .Spans}}</h6>
+          {{else if eq .Kind "p"}}<p>{{template "spans" .Spans}}</p>
+          {{else if eq .Kind "ul"}}<ul>{{range .Items}}<li>{{template "spans" .}}</li>{{end}}</ul>
+          {{else if eq .Kind "ol"}}<ol>{{range .Items}}<li>{{template "spans" .}}</li>{{end}}</ol>
+          {{else if eq .Kind "code"}}<pre class="slai-code">{{.Code}}</pre>{{end}}{{end}}
+      </div></div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-3"><div class="card-header"><h3 class="card-title">Task</h3></div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5">Status</dt><dd class="col-7"><span class="slai-chip slai-chip-status">{{.StatusLabel}}</span></dd>
+          <dt class="col-5">Assignee</dt><dd class="col-7">{{if .Task.Assignee}}<a href="/agents/{{.Task.Assignee}}">{{.Task.Assignee}}</a>{{if .AssigneeText}} <span class="text-secondary">({{.AssigneeText}})</span>{{end}}{{else}}—{{end}}</dd>
+          <dt class="col-5">Priority</dt><dd class="col-7"><span class="slai-prio">{{.Prio}}</span></dd>
+          <dt class="col-5">Review</dt><dd class="col-7">{{if .Round}}round {{.Round}}{{else}}not reviewed yet{{end}}</dd>
+          <dt class="col-5">Branch</dt><dd class="col-7"><code class="text-break">{{if .Task.Branch}}{{.Task.Branch}}{{else}}—{{end}}</code></dd>
+          <dt class="col-5">Spec</dt><dd class="col-7"><code class="text-break">{{if .Task.SpecPath}}{{.Task.SpecPath}}{{else}}—{{end}}</code></dd>
+          <dt class="col-5">Depends on</dt><dd class="col-7">{{range .DependsOn}}<a href="/tasks/{{.ID}}">{{.ID}}</a> <span class="text-secondary">{{.Status}}</span><br>{{else}}—{{end}}</dd>
+          <dt class="col-5">Waited on by</dt><dd class="col-7">{{range .WaitedOnBy}}<a href="/tasks/{{.}}">{{.}}</a> {{else}}—{{end}}</dd>
+        </dl>
+        {{if .Waiting}}<p class="mt-3 mb-0"><span class="slai-chip slai-chip-waiting">waiting on {{range $i, $w := .Waiting}}{{if $i}}, {{end}}{{$w}}{{end}}</span> <span class="text-secondary small">It starts by itself when they merge.</span></p>{{end}}
+      </div>
+      {{if not .ReadOnly}}{{if or .CanCancel .CanUnblock}}<div class="card-footer d-flex gap-2 flex-wrap">
+        {{if .CanUnblock}}<form hx-post="/tasks/{{.Task.ID}}/unblock" hx-target="#task-msg" hx-swap="innerHTML"><input type="hidden" name="ret" value="task"><button class="btn btn-sm btn-outline-success" type="submit">Unblock</button></form>{{end}}
+        {{if .CanCancel}}<form hx-post="/tasks/{{.Task.ID}}/cancel" hx-target="#task-msg" hx-swap="innerHTML" hx-confirm="Cancel {{.Task.ID}}? Its engineer is told."><input type="hidden" name="ret" value="task"><button class="btn btn-sm btn-outline-danger" type="submit">Cancel task</button></form>{{end}}
+      </div>{{end}}{{end}}
+    </div>
+
+    {{if .RedirectShown}}<div class="card mb-3" id="task-redirect"><div class="card-header"><h3 class="card-title">Redirect {{.Task.Assignee}}</h3></div>
+      <div class="card-body">
+        {{if .RedirectOK}}<form hx-post="/tasks/{{.Task.ID}}/redirect" hx-target="#redirect-msg" hx-swap="innerHTML">
+          <label class="form-label" for="rd-text">Interrupt its current turn and tell it</label>
+          <textarea class="form-control" id="rd-text" name="text" rows="3" required></textarea>
+          <div class="form-hint">Same path as <kbd>c</kbd> in the TUI: the supervisor presses Escape at a safe moment and refuses if a permission dialog is open.</div>
+          <div id="redirect-msg" class="mt-2" role="status"></div>
+          <div class="mt-2 text-end"><button class="btn btn-warning" type="submit">Interrupt and redirect</button></div>
+        </form>{{else}}<p class="text-secondary mb-0">Can’t redirect now: {{.RedirectWhy}}.</p>{{end}}
+      </div></div>{{end}}
+
+    <div class="card mb-3" id="task-timeline"><div class="card-header"><h3 class="card-title">Timeline</h3></div>
+      <div class="card-body">{{if .Timeline}}<ol class="slai-timeline">{{range .Timeline}}<li><span class="slai-tl-kind">{{.Kind}}</span> <span class="text-secondary">{{.Agent}} · {{.At}}</span>{{if .Detail}}<div class="small">{{.Detail}}</div>{{end}}{{if .Cause}}<div class="small text-secondary">cause: {{.Cause}}</div>{{end}}</li>{{end}}</ol>{{else}}<p class="text-secondary mb-0">No events for this task yet.</p>{{end}}</div></div>
+
+    <div class="card mb-3" id="task-messages"><div class="card-header"><h3 class="card-title">Messages</h3></div>
+      <div class="card-body">{{if .Messages}}<ul class="list-unstyled mb-0">{{range .Messages}}<li class="mb-2"><strong>{{.From}} → {{.To}}</strong> <span class="text-secondary small">{{.Kind}} · {{.At}}</span><div class="small">{{.Body}}</div></li>{{end}}</ul>{{else}}<p class="text-secondary mb-0">No messages about this task.</p>{{end}}</div></div>
+  </div>
+</div>
+{{end}}
+{{end}}
+
+{{define "spans"}}{{range .}}{{if .Code}}<code>{{.Text}}</code>{{else if .Bold}}<strong>{{.Text}}</strong>{{else}}{{.Text}}{{end}}{{end}}{{end}}

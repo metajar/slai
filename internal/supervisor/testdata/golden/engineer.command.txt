@@ -1,0 +1,1 @@
+claude --model 'sonnet' --append-system-prompt "$(cat '<PROJ>/.slai/run/eng-1/system.md')" --settings '<PROJ>/.slai/run/eng-1/settings.json' --permission-mode 'auto' --mcp-config '<PROJ>/.slai/run/eng-1/mcp.json'

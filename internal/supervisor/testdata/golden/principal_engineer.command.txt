@@ -1,0 +1,1 @@
+claude --model 'claude-fable-5-1' --append-system-prompt "$(cat '<PROJ>/.slai/run/principal/system.md')" --settings '<PROJ>/.slai/run/principal/settings.json' --permission-mode 'auto' --mcp-config '<PROJ>/.slai/run/principal/mcp.json'

@@ -1,0 +1,60 @@
+{{define "content"}}
+<div class="banner banner-info mb-3" role="status"><div class="flex-fill"><strong>Approving and merging happen through the principal.</strong>
+  This page has no approve or merge button on purpose: the web UI never has more power than the TUI. The principal uses <span class="mono">approve</span> and <span class="mono">request_changes</span>.
+  See also the <a href="/commit-preview">commit and revert preview</a>.</div></div>
+<div class="row row-cards">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="card-title">In-review queue · oldest first</h3></div>
+      {{if .Data.Queue}}<div class="table-responsive"><table class="table table-vcenter table-sl card-table">
+        <thead><tr><th scope="col">Task</th><th scope="col">Title</th><th scope="col">Engineer</th><th scope="col">Reviewer</th><th scope="col">Waiting</th><th scope="col">Round</th></tr></thead>
+        <tbody>{{range .Data.Queue}}<tr>
+          <td><a class="mono fw-semibold" href="/reviews?task={{.ID}}"{{if .Selected}} aria-current="true"{{end}}>{{.ID}}</a></td>
+          <td>{{.Title}}{{range .Warnings}} <span class="chip chip-warn">{{.}}</span>{{end}}</td>
+          <td>{{.Engineer}}</td><td>{{if .Reviewer}}{{.Reviewer}}{{else}}<span class="na" title="no principal_engineer in team.yaml">n/a</span>{{end}}</td>
+          <td class="text-nowrap">{{.Waiting}}</td><td>r{{.Round}}</td>
+        </tr>{{end}}</tbody>
+      </table></div>{{else}}<div class="card-body text-secondary">Nothing is waiting for review. When an engineer calls <code>request_review</code>, the task appears here.</div>{{end}}
+    </div>
+    {{with .Data.Task}}<div class="card mb-3">
+      <div class="card-header"><h3 class="card-title">{{.ID}} · diff and claims</h3></div>
+      <div class="card-body p-0">
+        {{if $.Data.Claims}}<div class="table-responsive"><table class="table table-vcenter card-table">
+          <caption class="px-3 pt-2 text-secondary">Claims of review request {{$.Data.ReviewNo}}</caption>
+          <thead><tr><th scope="col">Criterion</th><th scope="col">Engineer claims</th><th scope="col">Reviewer</th></tr></thead>
+          <tbody>{{range $.Data.Claims}}<tr>
+            <td>{{.AC}}</td>
+            <td>{{if .Met}}met{{else}}not met{{end}}{{if .ClaimNote}} <span class="reason">{{.ClaimNote}}</span>{{end}}</td>
+            <td><span class="chip {{.Chip}}">{{.State}}</span>{{if .VerdictNote}} <span class="reason">{{.VerdictNote}}</span>{{end}}</td>
+          </tr>{{end}}</tbody>
+        </table></div>{{else}}<p class="p-3 mb-0 text-secondary">No acceptance-criteria claims were made for this task.</p>{{end}}
+        {{if $.Data.DiffNote}}<p class="p-3 mb-0 text-secondary">{{$.Data.DiffNote}}</p>{{end}}
+        {{range $.Data.Diff}}<details class="diff-file"{{if .Open}} open{{end}}>
+          <summary>{{.Name}}<span class="ms-auto text-secondary">+{{.Added}} −{{.Del}}</span></summary>
+          <div class="diff">{{range .Lines}}<span class="ln {{.Class}}">{{.Text}}</span>{{end}}</div>
+        </details>{{end}}
+        {{if $.Data.Truncated}}<p class="p-3 mb-0 text-secondary">The diff was truncated for display; the full change is on the branch.</p>{{end}}
+      </div>
+    </div>{{end}}
+  </div>
+  <div class="col-lg-5">
+    <div class="card mb-3"><div class="card-header"><h3 class="card-title">Merge refusals</h3></div>
+      {{if .Data.Refusals}}<div class="card-body">{{range .Data.Refusals}}
+        <div class="mb-3"><strong>{{.Task}}</strong> <span class="text-secondary small">· merge_refused · {{.When}}</span>
+          <div>{{.Cause}}{{if .Command}} (<code>{{.Command}}</code>{{if .Exit}}, exit {{.Exit}}{{end}}){{end}}</div>
+          {{if .Tail}}<pre class="plan mb-0">{{.Tail}}</pre>{{end}}</div>{{end}}
+      </div>{{else}}<div class="card-body text-secondary">No merge has been refused.</div>{{end}}
+    </div>
+    {{if .Data.Task}}<div class="card mb-3"><div class="card-header"><h3 class="card-title">Verdict history · {{.Data.Task.ID}}</h3></div>
+      {{if .Data.History}}<div class="card-body"><ul class="timeline">{{range .Data.History}}
+        <li><span class="dot {{.Dot}}"></span><div class="small"><strong>{{.Title}}</strong>{{if .Detail}}<div class="reason">{{.Detail}}</div>{{end}}</div></li>{{end}}
+      </ul></div>{{else}}<div class="card-body text-secondary">No verdicts yet.</div>{{end}}
+    </div>{{end}}
+    <div class="card mb-3"><div class="card-header"><h3 class="card-title">Warnings</h3></div>
+      {{if .Data.Warnings}}<div class="card-body"><ul class="mb-0">{{range .Data.Warnings}}<li>{{.}}</li>{{end}}</ul>
+        <p class="reason mt-2 mb-0">A spec addendum is told to the engineer at the next wake; a rewritten spec needs the principal's explicit override to approve.</p></div>
+      {{else}}<div class="card-body text-secondary">No spec warnings on queued tasks.</div>{{end}}
+    </div>
+  </div>
+</div>
+{{end}}

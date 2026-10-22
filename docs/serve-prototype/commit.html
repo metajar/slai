@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Commit preview · slai</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<script src="assets/theme.js"></script>
+<link rel="stylesheet" href="vendor/tabler/css/tabler.min.css">
+<link rel="stylesheet" href="vendor/icons/tabler-icons.min.css">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="page">
+  <aside class="navbar navbar-vertical navbar-expand-lg" aria-label="Main navigation">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+      <h1 class="navbar-brand navbar-brand-autodark mb-0"><a href="index.html" class="d-flex align-items-center text-reset text-decoration-none"><span class="brand-mark">s</span><span><span class="brand-name">slai</span><span class="brand-sub">demo-project</span></span></a></h1>
+      <div class="d-lg-none"><a class="btn btn-sm btn-ghost-secondary" href="inbox.html" aria-label="Inbox"><i class="ti ti-message-question"></i><span class="badge bg-red text-red-fg ms-1" data-needs-badge>5</span></a></div>
+      <div class="collapse navbar-collapse" id="sidebar-menu">
+        <ul class="navbar-nav pt-lg-3"><li class="nav-item"><a class="nav-link" href="index.html"><span class="nav-link-icon"><i class="ti ti-layout-dashboard"></i></span><span class="nav-link-title">Dashboard</span></a></li><li class="nav-item"><a class="nav-link" href="agents.html"><span class="nav-link-icon"><i class="ti ti-robot"></i></span><span class="nav-link-title">Agents</span></a></li><li class="nav-item"><a class="nav-link" href="board.html"><span class="nav-link-icon"><i class="ti ti-layout-kanban"></i></span><span class="nav-link-title">Board</span></a></li><li class="nav-item"><a class="nav-link" href="reviews.html"><span class="nav-link-icon"><i class="ti ti-eye-check"></i></span><span class="nav-link-title">Reviews</span><span class="badge bg-azure text-azure-fg">2</span></a></li><li class="nav-item"><a class="nav-link" href="inbox.html"><span class="nav-link-icon"><i class="ti ti-message-question"></i></span><span class="nav-link-title">Inbox</span><span class="badge bg-red text-red-fg" data-needs-badge>5</span></a></li><li class="nav-item"><a class="nav-link" href="stats.html"><span class="nav-link-icon"><i class="ti ti-chart-bar"></i></span><span class="nav-link-title">Stats</span></a></li><li class="nav-item"><a class="nav-link" href="memory.html"><span class="nav-link-icon"><i class="ti ti-brain"></i></span><span class="nav-link-title">Memory</span></a></li><li class="nav-item"><a class="nav-link" href="doctor.html"><span class="nav-link-icon"><i class="ti ti-stethoscope"></i></span><span class="nav-link-title">Doctor</span></a></li><li class="nav-item"><a class="nav-link" href="log.html"><span class="nav-link-icon"><i class="ti ti-list-details"></i></span><span class="nav-link-title">Log</span></a></li><li class="nav-item"><a class="nav-link active" aria-current="page" href="commit.html"><span class="nav-link-icon"><i class="ti ti-git-pull-request"></i></span><span class="nav-link-title">Commit preview</span></a></li></ul>
+        <div class="mt-auto p-3 d-none d-lg-block">
+          <div class="card card-sm"><div class="card-body">
+            <div class="d-flex align-items-center gap-2"><span class="dot ok pulse"></span><strong class="small">Supervisor running</strong></div>
+            <div class="reason mt-1">heartbeat 2s ago · pid 41873 · up 3h12m</div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="page-wrapper">
+    <div class="proto-ribbon">Prototype · fake data · nothing here talks to a real team</div>
+    <header class="navbar navbar-expand-md d-print-none sticky-top" style="background:var(--tblr-bg-surface);border-bottom:1px solid var(--tblr-border-color)">
+      <div class="container-xl">
+        <div class="d-flex align-items-center gap-2 flex-wrap w-100">
+          <span class="chip chip-ok"><i class="ti ti-heartbeat"></i>Supervisor ok</span>
+          <a class="chip chip-user text-decoration-none" href="inbox.html"><i class="ti ti-hand-stop"></i><span id="needs-count">5</span> need you</a>
+          <div class="ms-auto d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#hold-modal" data-hold-open><i class="ti ti-player-pause me-1"></i>Hold team</button>
+            <button class="btn btn-sm btn-warning" data-hold-release hidden><i class="ti ti-player-play me-1"></i>Release hold</button>
+            <button class="btn btn-sm btn-icon btn-ghost-secondary" id="theme-toggle" type="button" aria-label="Switch theme"><i class="ti ti-moon"></i></button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div class="page-header d-print-none"><div class="container-xl"><div class="row g-2 align-items-center">
+      <div class="col"><div class="page-pretitle">Integration, read-only</div><h2 class="page-title">Commit preview</h2></div>
+      <div class="col-auto ms-auto"><div class="btn-list"></div></div>
+    </div></div></div>
+    <div class="page-body"><div class="container-xl">
+      
+      <div id="hold-banner" class="banner banner-hold mb-3" hidden role="status"><i class="ti ti-player-pause text-warning"></i><div><strong>Team on hold: <span id="hold-name">hold</span></strong> since 11:44 (just now). No wake-ups are being delivered, nothing is nudged or restarted; sessions stay up. <a href="#" data-hold-release-link>Use “Release hold” to resume.</a></div></div>
+      <div class="banner banner-info mb-3" role="status"><i class="ti ti-lock text-azure"></i><div class="flex-fill"><strong>Read-only plans.</strong> Applying <span class='mono'>slai commit</span> or <span class='mono'>slai revert</span> stays on the command line, where you can see exactly what it does.</div></div>
+<div class="row row-cards"><div class="col-lg-7"><div class="card mb-3"><div class="card-header"><h3 class="card-title">What slai commit would do</h3><div class="card-actions"><button class="btn btn-sm" data-toast="Plan refreshed from the current branch state." data-kind="info" data-title="Refreshed"><i class="ti ti-refresh me-1"></i>Refresh</button></div></div><div class="card-body  "><pre class="plan mb-0"><span class="c2">$ slai commit --dry-run</span>
+integration  slai/integration (22e7e63)
+onto         main (81029a2)
+
+  would apply 14 commits, oldest first, as one fast-forward-free merge:
+    191fc37  [T-0071] slai status --stats: per-agent and per-harness/model quality numbers
+    d8a91cb  Merge [T-0072] TUI send box: Tab-completes task ids, branch names and agent ids
+    c767b84  Merge [T-0071] Per-agent quality stats
+    …        (11 more)
+
+  conflicts with main: none
+  your working tree: clean
+  main is not touched until you run `slai commit`, which stays a CLI-only action.</pre></div></div></div>
+<div class="col-lg-5"><div class="card mb-3"><div class="card-header"><h3 class="card-title">What slai revert would do</h3><div class="card-actions"></div></div><div class="card-body  "><label class="form-label" for="rv">Merged task</label><select class="form-select mb-3" id="rv"><option>T-0071 · Per-agent quality stats: slai status --stats</option><option>T-0072 · TUI send box: Tab-completes task ids, branch n</option><option>T-0073 · Per-task spend cap with a warning at 80%</option><option>T-0074 · Spend vs caps in slai status and the TUI heade</option><option>T-0076 · False hooks_failing alert: spinner timer ticks</option><option>T-0078 · Spec: slai serve, a web UI for managing the te</option><option>T-0086 · Worktree branch switch: slai moved a worktree </option></select><pre class="plan mb-0"><span class="c2">$ slai revert T-0076 --dry-run</span>
+would run, on slai/integration:
+  git revert -m 1 7c4be21     # Merge [T-0076] False hooks_failing alert
+files touched: internal/supervisor/health.go, internal/hooks/fallback.go
+tasks that depend on T-0076: none
+the task becomes "reverted"; its engineer is told at the next wake.</pre></div></div></div></div>
+    </div></div>
+    <footer class="footer footer-transparent d-print-none"><div class="container-xl"><div class="small text-secondary">slai serve · same privileges as the TUI · it never approves, merges or types keystrokes into a pane · <a href="signin.html">sign-in page</a> · <a href="index-readonly.html">read-only mode</a></div></div></footer>
+  </div>
+</div>
+<div class="modal modal-blur fade" id="hold-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h3 class="modal-title">Hold the team</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body"><p class="text-secondary">Nothing is woken, nudged or restarted while the team is on hold. Sessions stay up and work in progress is untouched. Same as <span class="mono">slai hold</span> and <kbd>H</kbd> in the TUI.</p>
+    <label class="form-label" for="hold-input">Name (optional)</label><input class="form-control" id="hold-input" type="text" placeholder="release-window"></div>
+  <div class="modal-footer"><button class="btn" data-bs-dismiss="modal">Cancel</button><button class="btn btn-warning" data-hold-confirm><i class="ti ti-player-pause me-1"></i>Hold team</button></div>
+</div></div></div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3 mt-5" id="toasts" aria-live="polite"></div>
+<script src="vendor/tabler/js/tabler.min.js"></script>
+<script src="vendor/sortable/Sortable.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+
+  ┃                                                                                                                                                             New session - 2026-10-21T12:17:36.
+  ┃  Run the shell command: echo spike-ok                                                                                                                       303Z
+  ┃
+                                                                                                                                                                Context
+     ▣  Build · GLM-5.3                                                                                                                                         0 tokens
+                                                                                                                                                                0% used
+                                                                                                                                                                $0.00 spent
+
+                                                                                                                                                                MCP
+                                                                                                                                                                • slai MCP error -32000: Connection
+                                                                                                                                                                  closed
+
+                                                                                                                                                                LSP
+                                                                                                                                                                LSPs are disabled
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  ┃
+  ┃
+  ┃                                                                                                                                                             ~/coding/slai/.slai/worktrees/eng-2/.
+  ┃  Build · GLM-5.3 Z.AI                                                                                                                                       spike/proj:main
+  ╹▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+   ⬝⬝⬝⬝⬝⬝⬝⬝ Insufficient balance or no resource package. Please recharge. [retrying in 15s attempt #4]                                         esc interrupt    • OpenCode 1.18.16
+

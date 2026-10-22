@@ -1,0 +1,105 @@
+{{define "scripts"}}<script src="/static/sortable.min.js" defer></script>{{end}}
+
+{{define "content"}}
+<div class="slai-board-bar card mb-3">
+  <div class="card-body">
+    <form class="row g-2 align-items-end" method="get" action="/board" role="search" aria-label="Filter the board">
+      <div class="col-12 col-md-4"><label class="form-label" for="f-q">Search</label>
+        <input class="form-control" id="f-q" type="search" name="q" value="{{.Data.Filter.Text}}" placeholder="title, id, branch…"></div>
+      <div class="col-6 col-md-3"><label class="form-label" for="f-a">Assignee</label>
+        <select class="form-select" id="f-a" name="assignee"><option value="">Everyone</option>
+          {{range .Data.Assignees}}<option value="{{.}}"{{if eq . $.Data.Filter.Assignee}} selected{{end}}>{{.}}</option>{{end}}</select></div>
+      <div class="col-6 col-md-2"><label class="form-check mt-4"><input class="form-check-input" type="checkbox" name="needs" value="1"{{if .Data.Filter.NeedsMe}} checked{{end}}><span class="form-check-label">Needs me</span></label></div>
+      <div class="col-12 col-md-3 d-flex gap-2 justify-content-md-end">
+        <button class="btn btn-primary" type="submit">Filter</button>
+        <a class="btn" href="/board">Clear</a>
+      </div>
+    </form>
+    <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
+      <a class="btn btn-sm{{if .Data.Filter.NeedsMe}} btn-primary{{else}} btn-outline-primary{{end}}" id="needs-toggle" href="{{.Data.Filter.ToggleHref}}"{{if .Data.Filter.NeedsMe}} aria-pressed="true"{{else}} aria-pressed="false"{{end}}>Needs me{{if .Data.Filter.NeedsMe}}: on{{end}}</a>
+      <span class="text-secondary small">Showing {{.Data.Shown}} of {{.Data.Total}} tasks. The filter is in the address, so you can bookmark this view.</span>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3" id="board-legend">
+  <div class="card-body">
+    <h3 class="card-title">How to read the board</h3>
+    <dl class="row mb-0 slai-legend">
+      {{range .Data.Legend}}<dt class="col-sm-3"><span class="slai-chip slai-chip-{{.Class}}">{{.Chip}}</span></dt><dd class="col-sm-9">{{.Text}}</dd>{{end}}
+    </dl>
+    <p class="text-secondary small mt-2 mb-0">Cards move on their own as the team works. From here you can <strong>reorder</strong> (priority), <strong>cancel</strong>, <strong>unblock</strong> and <strong>create</strong> tasks. Only the principal’s approve moves a task to merged.</p>
+  </div>
+</div>
+
+{{if not .ReadOnly}}
+<details class="card mb-3 slai-create" id="create-task">
+  <summary class="card-header"><span class="card-title">New task</span></summary>
+  <form class="card-body" hx-post="/tasks" hx-target="#board-msg" hx-swap="innerHTML">
+    <input type="hidden" name="view" value="{{.Data.View}}">
+    <div class="row g-3">
+      <div class="col-12"><label class="form-label" for="nt-title">Title</label><input class="form-control" id="nt-title" name="title" required maxlength="200"></div>
+      <div class="col-12"><label class="form-label" for="nt-desc">Description</label><textarea class="form-control" id="nt-desc" name="description" rows="3"></textarea>
+        <div class="form-hint">What to build, how to check it, which acceptance criteria.</div></div>
+      <div class="col-md-4"><label class="form-label" for="nt-asg">Assignee</label>
+        <select class="form-select" id="nt-asg" name="assignee" required>{{range .Data.Assignees}}<option>{{.}}</option>{{end}}</select></div>
+      <div class="col-md-4"><label class="form-label" for="nt-dep">Depends on</label><input class="form-control" id="nt-dep" name="depends_on" placeholder="T-0083, T-0084">
+        <div class="form-hint">It waits until these have merged.</div></div>
+      <div class="col-md-4"><label class="form-label" for="nt-spec">Spec path</label><input class="form-control" id="nt-spec" name="spec_path" placeholder=".slai/specs/name.md"></div>
+      <div class="col-12"><label class="form-label" for="nt-files">Files</label><input class="form-control" id="nt-files" name="files" placeholder="internal/tui/, cmd/"></div>
+    </div>
+    <div class="mt-3 text-end"><button class="btn btn-primary" type="submit">Create task</button></div>
+  </form>
+</details>
+{{end}}
+
+<div id="board-msg" class="mb-3" role="status" aria-live="polite"></div>
+
+<div id="board-cols" class="slai-board" data-view="{{.Data.View}}" hx-get="/f/board?{{.Data.View}}" hx-trigger="{{.Data.Refresh}}" hx-swap="innerHTML">
+{{template "board-columns" .Data.BoardView}}
+</div>
+{{end}}
+
+{{define "board-columns"}}{{$ro := .ReadOnly}}{{$view := .View}}
+{{range .Cols}}<section class="slai-col" data-col="{{.Key}}" aria-label="{{.Label}}">
+  <header class="slai-col-head"><h3>{{.Label}}</h3><span class="badge bg-secondary-lt">{{len .Cards}}</span></header>
+  <p class="slai-col-hint">{{.Hint}}</p>
+  <div class="slai-col-body" data-col="{{.Key}}">
+  {{range .Cards}}<article class="slai-card{{if .PrioHigh}} slai-card-hi{{end}}{{if eq .Col "cancelled"}} slai-card-cancelled{{end}}" data-task="{{.ID}}" data-col="{{.Col}}">
+    <div class="slai-card-top"><a class="slai-tid" href="/tasks/{{.ID}}">{{.ID}}</a>
+      <span class="slai-prio{{if .PrioHigh}} slai-prio-hi{{end}}" title="priority {{.Priority}}: higher runs first">{{.Prio}}</span>
+      {{if .Round}}<span class="slai-round" title="review round {{.Round}}">r{{.Round}}</span>{{end}}</div>
+    <a class="slai-card-title" href="/tasks/{{.ID}}">{{.Title}}</a>
+    <div class="slai-card-meta">
+      {{if .Assignee}}<span class="slai-who"><span class="slai-dot slai-dot-{{.DotClass}}" aria-hidden="true"></span>{{.Assignee}} <span class="visually-hidden">({{.DotText}})</span></span>{{end}}
+      {{if .Waiting}}<span class="slai-chip slai-chip-waiting" title="waiting on other tasks to merge: nobody needs to act">waiting on {{range $i, $w := .Waiting}}{{if $i}}, {{end}}{{$w}}{{end}}</span>{{end}}
+      {{if .StuckProblem}}<span class="slai-chip slai-chip-blocked" title="blocked by a problem: see the Inbox">blocked</span>{{end}}
+      {{if .ChangesRequested}}<span class="slai-chip slai-chip-info">changes requested</span>{{end}}
+      {{if .DoneNonCode}}<span class="slai-chip slai-chip-info">done (no merge)</span>{{end}}
+      {{if .NeedsMe}}<span class="slai-chip slai-chip-user">needs you</span>{{end}}
+    </div>
+    {{if .Branch}}<div class="slai-branch">{{.Branch}}</div>{{end}}
+    {{if not $ro}}{{if or .CanCancel .CanUnblock}}
+    <details class="slai-menu">
+      <summary aria-label="Actions for {{.ID}}">Actions</summary>
+      <div class="slai-menu-body">
+        {{if .CanCancel}}
+        <form class="slai-prio-form" hx-post="/tasks/{{.ID}}/priority" hx-target="#board-msg" hx-swap="innerHTML">
+          <input type="hidden" name="view" value="{{$view}}">
+          <span class="slai-menu-label">Priority</span>
+          {{range .Prios}}<button class="btn btn-sm{{if .Current}} btn-primary{{else}} btn-outline-secondary{{end}}" name="spec" value="{{.Label}}" type="submit"{{if .Current}} aria-pressed="true"{{end}}>{{.Label}}</button>{{end}}
+          <button class="btn btn-sm btn-outline-secondary" name="spec" value="top" type="submit">top</button>
+        </form>
+        {{end}}
+        {{if .CanUnblock}}<form hx-post="/tasks/{{.ID}}/unblock" hx-target="#board-msg" hx-swap="innerHTML"><input type="hidden" name="view" value="{{$view}}"><button class="btn btn-sm btn-outline-success" type="submit">Unblock</button></form>{{end}}
+        {{if .CanCancel}}<form hx-post="/tasks/{{.ID}}/cancel" hx-target="#board-msg" hx-swap="innerHTML" hx-confirm="Cancel {{.ID}}? Its engineer is told."><input type="hidden" name="view" value="{{$view}}"><button class="btn btn-sm btn-outline-danger" type="submit">Cancel task</button></form>{{end}}
+      </div>
+    </details>
+    {{end}}{{end}}
+  </article>{{else}}<p class="slai-col-empty">Nothing here.</p>{{end}}
+  </div>
+  {{if .MoreHref}}<p class="slai-col-more"><a href="{{.MoreHref}}">{{if .Hidden}}Show {{.Hidden}} older{{else}}Show fewer{{end}}</a></p>{{end}}
+</section>{{end}}
+{{end}}
+
+{{define "write-result"}}<div class="alert alert-success" role="status">{{.Msg}}</div><div id="board-cols" hx-swap-oob="innerHTML">{{template "board-columns" .Board}}</div>{{end}}

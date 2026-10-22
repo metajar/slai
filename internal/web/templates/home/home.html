@@ -1,0 +1,28 @@
+{{define "content"}}
+<div class="row row-cards">
+  <div class="col-md-6">
+    <div class="card"><div class="card-header"><h3 class="card-title">Agents</h3></div>
+    {{if .Data.Agents}}<div class="table-responsive"><table class="table table-vcenter card-table">
+      <thead><tr><th scope="col">Agent</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col">Task</th></tr></thead>
+      <tbody>{{range .Data.Agents}}<tr><td>{{.ID}}</td><td>{{.Role}}</td><td>{{.Status}}</td><td>{{.CurrentTask}}</td></tr>{{end}}</tbody>
+    </table></div>{{else}}<div class="card-body text-secondary">No agents yet: run <code>slai up</code>.</div>{{end}}
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card"><div class="card-header"><h3 class="card-title">Open tasks: {{len .Data.Tasks}}</h3></div>
+    {{if .Data.Tasks}}<ul class="list-group list-group-flush">{{range .Data.Tasks}}<li class="list-group-item">{{.ID}} <span class="text-secondary">{{.Status}}</span> {{.Title}}</li>{{end}}</ul>
+    {{else}}<div class="card-body text-secondary">No tasks yet: type your goal to {{.Data.Orchestrator}}.</div>{{end}}
+    </div>
+  </div>
+  {{if and .Data.Orchestrator (not .ReadOnly)}}<div class="col-12">
+    <form class="card" hx-post="/agents/{{.Data.Orchestrator}}/send" hx-target="#send-result" hx-swap="innerHTML">
+      <div class="card-body">
+        <label class="form-label" for="send-body">Message to {{.Data.Orchestrator}}</label>
+        <textarea class="form-control" id="send-body" name="body" rows="3" required></textarea>
+        <div id="send-result" class="mt-2" role="status"></div>
+      </div>
+      <div class="card-footer text-end"><button class="btn btn-primary" type="submit">Send</button></div>
+    </form>
+  </div>{{end}}
+</div>
+{{end}}

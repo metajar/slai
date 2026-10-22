@@ -1,0 +1,91 @@
+{
+  "env": {
+    "SLAI_AGENT_ID": "fg-newbie",
+    "SLAI_PROJECT": "<PROJ>"
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook notification --agent fg-newbie",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook pretooluse --agent fg-newbie",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook sessionstart --agent fg-newbie",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook stop --agent fg-newbie",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook userpromptsubmit --agent fg-newbie",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "mcp__slai__get_inbox",
+      "mcp__slai__reply",
+      "mcp__slai__get_board",
+      "mcp__slai__pong",
+      "mcp__slai__recall",
+      "mcp__slai__get_memory",
+      "Read",
+      "Glob",
+      "Grep"
+    ],
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "EnterWorktree",
+      "Bash(rm -rf:*)",
+      "Bash(rm -fr:*)",
+      "Bash(rm -r:*)",
+      "Edit",
+      "Write",
+      "NotebookEdit"
+    ]
+  },
+  "statusLine": {
+    "command": "slai statusline --agent fg-newbie",
+    "type": "command"
+  }
+}

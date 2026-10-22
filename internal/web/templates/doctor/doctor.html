@@ -1,0 +1,32 @@
+{{define "content"}}{{template "doctor-live" .Data}}{{end}}
+
+{{/* The live region: slai.js refetches /f/doctor on an alerts or memory notice (the checks are
+   cached for 30 s server-side, so a burst costs one run), and every 30 s only while the event
+   stream is down. */}}
+{{define "doctor-live"}}<div id="doctor-body" data-live="alerts memory" data-live-src="/f/doctor">
+{{if .Missing}}<div class="alert alert-warning" role="status">{{.Missing}}</div>{{else}}
+{{with .Report}}
+<div class="banner {{.Class}} mb-3" role="status"><div class="flex-fill"><strong>{{.Summary}}</strong>
+  <span class="reason">Run {{$.At}}. {{if or .Failures .Warnings}}The team may still be working: warnings do not stop it; a failure needs you.{{end}}</span>
+  {{if .Err}}<div>The check run itself reported: {{.Err}}</div>{{end}}</div>
+  <a class="btn btn-sm" href="/doctor?rerun=1">Re-run checks</a></div>
+<div class="row row-cards"><div class="col-lg-7">
+  <div class="card mb-3"><div class="card-header"><h3 class="card-title">Checks · same as slai doctor</h3></div>
+    <div class="card-body p-0 list-group list-group-flush">
+      {{range .Rows}}{{if eq .Level "text"}}<div class="list-group-item py-1"><span class="mono small text-secondary">{{.Body}}</span></div>
+      {{else}}<div class="list-group-item"><div class="d-flex gap-3 align-items-start"><span class="chip {{.Chip}}">{{.Label}}</span>
+        <div><span>{{.Body}}</span>{{range .Hints}}<div class="reason">{{.}}</div>{{end}}</div></div></div>{{end}}
+      {{else}}<div class="list-group-item text-secondary">The doctor printed nothing.</div>{{end}}
+    </div></div>
+</div>{{end}}
+<div class="col-lg-5">
+  {{range .Probes}}<div class="card mb-3"><div class="card-header"><h3 class="card-title">{{.Title}}{{if .Ran}} · last run {{.When}}{{end}}</h3></div>
+    <div class="card-body"><p class="small text-secondary">{{.About}}</p>
+      {{if $.ReadOnly}}<p class="reason">Read-only mode: run it from a terminal: <code>{{.Command}}</code></p>
+      {{else}}<form hx-post="/doctor/run" hx-swap="none" class="mb-3"><input type="hidden" name="which" value="{{.Which}}"><button class="btn" type="submit">Run now</button>
+        <span class="reason ms-2">or <code>{{.Command}}</code> in a terminal</span></form>{{end}}
+      {{if .Ran}}<pre class="plan mb-0">{{.Text}}</pre>{{else}}<p class="reason mb-0">Not run from the web yet.</p>{{end}}
+    </div></div>{{end}}
+</div></div>{{end}}
+
+</div>{{end}}

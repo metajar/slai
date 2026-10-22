@@ -1,0 +1,11 @@
+> [slai] You have 1 new items. Call get_inbox.
+
+⏺ slai - get_inbox (MCP)
+  ⎿  eng-1 has been stuck on a prompt only the user can answer: Do you want to proceed? | ❯ 1. Yes | 2. Yes, and don't ask again. The user has been told; slai will not answer it.
+
+⏺ Understood. eng-1 is blocked on a permission prompt; I will reassign its task while the user decides.
+
+╭──────────────────────────────╮
+│ >                            │
+╰──────────────────────────────╯
+  ? for shortcuts

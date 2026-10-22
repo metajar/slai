@@ -1,0 +1,20 @@
+# name path   (every page route of the route table has at least one line here; capture.sh and
+# TestEveryPageRouteHasScreens read it. {$} is "/".)
+dashboard /
+agents /agents
+agent-detail /agents/eng-1
+agent-waiting /agents/eng-3
+agent-new /agents/new
+board /board
+task-in-review /tasks/T-0007
+task-changes-requested /tasks/T-0013
+reviews /reviews
+inbox /inbox
+stats /stats
+memory /memory
+memory-fact-stale /memory/f-d0904627
+memory-fact-fresh /memory/f-cbbc8eea
+doctor /doctor
+log /log
+commit-preview /commit-preview
+capabilities /capabilities

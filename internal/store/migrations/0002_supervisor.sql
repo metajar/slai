@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '');
+ALTER TABLE agents ADD COLUMN paused INTEGER NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind, id);
+CREATE INDEX IF NOT EXISTS idx_messages_pair ON messages(created_at);

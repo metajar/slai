@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+project_name: slai
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: slai
+    main: .
+    binary: slai
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X github.com/oorbt/slai/cmd.version={{.Version}}
+      - -X github.com/oorbt/slai/cmd.commit={{.ShortCommit}}
+      - -X github.com/oorbt/slai/cmd.date={{.Date}}
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - PRD.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude: ["^docs:", "^test:"]
+
+brews:
+  - name: slai
+    repository:
+      owner: oorbt
+      name: homebrew-tap
+    homepage: https://github.com/oorbt/slai
+    description: Turn a git repo into a managed AI software team of Claude Code agents
+    license: MIT
+    dependencies:
+      - name: tmux
+      - name: git
+    test: |
+      system "#{bin}/slai", "version"

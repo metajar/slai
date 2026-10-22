@@ -1,0 +1,111 @@
+{{define "scripts"}}<link rel="stylesheet" href="/dashboard.css">{{end}}
+
+{{define "chip"}}<span class="dash-chip {{.Class}}"{{if .Gloss}} title="{{.Gloss}}"{{end}}><span aria-hidden="true">{{.Icon}}</span>{{.Label}}</span>{{end}}
+
+{{define "content"}}{{template "dash-body" .Data}}{{end}}
+
+{{define "dash-body"}}
+<div id="dash" data-live="agents tasks alerts spend inbox" data-live-src="/f/dashboard" hx-get="/f/dashboard" hx-trigger="every 60s" hx-swap="outerHTML">
+
+  <p class="dash-sentence" id="dash-sentence" role="status">{{.Sentence}}</p>
+  <div id="dash-msg" role="status"></div>
+
+  {{range .Banners}}<div class="dash-banner dash-banner-{{.Class}}" role="status">
+    <div class="flex-fill"><strong>{{.Title}}.</strong> {{.Text}}</div>
+    {{if and .Resume (not $.ReadOnly) $.HasCtl}}<form hx-post="/team/resume" hx-target="#dash-msg" hx-swap="innerHTML"><button class="btn btn-sm btn-primary" type="submit">Resume</button></form>{{end}}
+  </div>{{end}}
+
+  <div class="row row-cards mb-3">
+    {{range .Cards}}<div class="col-6 col-lg-3"><a class="card card-sm text-reset text-decoration-none" href="{{.Href}}"><div class="card-body">
+      <div class="text-secondary">{{.Label}}</div>
+      <div class="h1 mb-0">{{.Value}}</div>
+      <div class="dash-reason">{{.Sub}}</div>
+    </div></a></div>{{end}}
+  </div>
+
+  {{if .FirstRun}}<div class="card mb-3 border-primary"><div class="card-body">
+    <h3 class="card-title">Start here</h3>
+    <p>Nothing has been asked yet. Tell <strong>{{.FirstRun.Orchestrator}}</strong>, the orchestrator, what you want built; it will split the work between the engineers.</p>
+    {{if not .ReadOnly}}<form id="first-run-form" hx-preserve="true" hx-post="/agents/{{.FirstRun.Orchestrator}}/send" hx-target="#dash-msg" hx-swap="innerHTML">
+      <label class="form-label" for="first-body">Message to {{.FirstRun.Orchestrator}}</label>
+      <textarea class="form-control" id="first-body" name="body" rows="3" required></textarea>
+      <div class="mt-2 text-end"><button class="btn btn-primary" type="submit">Send to {{.FirstRun.Orchestrator}}</button></div>
+    </form>{{else}}<p class="text-secondary">This server is read-only, so it cannot send the message. Run <code>slai send {{.FirstRun.Orchestrator}} "..."</code>.</p>{{end}}
+  </div></div>{{end}}
+
+  <div class="row row-cards">
+    <div class="col-lg-8">
+      <h3 class="mb-2">Agents</h3>
+      {{if or .Active .Idle}}
+      <div class="row row-cards">
+        {{range .Active}}<div class="col-12 col-sm-6 col-xl-4"><div class="card dash-agent"><div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div><strong>{{.ID}}</strong> <span class="text-secondary">{{.Role}}</span></div>
+            {{template "chip" .Chip}}
+          </div>
+          {{if .Chip.Reason}}<div class="dash-reason mt-1">{{.Chip.Reason}}</div>{{end}}
+          <div class="mt-2 small">{{if .Task}}Working on <a href="/tasks/{{.Task}}">{{.Task}}</a>{{else}}No task{{end}}</div>
+          <div class="dash-reason">{{.Harness}} · last seen {{.Last}}</div>
+        </div></div></div>{{end}}
+      </div>
+      {{if .Idle}}<details class="dash-idle mt-3">
+        <summary>{{len .Idle}} idle {{if eq (len .Idle) 1}}agent{{else}}agents{{end}} <span class="dash-reason">(healthy: nothing is owed to {{if eq (len .Idle) 1}}it{{else}}them{{end}})</span></summary>
+        <ul class="list-group list-group-flush mt-2">{{range .Idle}}<li class="list-group-item d-flex justify-content-between">
+          <span><strong>{{.ID}}</strong> <span class="text-secondary">{{.Role}}</span></span>
+          <span class="dash-reason">{{.Harness}} · last seen {{.Last}}</span></li>{{end}}</ul>
+      </details>{{end}}
+      {{else}}<div class="card"><div class="card-body text-secondary">No agents yet: run <code>slai up</code>.</div></div>{{end}}
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card mb-3"><div class="card-header"><h3 class="card-title">Needs attention</h3>
+        <div class="card-actions"><a href="/inbox" class="small">{{.NeedsYou}} need you · Inbox</a></div></div>
+        {{if .Needs}}<ul class="list-group list-group-flush">{{range .Needs}}<li class="list-group-item">
+          <div class="d-flex justify-content-between"><strong>{{.Who}}</strong><span class="dash-chip chip-{{.Class}}">{{.Label}}</span></div>
+          {{if .Text}}<div class="small">{{.Text}}</div>{{end}}
+          {{if .Gloss}}<div class="dash-reason">{{.Gloss}}</div>{{end}}
+          {{if .Also}}<div class="dash-reason">Also: {{.Also}}</div>{{end}}
+          {{if .Since}}<div class="dash-reason">{{.Since}}</div>{{end}}
+        </li>{{end}}</ul>
+        {{else}}<div class="card-body text-secondary">Nothing needs attention.</div>{{end}}
+      </div>
+
+      <div class="card mb-3"><div class="card-header"><h3 class="card-title">Spend and caps</h3></div><div class="card-body">
+        <div class="dash-reason mb-2">{{.Spend.Window}}</div>
+        {{range .Spend.Rows}}<div class="mb-3">
+          <div class="d-flex justify-content-between small"><span>{{.Label}}</span><strong>{{if .OFF}}{{.Cap}}{{else if .HasMeter}}{{.Spent}} / {{.Cap}}{{else}}{{.Cap}}{{end}}</strong></div>
+          {{if .HasMeter}}<progress class="dash-meter dash-meter-{{.State}}" max="100" value="{{.Percent}}" aria-label="{{.Label}}: {{.Percent}}% of the cap">{{.Percent}}%</progress>{{end}}
+          <div class="dash-reason">{{if .Icon}}<span class="dash-chip chip-{{.State}}"><span aria-hidden="true">{{.Icon}}</span>{{.Text}}</span>{{else}}{{.Text}}{{end}}</div>
+        </div>{{end}}
+        <p class="mb-0 small" id="spend-protection"><strong>{{.Spend.Protection}}</strong></p>
+      </div></div>
+
+      <div class="card mb-3"><div class="card-header"><h3 class="card-title">Rate limits</h3></div><div class="card-body">
+        {{range .Gauges}}<div class="mb-3">
+          <div class="d-flex justify-content-between small"><span>{{.Label}}</span>
+            <span class="dash-chip {{.Class}}">{{if .NA}}n/a{{else}}{{.Text}}{{end}}</span></div>
+          {{if not .NA}}<progress class="dash-meter" max="100" value="{{.Percent}}" aria-label="{{.Label}}: {{.Text}}">{{.Text}}</progress>{{end}}
+          {{if .Reason}}<div class="dash-reason">{{.Reason}}</div>{{end}}
+        </div>{{end}}
+      </div></div>
+
+      {{if and (not .ReadOnly) .HasCtl}}<div class="card mb-3"><div class="card-header"><h3 class="card-title">Team controls</h3></div><div class="card-body">
+        <p class="dash-reason">Hold stops all wake-ups and restarts until you resume. Sessions stay up.</p>
+        <form class="mb-2" id="hold-form" hx-preserve="true" hx-post="/team/hold" hx-target="#dash-msg" hx-swap="innerHTML">
+          <label class="form-label" for="hold-name">Hold name (optional)</label>
+          <input class="form-control mb-2" id="hold-name" name="name" maxlength="80" autocomplete="off">
+          <button class="btn btn-warning" type="submit">Hold the team</button>
+        </form>
+        <div class="d-flex gap-2">
+          <form hx-post="/team/pause" hx-target="#dash-msg" hx-swap="innerHTML"><button class="btn btn-outline-secondary" type="submit">Pause wake-ups</button></form>
+          <form hx-post="/team/resume" hx-target="#dash-msg" hx-swap="innerHTML"><button class="btn btn-outline-primary" type="submit">Resume</button></form>
+        </div>
+      </div></div>{{end}}
+
+      <details class="mb-3"><summary class="small">What do these words mean?</summary>
+        <dl class="small mt-2">{{range .Glossary}}<dt>{{.Word}}</dt><dd>{{.Text}}</dd>{{end}}</dl>
+      </details>
+    </div>
+  </div>
+</div>
+{{end}}

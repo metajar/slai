@@ -1,0 +1,48 @@
+{{define "layout"}}<!doctype html>
+<html lang="en" data-bs-theme="{{.Theme}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="htmx-config" content='{"allowEval":false,"selfRequestsOnly":true,"allowScriptTags":false,"includeIndicatorStyles":false,"historyCacheSize":0,"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"422","swap":true,"error":false},{"code":"[45]..","swap":false,"error":true}]}'>
+<title>{{if .Needs}}({{.Needs}}) {{end}}{{block "title" .}}{{.Title}}{{end}} · slai</title>
+<link rel="stylesheet" href="/static/tabler.min.css">
+<link rel="stylesheet" href="/static/slai.css">
+<script src="/static/htmx.min.js" defer></script>
+{{block "scripts" .}}{{end}}
+<script src="/static/slai.js" defer></script>
+</head>
+<body hx-headers='{"X-Slai-Request":"1"}'>
+<a class="slai-skip" href="#main">Skip to content</a>
+<div class="page">
+  <aside class="navbar navbar-vertical navbar-expand-lg" aria-label="Main">
+    <div class="container-fluid">
+      <h1 class="navbar-brand navbar-brand-autodark"><a href="/">slai</a></h1>
+      <ul class="navbar-nav pt-lg-3">
+        {{range .Nav}}<li class="nav-item">
+          {{if .Enabled}}<a class="nav-link{{if eq .Key $.Active}} active{{end}}" href="{{.Href}}"{{if eq .Key $.Active}} aria-current="page"{{end}}><span class="nav-link-title">{{.Label}}</span>{{if .Badge}}<span class="badge bg-red text-red-fg ms-auto" title="{{.Hint}}">{{.Badge}}<span class="visually-hidden"> need you</span></span>{{end}}</a>
+          {{else}}<span class="nav-link slai-nav-disabled" aria-disabled="true" title="not available yet"><span class="nav-link-title">{{.Label}}</span></span>{{end}}
+        </li>{{end}}
+      </ul>
+      <div class="mt-auto pt-3">
+        {{if .ReadOnly}}<span class="badge bg-secondary-lt slai-readonly" title="started with --read-only: every write is refused">read-only</span>{{end}}
+        <a class="btn btn-sm btn-ghost-secondary" href="/theme?set={{if eq .Theme "dark"}}light{{else}}dark{{end}}">{{if eq .Theme "dark"}}Light{{else}}Dark{{end}} theme</a>
+      </div>
+    </div>
+  </aside>
+  <div class="page-wrapper">
+    <main id="main" class="page-body container-xl">
+      {{if .Notice}}<div class="alert alert-warning slai-banner" role="status">{{.Notice}}</div>{{end}}
+      <h2 class="page-title mb-3">{{.Title}}</h2>
+      {{block "content" .}}{{end}}
+    </main>
+    <footer class="footer footer-transparent d-print-none">
+      <div class="container-xl text-secondary">
+        <span>This page never approves a review, merges, commits or types keystrokes into a terminal: <a href="/capabilities">see everything it can do</a>.</span>
+        <span class="ms-3" role="status">{{.Refused}} {{if eq .Refused 1}}write{{else}}writes{{end}} refused this session{{if .RefusedUnauth}} · {{.RefusedUnauth}} unauthenticated {{if eq .RefusedUnauth 1}}request{{else}}requests{{end}} refused since start{{end}}</span>
+      </div>
+    </footer>
+  </div>
+</div>
+</body>
+</html>{{end}}

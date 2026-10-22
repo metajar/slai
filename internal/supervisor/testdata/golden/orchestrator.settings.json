@@ -1,0 +1,96 @@
+{
+  "env": {
+    "SLAI_AGENT_ID": "orch",
+    "SLAI_PROJECT": "<PROJ>"
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook notification --agent orch",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook pretooluse --agent orch",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook sessionstart --agent orch",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook stop --agent orch",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "slai hook userpromptsubmit --agent orch",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "mcp__slai__create_task",
+      "mcp__slai__update_task",
+      "mcp__slai__get_board",
+      "mcp__slai__send_message",
+      "mcp__slai__ask_user",
+      "mcp__slai__get_inbox",
+      "mcp__slai__cancel_task",
+      "mcp__slai__finish",
+      "mcp__slai__ping",
+      "mcp__slai__pong",
+      "mcp__slai__reply",
+      "mcp__slai__remember",
+      "mcp__slai__recall",
+      "mcp__slai__get_memory"
+    ],
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "EnterWorktree",
+      "Bash(rm -rf:*)",
+      "Bash(rm -fr:*)",
+      "Bash(rm -r:*)",
+      "Edit",
+      "Write",
+      "NotebookEdit"
+    ]
+  },
+  "statusLine": {
+    "command": "slai statusline --agent orch",
+    "type": "command"
+  }
+}

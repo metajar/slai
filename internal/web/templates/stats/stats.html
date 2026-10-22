@@ -1,0 +1,54 @@
+{{define "content"}}
+<form class="card mb-3" method="get" action="/stats">
+  <div class="card-body"><div class="row g-2 align-items-end">
+    <div class="col-8 col-md-3"><label class="form-label" for="since">Tasks assigned in the last</label>
+      <input class="form-control" id="since" name="since" value="{{.Data.Since}}" placeholder="7d, 2w, 36h (blank: all time)"></div>
+    <div class="col-4 col-md-2"><button class="btn" type="submit">Show</button></div>
+    <div class="col-12 col-md-7 reason">{{.Data.Window}} · same numbers as <span class="mono">slai status --stats</span></div>
+  </div>{{if .Data.BadSince}}<div class="alert alert-warning mt-2 mb-0" role="status">{{.Data.BadSince}}</div>{{end}}</div>
+</form>
+{{template "stats-live" .Data}}
+{{end}}
+
+{{/* The live region: slai.js refetches data-live-src (and swaps this element for the reply) when a
+   stats or spend notice arrives, and every 30 s only while the event stream is down. */}}
+{{define "stats-live"}}<div id="stats-body" data-live="stats spend" data-live-src="{{.LiveSrc}}">{{template "stats-body" .}}</div>{{end}}
+
+{{define "stats-body"}}
+<div class="row row-cards"><div class="col-12">
+  <div class="card mb-3"><div class="card-header"><h3 class="card-title">Quality by agent</h3></div>
+    {{if .Agents}}<div class="table-responsive"><table class="table table-vcenter table-sl card-table">
+      <thead><tr><th scope="col">by agent</th><th scope="col">harness/model</th>{{range .Defs}}<th scope="col" title="{{.Meaning}}">{{.Col}}</th>{{end}}</tr></thead>
+      <tbody>{{range .Agents}}{{template "stats-row" .}}{{end}}</tbody>
+    </table></div>{{else}}<div class="card-body text-secondary">No engineers in the team yet.</div>{{end}}
+    <div class="p-3 reason"><strong>What the columns mean.</strong> {{range $i, $d := .Defs}}{{if $i}} · {{end}}<em>{{$d.Col}}</em>: {{$d.Meaning}}{{end}}. <span class="na">n/a</span> means the data cannot say (hover for why), not zero.</div>
+  </div>
+  <div class="card mb-3"><div class="card-header"><h3 class="card-title">Quality by harness and model</h3></div>
+    {{if .Groups}}<div class="table-responsive"><table class="table table-vcenter table-sl card-table">
+      <thead><tr><th scope="col">by harness / model</th><th scope="col">agents</th>{{range .Defs}}<th scope="col" title="{{.Meaning}}">{{.Col}}</th>{{end}}</tr></thead>
+      <tbody>{{range .Groups}}{{template "stats-row" .}}{{end}}</tbody>
+    </table></div>{{else}}<div class="card-body text-secondary">No groups yet.</div>{{end}}
+  </div>
+</div>
+<div class="col-lg-6"><div class="card mb-3"><div class="card-header"><h3 class="card-title">Spend vs caps</h3></div>
+  <div class="card-body">
+    {{if .CapsOff}}<p class="mb-1"><span class="chip chip-idle">Caps: OFF</span></p><p class="reason mb-0">No spend cap is set, so nothing pauses on cost. Set <code>defaults.spend_caps</code> in <code>.slai/team.yaml</code>.</p>
+    {{else}}{{range .Caps}}<div class="mb-3"><div class="d-flex justify-content-between small"><span>{{.Label}}</span><strong>{{.Text}}</strong></div>
+      <progress class="slai-progress {{.Class}}" value="{{.Pct}}" max="100" aria-label="{{.Label}}">{{.Pct}}%</progress>
+      <div class="reason">{{.Note}}</div></div>{{end}}
+    <div class="reason">Warning at 80%, wake-ups pause at 100%.</div>{{end}}
+  </div></div></div>
+<div class="col-lg-6"><div class="card mb-3"><div class="card-header"><h3 class="card-title">Per task</h3></div>
+  {{if .Tasks}}<div class="table-responsive"><table class="table table-vcenter table-sl card-table">
+    <thead><tr><th scope="col">Task</th><th scope="col">Assignee</th><th scope="col">Spend</th><th scope="col">Tokens</th><th scope="col" title="request_review calls">Rounds</th></tr></thead>
+    <tbody>{{range .Tasks}}<tr><td class="mono"><a href="/tasks/{{.ID}}">{{.ID}}</a></td><td>{{.Assignee}}</td><td>{{template "stats-cell" .Spend}}</td><td>{{template "stats-cell" .Tokens}}</td><td>{{.Rounds}}</td></tr>{{end}}</tbody>
+  </table></div><div class="p-3 reason">n/a means “this harness cannot tell us” or “nothing was recorded”, not zero. Tokens are input plus output.</div>
+  {{else}}<div class="card-body text-secondary">No tasks in this window.</div>{{end}}
+</div></div></div>
+{{end}}
+
+{{define "stats-cell"}}{{if .NA}}<span class="na" tabindex="0" title="{{.Why}}">n/a</span>{{else}}{{.Text}}{{end}}{{end}}
+
+{{define "stats-row"}}<tr><td class="fw-semibold">{{.Name}}</td><td>{{.Where}}</td><td>{{.Merged}}</td><td>{{.Cancelled}}/{{.Reverted}}</td>
+  <td>{{template "stats-cell" .Rounds}}</td><td>{{template "stats-cell" .Rework}}</td><td>{{.Refused}}</td>
+  <td>{{template "stats-cell" .Spend}}</td><td>{{template "stats-cell" .Per}}</td><td>{{template "stats-cell" .Median}}</td></tr>{{end}}

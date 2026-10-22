@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>New agent · slai</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<script src="assets/theme.js"></script>
+<link rel="stylesheet" href="vendor/tabler/css/tabler.min.css">
+<link rel="stylesheet" href="vendor/icons/tabler-icons.min.css">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="page">
+  <aside class="navbar navbar-vertical navbar-expand-lg" aria-label="Main navigation">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+      <h1 class="navbar-brand navbar-brand-autodark mb-0"><a href="index.html" class="d-flex align-items-center text-reset text-decoration-none"><span class="brand-mark">s</span><span><span class="brand-name">slai</span><span class="brand-sub">demo-project</span></span></a></h1>
+      <div class="d-lg-none"><a class="btn btn-sm btn-ghost-secondary" href="inbox.html" aria-label="Inbox"><i class="ti ti-message-question"></i><span class="badge bg-red text-red-fg ms-1" data-needs-badge>5</span></a></div>
+      <div class="collapse navbar-collapse" id="sidebar-menu">
+        <ul class="navbar-nav pt-lg-3"><li class="nav-item"><a class="nav-link" href="index.html"><span class="nav-link-icon"><i class="ti ti-layout-dashboard"></i></span><span class="nav-link-title">Dashboard</span></a></li><li class="nav-item"><a class="nav-link active" aria-current="page" href="agents.html"><span class="nav-link-icon"><i class="ti ti-robot"></i></span><span class="nav-link-title">Agents</span></a></li><li class="nav-item"><a class="nav-link" href="board.html"><span class="nav-link-icon"><i class="ti ti-layout-kanban"></i></span><span class="nav-link-title">Board</span></a></li><li class="nav-item"><a class="nav-link" href="reviews.html"><span class="nav-link-icon"><i class="ti ti-eye-check"></i></span><span class="nav-link-title">Reviews</span><span class="badge bg-azure text-azure-fg">2</span></a></li><li class="nav-item"><a class="nav-link" href="inbox.html"><span class="nav-link-icon"><i class="ti ti-message-question"></i></span><span class="nav-link-title">Inbox</span><span class="badge bg-red text-red-fg" data-needs-badge>5</span></a></li><li class="nav-item"><a class="nav-link" href="stats.html"><span class="nav-link-icon"><i class="ti ti-chart-bar"></i></span><span class="nav-link-title">Stats</span></a></li><li class="nav-item"><a class="nav-link" href="memory.html"><span class="nav-link-icon"><i class="ti ti-brain"></i></span><span class="nav-link-title">Memory</span></a></li><li class="nav-item"><a class="nav-link" href="doctor.html"><span class="nav-link-icon"><i class="ti ti-stethoscope"></i></span><span class="nav-link-title">Doctor</span></a></li><li class="nav-item"><a class="nav-link" href="log.html"><span class="nav-link-icon"><i class="ti ti-list-details"></i></span><span class="nav-link-title">Log</span></a></li><li class="nav-item"><a class="nav-link" href="commit.html"><span class="nav-link-icon"><i class="ti ti-git-pull-request"></i></span><span class="nav-link-title">Commit preview</span></a></li></ul>
+        <div class="mt-auto p-3 d-none d-lg-block">
+          <div class="card card-sm"><div class="card-body">
+            <div class="d-flex align-items-center gap-2"><span class="dot ok pulse"></span><strong class="small">Supervisor running</strong></div>
+            <div class="reason mt-1">heartbeat 2s ago · pid 41873 · up 3h12m</div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="page-wrapper">
+    <div class="proto-ribbon">Prototype · fake data · nothing here talks to a real team</div>
+    <header class="navbar navbar-expand-md d-print-none sticky-top" style="background:var(--tblr-bg-surface);border-bottom:1px solid var(--tblr-border-color)">
+      <div class="container-xl">
+        <div class="d-flex align-items-center gap-2 flex-wrap w-100">
+          <span class="chip chip-ok"><i class="ti ti-heartbeat"></i>Supervisor ok</span>
+          <a class="chip chip-user text-decoration-none" href="inbox.html"><i class="ti ti-hand-stop"></i><span id="needs-count">5</span> need you</a>
+          <div class="ms-auto d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#hold-modal" data-hold-open><i class="ti ti-player-pause me-1"></i>Hold team</button>
+            <button class="btn btn-sm btn-warning" data-hold-release hidden><i class="ti ti-player-play me-1"></i>Release hold</button>
+            <button class="btn btn-sm btn-icon btn-ghost-secondary" id="theme-toggle" type="button" aria-label="Switch theme"><i class="ti ti-moon"></i></button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div class="page-header d-print-none"><div class="container-xl"><div class="row g-2 align-items-center">
+      <div class="col"><div class="page-pretitle">Agents · add to team.yaml</div><h2 class="page-title">New agent</h2></div>
+      <div class="col-auto ms-auto"><div class="btn-list"></div></div>
+    </div></div></div>
+    <div class="page-body"><div class="container-xl">
+      
+      <div id="hold-banner" class="banner banner-hold mb-3" hidden role="status"><i class="ti ti-player-pause text-warning"></i><div><strong>Team on hold: <span id="hold-name">hold</span></strong> since 11:44 (just now). No wake-ups are being delivered, nothing is nudged or restarted; sessions stay up. <a href="#" data-hold-release-link>Use “Release hold” to resume.</a></div></div>
+      <div class="row row-cards"><div class="col-lg-8"><div class="card mb-3"><div class="card-header"><h3 class="card-title">New agent</h3><div class="card-actions"></div></div><div class="card-body  "><form id="newagent-form" novalidate data-existing="orch,pm,principal,eng-1,eng-2,eng-3,eng-4,fg-newbie,fg-power,fg-skeptic">
+<div class="alert alert-danger" id="na-summary" role="alert" hidden><div class="d-flex gap-2"><i class="ti ti-alert-octagon fs-2"></i><div><strong>Nothing was written.</strong> <span id="na-summary-text">Fix the fields below.</span></div></div></div>
+<div class="row g-3">
+ <div class="col-md-6"><label class="form-label" for="na-role">Role</label><select class="form-select" id="na-role" name="role"><option value="orchestrator">orchestrator</option><option value="product_manager">product_manager</option><option value="principal_engineer">principal_engineer</option><option value="engineer" selected>engineer</option><option value="focus_group">focus_group</option></select><div class="invalid-feedback"></div></div>
+ <div class="col-md-6"><label class="form-label" for="na-harness">Harness</label><select class="form-select" id="na-harness" name="harness"><option>claude</option><option>opencode</option><option>pi</option></select><div class="form-hint" id="na-harness-hint">claude needs the <span class="mono">claude</span> binary on PATH.</div><div class="invalid-feedback"></div></div>
+ <div class="col-md-6"><label class="form-label" for="na-id">Agent id</label><input class="form-control" id="na-id" name="id" type="text" autocomplete="off" placeholder="eng-5" value="eng-5"><div class="form-hint">lowercase letters, digits and dashes; starts with a letter; 2–24 characters.</div><div class="invalid-feedback"></div></div>
+ <div class="col-md-6"><label class="form-label" for="na-focus">Focus</label><input class="form-control" id="na-focus" name="focus" type="text" placeholder="backend, frontend, docs…" value="frontend"><div class="form-hint">One word that helps orch route work. Optional.</div></div>
+ <div class="col-md-6"><label class="form-label" for="na-model">Model</label><input class="form-control" id="na-model" name="model" type="text" value="sonnet" autocomplete="off"><div class="form-hint" id="na-model-hint">a key in <span class="mono">models:</span> (opus, sonnet, haiku) or a raw <span class="mono">claude-…</span> id.</div><div class="invalid-feedback"></div></div>
+ <div class="col-md-6" id="na-perm-wrap"><label class="form-label" for="na-perm">Permission mode</label><select class="form-select" id="na-perm" name="perm"><option>(team default)</option><option>acceptEdits</option><option>auto</option><option>bypassPermissions</option><option>manual</option><option>dontAsk</option><option>plan</option></select><div class="form-hint">Passed to <span class="mono">claude --permission-mode</span>. pi has no permission layer, so the field disappears for it.</div><div class="invalid-feedback"></div></div>
+ <div class="col-12" id="na-persona-wrap" hidden><label class="form-label" for="na-persona">Persona</label><textarea class="form-control" id="na-persona" rows="3" placeholder="Who is this focus-group member? What do they care about?"></textarea><div class="form-hint">Only for focus groups.</div></div>
+</div>
+<div class="mt-4 d-flex gap-2 flex-wrap align-items-center"><button class="btn btn-primary" type="submit" data-write><i class="ti ti-user-plus me-1"></i>Add agent</button><a class="btn" href="agents.html">Cancel</a>
+<span class="reason ms-auto"><i class="ti ti-lock"></i> same validation and same <span class="mono">team.yaml</span> writer as the TUI form · logged as a <span class="mono">web_action</span> event</span></div>
+</form><div id="na-success" hidden><div class="text-center py-4"><span class="avatar avatar-xl bg-green-lt mb-3"><i class="ti ti-check" style="font-size:2rem"></i></span><h3 class="mb-1"><span id="na-ok-id">eng-5</span> was added</h3>
+<p class="text-secondary mb-3">Written to <span class="mono">.slai/team.yaml</span>. The supervisor picks it up in a few seconds and starts the session; the agent then appears on the dashboard and in the list.</p></div>
+<div class="pane mb-3" style="max-height:none"><span class="dim"># .slai/team.yaml (appended)</span>
+<span class="c4">- id:</span> <span id="na-ok-yaml-id">eng-5</span>
+  <span class="c4">role:</span> <span id="na-ok-yaml-role">engineer</span>
+  <span class="c4">harness:</span> <span id="na-ok-yaml-h">claude</span>
+  <span class="c4">model:</span> <span id="na-ok-yaml-m">sonnet</span>
+  <span class="c4">focus:</span> <span id="na-ok-yaml-f">frontend</span></div>
+<div class="d-flex gap-2 flex-wrap justify-content-center"><a class="btn btn-primary" href="agents.html"><i class="ti ti-robot me-1"></i>See it in Agents</a><a class="btn" href="agent-new.html" data-reset-form>Add another</a></div></div></div></div></div><div class="col-lg-4"><div class="card mb-3"><div class="card-header"><h3 class="card-title">What happens</h3><div class="card-actions"></div></div><div class="card-body  "><ul class="small ps-3 mb-0"><li class="mb-2">An invalid id, role, model or harness is refused with the validator’s own message, inline. Nothing is written.</li><li class="mb-2">A duplicate id is refused; <span class="mono">team.yaml</span> stays as it was.</li><li class="mb-2">Not allowed in <span class="mono">--read-only</span> mode: the form is hidden and the server answers 403.</li><li>Try it: set the id to <span class="mono">eng-3</span> (duplicate) or <span class="mono">Eng_5</span>, or pick opencode and leave the model as <span class="mono">sonnet</span>.</li></ul>
+<hr><div class="btn-list"><a class="btn btn-sm btn-outline-danger" href="agent-new.html#demo-error">Show an error state</a><a class="btn btn-sm btn-outline-success" href="agent-new.html#demo-success">Show the success state</a></div></div></div></div></div>
+    </div></div>
+    <footer class="footer footer-transparent d-print-none"><div class="container-xl"><div class="small text-secondary">slai serve · same privileges as the TUI · it never approves, merges or types keystrokes into a pane · <a href="signin.html">sign-in page</a> · <a href="index-readonly.html">read-only mode</a></div></div></footer>
+  </div>
+</div>
+<div class="modal modal-blur fade" id="hold-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h3 class="modal-title">Hold the team</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body"><p class="text-secondary">Nothing is woken, nudged or restarted while the team is on hold. Sessions stay up and work in progress is untouched. Same as <span class="mono">slai hold</span> and <kbd>H</kbd> in the TUI.</p>
+    <label class="form-label" for="hold-input">Name (optional)</label><input class="form-control" id="hold-input" type="text" placeholder="release-window"></div>
+  <div class="modal-footer"><button class="btn" data-bs-dismiss="modal">Cancel</button><button class="btn btn-warning" data-hold-confirm><i class="ti ti-player-pause me-1"></i>Hold team</button></div>
+</div></div></div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3 mt-5" id="toasts" aria-live="polite"></div>
+<script src="vendor/tabler/js/tabler.min.js"></script>
+<script src="vendor/sortable/Sortable.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

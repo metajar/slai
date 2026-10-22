@@ -1,0 +1,47 @@
+{{define "new"}}{{template "newform" .Data}}{{end}}
+
+{{define "newform"}}{{if .ReadOnly}}<div id="new-agent" class="alert alert-secondary" role="status">Read-only mode: adding an agent is disabled. <a href="/agents">Back to agents</a></div>{{else}}<form id="new-agent" class="card" hx-post="/agents" hx-target="#new-agent" hx-swap="outerHTML">
+  <div class="card-body">
+    {{if .Err}}<div class="alert alert-danger" role="alert">{{.Err}}</div>{{end}}
+    <div class="mb-3">
+      <label class="form-label" for="f-role">Role</label>
+      <select class="form-select" id="f-role" name="role" aria-describedby="h-role">{{$r := .Role}}{{range .Roles}}<option value="{{.}}"{{if eq . $r}} selected{{end}}>{{.}}</option>{{end}}</select>
+      <div class="form-hint" id="h-role">What the agent does. Orchestrator and principal engineer are one per team.</div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="f-harness">Harness</label>
+      <select class="form-select" id="f-harness" name="harness" aria-describedby="h-harness">{{$h := .Harness}}{{range .Harnesses}}<option value="{{.}}"{{if eq . $h}} selected{{end}}>{{.}}</option>{{end}}</select>
+      <div class="form-hint" id="h-harness">The program that runs the agent: claude (Claude Code), opencode or pi. Non-claude harnesses need their program installed.</div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="f-id">ID</label>
+      <input class="form-control" id="f-id" name="id" value="{{.ID}}" aria-describedby="h-id" required>
+      <div class="form-hint" id="h-id">A short unique name, e.g. eng-3. Teammates address the agent by it.</div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="f-focus">Focus</label>
+      <input class="form-control" id="f-focus" name="focus" value="{{.Focus}}" aria-describedby="h-focus">
+      <div class="form-hint" id="h-focus">Optional. One line on what this agent concentrates on, e.g. backend.</div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="f-model">Model</label>
+      <input class="form-control" id="f-model" name="model" value="{{.Model}}" aria-describedby="h-model">
+      <div class="form-hint" id="h-model">{{.ModelHint}}. A bare alias must be a key in <code>models:</code> in team.yaml.</div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="f-persona">Persona</label>
+      <textarea class="form-control" id="f-persona" name="persona" rows="2" aria-describedby="h-persona">{{.Persona}}</textarea>
+      <div class="form-hint" id="h-persona">Only for the focus_group role: who the agent plays when it reacts to a feature.</div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="f-perm">Permission mode</label>
+      <select class="form-select" id="f-perm" name="perm" aria-describedby="h-perm"><option value="">(team default)</option>{{$p := .Perm}}{{range .Perms}}<option value="{{.}}"{{if eq . $p}} selected{{end}}>{{.}}</option>{{end}}</select>
+      <div class="form-hint" id="h-perm">How much the agent may do without asking you. Ignored by pi, which has no permission prompts.</div>
+    </div>
+  </div>
+  <div class="card-footer">
+    <p class="text-secondary mb-2">This adds an entry to <code>team.yaml</code>; a running supervisor starts the agent within a few seconds.</p>
+    <button class="btn btn-primary" type="submit">Add agent</button>
+    <a class="btn btn-link" href="/agents">Cancel</a>
+  </div>
+</form>{{end}}{{end}}

@@ -1,0 +1,1 @@
+claude --model 'opus' --append-system-prompt "$(cat '<PROJ>/.slai/run/orch/system.md')" --settings '<PROJ>/.slai/run/orch/settings.json' --permission-mode 'auto' --mcp-config '<PROJ>/.slai/run/orch/mcp.json'

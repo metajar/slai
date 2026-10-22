@@ -1,0 +1,6 @@
+{"type":"user","message":{"role":"user","content":"hi"}}
+{"type":"assistant","message":{"id":"msg_1","model":"claude-opus-5-5","role":"assistant","content":[{"type":"thinking","thinking":""}],"usage":{"input_tokens":2,"cache_creation_input_tokens":1000,"cache_read_input_tokens":2000,"output_tokens":100}}}
+{"type":"assistant","message":{"id":"msg_1","model":"claude-opus-5-5","role":"assistant","content":[{"type":"tool_use","id":"t"}],"usage":{"input_tokens":2,"cache_creation_input_tokens":1000,"cache_read_input_tokens":2000,"output_tokens":100}}}
+not json "usage"
+{"type":"assistant","message":{"id":"msg_2","model":"claude-sonnet-5-5","role":"assistant","content":[],"usage":{"input_tokens":10,"output_tokens":50}}}
+{"type":"assistant","message":{"id":"msg_3","model":"<synthetic>","role":"assistant","content":[],"usage":{"input_tokens":0,"output_tokens":0}}}

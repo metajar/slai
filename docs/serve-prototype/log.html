@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Log · slai</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<script src="assets/theme.js"></script>
+<link rel="stylesheet" href="vendor/tabler/css/tabler.min.css">
+<link rel="stylesheet" href="vendor/icons/tabler-icons.min.css">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="page">
+  <aside class="navbar navbar-vertical navbar-expand-lg" aria-label="Main navigation">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+      <h1 class="navbar-brand navbar-brand-autodark mb-0"><a href="index.html" class="d-flex align-items-center text-reset text-decoration-none"><span class="brand-mark">s</span><span><span class="brand-name">slai</span><span class="brand-sub">demo-project</span></span></a></h1>
+      <div class="d-lg-none"><a class="btn btn-sm btn-ghost-secondary" href="inbox.html" aria-label="Inbox"><i class="ti ti-message-question"></i><span class="badge bg-red text-red-fg ms-1" data-needs-badge>5</span></a></div>
+      <div class="collapse navbar-collapse" id="sidebar-menu">
+        <ul class="navbar-nav pt-lg-3"><li class="nav-item"><a class="nav-link" href="index.html"><span class="nav-link-icon"><i class="ti ti-layout-dashboard"></i></span><span class="nav-link-title">Dashboard</span></a></li><li class="nav-item"><a class="nav-link" href="agents.html"><span class="nav-link-icon"><i class="ti ti-robot"></i></span><span class="nav-link-title">Agents</span></a></li><li class="nav-item"><a class="nav-link" href="board.html"><span class="nav-link-icon"><i class="ti ti-layout-kanban"></i></span><span class="nav-link-title">Board</span></a></li><li class="nav-item"><a class="nav-link" href="reviews.html"><span class="nav-link-icon"><i class="ti ti-eye-check"></i></span><span class="nav-link-title">Reviews</span><span class="badge bg-azure text-azure-fg">2</span></a></li><li class="nav-item"><a class="nav-link" href="inbox.html"><span class="nav-link-icon"><i class="ti ti-message-question"></i></span><span class="nav-link-title">Inbox</span><span class="badge bg-red text-red-fg" data-needs-badge>5</span></a></li><li class="nav-item"><a class="nav-link" href="stats.html"><span class="nav-link-icon"><i class="ti ti-chart-bar"></i></span><span class="nav-link-title">Stats</span></a></li><li class="nav-item"><a class="nav-link" href="memory.html"><span class="nav-link-icon"><i class="ti ti-brain"></i></span><span class="nav-link-title">Memory</span></a></li><li class="nav-item"><a class="nav-link" href="doctor.html"><span class="nav-link-icon"><i class="ti ti-stethoscope"></i></span><span class="nav-link-title">Doctor</span></a></li><li class="nav-item"><a class="nav-link active" aria-current="page" href="log.html"><span class="nav-link-icon"><i class="ti ti-list-details"></i></span><span class="nav-link-title">Log</span></a></li><li class="nav-item"><a class="nav-link" href="commit.html"><span class="nav-link-icon"><i class="ti ti-git-pull-request"></i></span><span class="nav-link-title">Commit preview</span></a></li></ul>
+        <div class="mt-auto p-3 d-none d-lg-block">
+          <div class="card card-sm"><div class="card-body">
+            <div class="d-flex align-items-center gap-2"><span class="dot ok pulse"></span><strong class="small">Supervisor running</strong></div>
+            <div class="reason mt-1">heartbeat 2s ago · pid 41873 · up 3h12m</div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="page-wrapper">
+    <div class="proto-ribbon">Prototype · fake data · nothing here talks to a real team</div>
+    <header class="navbar navbar-expand-md d-print-none sticky-top" style="background:var(--tblr-bg-surface);border-bottom:1px solid var(--tblr-border-color)">
+      <div class="container-xl">
+        <div class="d-flex align-items-center gap-2 flex-wrap w-100">
+          <span class="chip chip-ok"><i class="ti ti-heartbeat"></i>Supervisor ok</span>
+          <a class="chip chip-user text-decoration-none" href="inbox.html"><i class="ti ti-hand-stop"></i><span id="needs-count">5</span> need you</a>
+          <div class="ms-auto d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#hold-modal" data-hold-open><i class="ti ti-player-pause me-1"></i>Hold team</button>
+            <button class="btn btn-sm btn-warning" data-hold-release hidden><i class="ti ti-player-play me-1"></i>Release hold</button>
+            <button class="btn btn-sm btn-icon btn-ghost-secondary" id="theme-toggle" type="button" aria-label="Switch theme"><i class="ti ti-moon"></i></button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div class="page-header d-print-none"><div class="container-xl"><div class="row g-2 align-items-center">
+      <div class="col"><div class="page-pretitle">Event stream</div><h2 class="page-title">Log</h2></div>
+      <div class="col-auto ms-auto"><div class="btn-list"></div></div>
+    </div></div></div>
+    <div class="page-body"><div class="container-xl">
+      
+      <div id="hold-banner" class="banner banner-hold mb-3" hidden role="status"><i class="ti ti-player-pause text-warning"></i><div><strong>Team on hold: <span id="hold-name">hold</span></strong> since 11:44 (just now). No wake-ups are being delivered, nothing is nudged or restarted; sessions stay up. <a href="#" data-hold-release-link>Use “Release hold” to resume.</a></div></div>
+      <div data-filter-scope>
+<div class="card mb-3"><div class="card-body"><div class="row g-2 align-items-end">
+<div class="col-6 col-md-2"><label class="form-label" for="la">Agent</label><select class="form-select" id="la" data-filter="agent"><option value="">All</option><option>eng-1</option><option>eng-2</option><option>eng-4</option><option>orch</option><option>principal</option><option>supervisor</option></select></div>
+<div class="col-6 col-md-3"><label class="form-label" for="lk">Kind</label><select class="form-select" id="lk" data-filter="kind"><option value="">All</option><option>ask</option><option>health</option><option>hold</option><option>hook:posttooluse</option><option>hook:pretooluse</option><option>lane_denied</option><option>merge_refused</option><option>message</option><option>pane_decision</option><option>redirect</option><option>report</option><option>request_changes</option><option>request_review</option><option>restart</option><option>wake</option></select></div>
+<div class="col-6 col-md-2"><label class="form-label" for="lt">Task</label><input class="form-control" id="lt" data-filter="task" placeholder="T-0080"></div>
+<div class="col-6 col-md-3"><label class="form-label" for="lq">Text</label><input class="form-control" id="lq" data-filter="text" placeholder="search"></div>
+<div class="col-12 col-md-2"><label class="form-check"><input class="form-check-input" type="checkbox" id="hooks" data-toast="Hook events are noisy; they are shown on demand, like h in the TUI." data-kind="info"><span class="form-check-label">Hook events</span></label></div></div></div></div>
+<div class="card"><div class="table-responsive"><table class="table table-vcenter table-sl card-table"><thead><tr><th>time</th><th>agent</th><th>kind</th><th>task</th><th>what</th></tr></thead><tbody><tr data-row data-agent="eng-2" data-kind="hook:posttooluse" data-task="T-0087" data-hook="1"><td class="mono text-nowrap">11:42:08</td><td>eng-2</td><td><span class="chip chip-idle">hook:posttooluse</span></td><td class="mono">T-0087</td><td>Write docs/serve-prototype/assets/app.js</td></tr><tr data-row data-agent="principal" data-kind="request_changes" data-task="T-0075" data-hook="0"><td class="mono text-nowrap">11:42:03</td><td>principal</td><td><span class="chip chip-idle">request_changes</span></td><td class="mono">T-0075</td><td>round 2: 0 comments. approve pending</td></tr><tr data-row data-agent="eng-4" data-kind="pane_decision" data-task="T-0080" data-hook="0"><td class="mono text-nowrap">11:41:51</td><td>eng-4</td><td><span class="chip chip-warn">pane_decision</span></td><td class="mono">T-0080</td><td>type_blocked · claude.modal · “Do you want to proceed?”</td></tr><tr data-row data-agent="orch" data-kind="message" data-task="" data-hook="0"><td class="mono text-nowrap">11:41:20</td><td>orch</td><td><span class="chip chip-info">message</span></td><td class="mono">—</td><td>orch → eng-3: T-0086 merged, pick up T-0081 when ready</td></tr><tr data-row data-agent="eng-1" data-kind="request_review" data-task="T-0079" data-hook="0"><td class="mono text-nowrap">11:40:44</td><td>eng-1</td><td><span class="chip chip-info">request_review</span></td><td class="mono">T-0079</td><td>Team memory M1: fact store and index (round 1)</td></tr><tr data-row data-agent="supervisor" data-kind="wake" data-task="" data-hook="0"><td class="mono text-nowrap">11:39:02</td><td>supervisor</td><td><span class="chip chip-info">wake</span></td><td class="mono">—</td><td>eng-3 woken: 2 new items</td></tr><tr data-row data-agent="eng-3" data-kind="report" data-task="T-0086" data-hook="0"><td class="mono text-nowrap">11:38:15</td><td>eng-3</td><td><span class="chip chip-info">report</span></td><td class="mono">T-0086</td><td>done · merged</td></tr><tr data-row data-agent="supervisor" data-kind="lane_denied" data-task="T-0080" data-hook="0"><td class="mono text-nowrap">11:36:40</td><td>supervisor</td><td><span class="chip chip-bad">lane_denied</span></td><td class="mono">T-0080</td><td>eng-4 Write /home/…/.config/opencode/config.json · outside worktree</td></tr><tr data-row data-agent="supervisor" data-kind="health" data-task="" data-hook="0"><td class="mono text-nowrap">11:34:12</td><td>supervisor</td><td><span class="chip chip-warn">health</span></td><td class="mono">—</td><td>fg-power dead · revive attempt 3/3 failed: tmux session gone</td></tr><tr data-row data-agent="principal" data-kind="merge_refused" data-task="T-0074" data-hook="0"><td class="mono text-nowrap">11:31:47</td><td>principal</td><td><span class="chip chip-bad">merge_refused</span></td><td class="mono">T-0074</td><td>test gate failed: TestSpendHeaderShowsCaps (internal/tui) — 1 of 41 packages</td></tr><tr data-row data-agent="supervisor" data-kind="restart" data-task="" data-hook="0"><td class="mono text-nowrap">11:29:30</td><td>supervisor</td><td><span class="chip chip-warn">restart</span></td><td class="mono">—</td><td>eng-3 restart: context 91% full (cause: context_full)</td></tr><tr data-row data-agent="pm" data-kind="ask" data-task="" data-hook="0"><td class="mono text-nowrap">11:27:09</td><td>pm</td><td><span class="chip chip-info">ask</span></td><td class="mono">—</td><td>pm → fg-skeptic: react to the serve prototype screenshots</td></tr><tr data-row data-agent="supervisor" data-kind="redirect" data-task="T-0083" data-hook="0"><td class="mono text-nowrap">11:25:55</td><td>supervisor</td><td><span class="chip chip-info">redirect</span></td><td class="mono">T-0083</td><td>course correction delivered to eng-1 (interrupted at hook 8s)</td></tr><tr data-row data-agent="eng-2" data-kind="hook:pretooluse" data-task="T-0087" data-hook="1"><td class="mono text-nowrap">11:22:18</td><td>eng-2</td><td><span class="chip chip-idle">hook:pretooluse</span></td><td class="mono">T-0087</td><td>Bash go vet ./...</td></tr><tr data-row data-agent="supervisor" data-kind="hold" data-task="" data-hook="0"><td class="mono text-nowrap">11:20:00</td><td>supervisor</td><td><span class="chip chip-info">hold</span></td><td class="mono">—</td><td>team hold “release-window” lifted</td></tr></tbody></table>
+<div class="empty-hint m-3" data-filter-empty hidden>No event matches these filters.</div></div>
+<div class="card-footer d-flex align-items-center"><span class="text-secondary small">Showing <span data-filter-count>15</span> of 4,312 · newest first · 100 per page</span><ul class="pagination m-0 ms-auto"><li class="page-item disabled"><a class="page-link" href="#">prev</a></li><li class="page-item active"><a class="page-link" href="#">1</a></li><li class="page-item"><a class="page-link" href="#">2</a></li><li class="page-item"><a class="page-link" href="#">3</a></li><li class="page-item"><a class="page-link" href="#">next</a></li></ul></div></div></div>
+    </div></div>
+    <footer class="footer footer-transparent d-print-none"><div class="container-xl"><div class="small text-secondary">slai serve · same privileges as the TUI · it never approves, merges or types keystrokes into a pane · <a href="signin.html">sign-in page</a> · <a href="index-readonly.html">read-only mode</a></div></div></footer>
+  </div>
+</div>
+<div class="modal modal-blur fade" id="hold-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h3 class="modal-title">Hold the team</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body"><p class="text-secondary">Nothing is woken, nudged or restarted while the team is on hold. Sessions stay up and work in progress is untouched. Same as <span class="mono">slai hold</span> and <kbd>H</kbd> in the TUI.</p>
+    <label class="form-label" for="hold-input">Name (optional)</label><input class="form-control" id="hold-input" type="text" placeholder="release-window"></div>
+  <div class="modal-footer"><button class="btn" data-bs-dismiss="modal">Cancel</button><button class="btn btn-warning" data-hold-confirm><i class="ti ti-player-pause me-1"></i>Hold team</button></div>
+</div></div></div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3 mt-5" id="toasts" aria-live="polite"></div>
+<script src="vendor/tabler/js/tabler.min.js"></script>
+<script src="vendor/sortable/Sortable.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

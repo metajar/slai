@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard (first run) · slai</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<script src="assets/theme.js"></script>
+<link rel="stylesheet" href="vendor/tabler/css/tabler.min.css">
+<link rel="stylesheet" href="vendor/icons/tabler-icons.min.css">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="page">
+  <aside class="navbar navbar-vertical navbar-expand-lg" aria-label="Main navigation">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+      <h1 class="navbar-brand navbar-brand-autodark mb-0"><a href="index.html" class="d-flex align-items-center text-reset text-decoration-none"><span class="brand-mark">s</span><span><span class="brand-name">slai</span><span class="brand-sub">demo-project</span></span></a></h1>
+      <div class="d-lg-none"><a class="btn btn-sm btn-ghost-secondary" href="inbox.html" aria-label="Inbox"><i class="ti ti-message-question"></i><span class="badge bg-red text-red-fg ms-1" data-needs-badge>5</span></a></div>
+      <div class="collapse navbar-collapse" id="sidebar-menu">
+        <ul class="navbar-nav pt-lg-3"><li class="nav-item"><a class="nav-link active" aria-current="page" href="index.html"><span class="nav-link-icon"><i class="ti ti-layout-dashboard"></i></span><span class="nav-link-title">Dashboard</span></a></li><li class="nav-item"><a class="nav-link" href="agents.html"><span class="nav-link-icon"><i class="ti ti-robot"></i></span><span class="nav-link-title">Agents</span></a></li><li class="nav-item"><a class="nav-link" href="board.html"><span class="nav-link-icon"><i class="ti ti-layout-kanban"></i></span><span class="nav-link-title">Board</span></a></li><li class="nav-item"><a class="nav-link" href="reviews.html"><span class="nav-link-icon"><i class="ti ti-eye-check"></i></span><span class="nav-link-title">Reviews</span><span class="badge bg-azure text-azure-fg">2</span></a></li><li class="nav-item"><a class="nav-link" href="inbox.html"><span class="nav-link-icon"><i class="ti ti-message-question"></i></span><span class="nav-link-title">Inbox</span><span class="badge bg-red text-red-fg" data-needs-badge>5</span></a></li><li class="nav-item"><a class="nav-link" href="stats.html"><span class="nav-link-icon"><i class="ti ti-chart-bar"></i></span><span class="nav-link-title">Stats</span></a></li><li class="nav-item"><a class="nav-link" href="memory.html"><span class="nav-link-icon"><i class="ti ti-brain"></i></span><span class="nav-link-title">Memory</span></a></li><li class="nav-item"><a class="nav-link" href="doctor.html"><span class="nav-link-icon"><i class="ti ti-stethoscope"></i></span><span class="nav-link-title">Doctor</span></a></li><li class="nav-item"><a class="nav-link" href="log.html"><span class="nav-link-icon"><i class="ti ti-list-details"></i></span><span class="nav-link-title">Log</span></a></li><li class="nav-item"><a class="nav-link" href="commit.html"><span class="nav-link-icon"><i class="ti ti-git-pull-request"></i></span><span class="nav-link-title">Commit preview</span></a></li></ul>
+        <div class="mt-auto p-3 d-none d-lg-block">
+          <div class="card card-sm"><div class="card-body">
+            <div class="d-flex align-items-center gap-2"><span class="dot ok pulse"></span><strong class="small">Supervisor running</strong></div>
+            <div class="reason mt-1">heartbeat 2s ago · pid 41873 · up 3h12m</div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="page-wrapper">
+    <div class="proto-ribbon">Prototype · fake data · nothing here talks to a real team</div>
+    <header class="navbar navbar-expand-md d-print-none sticky-top" style="background:var(--tblr-bg-surface);border-bottom:1px solid var(--tblr-border-color)">
+      <div class="container-xl">
+        <div class="d-flex align-items-center gap-2 flex-wrap w-100">
+          <span class="chip chip-ok"><i class="ti ti-heartbeat"></i>Supervisor ok</span>
+          <a class="chip chip-user text-decoration-none" href="inbox.html"><i class="ti ti-hand-stop"></i><span id="needs-count">5</span> need you</a>
+          <div class="ms-auto d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#hold-modal" data-hold-open><i class="ti ti-player-pause me-1"></i>Hold team</button>
+            <button class="btn btn-sm btn-warning" data-hold-release hidden><i class="ti ti-player-play me-1"></i>Release hold</button>
+            <button class="btn btn-sm btn-icon btn-ghost-secondary" id="theme-toggle" type="button" aria-label="Switch theme"><i class="ti ti-moon"></i></button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div class="page-header d-print-none"><div class="container-xl"><div class="row g-2 align-items-center">
+      <div class="col"><div class="page-pretitle">demo-project · just started</div><h2 class="page-title">Dashboard (first run)</h2></div>
+      <div class="col-auto ms-auto"><div class="btn-list"></div></div>
+    </div></div></div>
+    <div class="page-body"><div class="container-xl">
+      
+      <div id="hold-banner" class="banner banner-hold mb-3" hidden role="status"><i class="ti ti-player-pause text-warning"></i><div><strong>Team on hold: <span id="hold-name">hold</span></strong> since 11:44 (just now). No wake-ups are being delivered, nothing is nudged or restarted; sessions stay up. <a href="#" data-hold-release-link>Use “Release hold” to resume.</a></div></div>
+      <div class="banner banner-hint mb-3" role="status"><i class="ti ti-sparkles text-primary"></i><div class="flex-fill"><strong>Welcome. You only need to talk to one agent: <span class="mono">orch</span>.</strong> Tell it your goal in plain words; it splits the goal into tasks and the rest of the team works for it. The other agents’ panes show machine traffic, you rarely need to type there.</div></div>
+<div class="row row-cards mb-3"><div class="col-6 col-lg-3"><div class="card card-sm"><div class="card-body"><div class="d-flex align-items-center">
+<span class="avatar rounded bg-green-lt me-3"><i class="ti ti-heartbeat"></i></span>
+<div><div class="kpi">10 <small>/ 10</small></div><div class="reason">Agents healthy</div></div></div></div></div></div><div class="col-6 col-lg-3"><div class="card card-sm"><div class="card-body"><div class="d-flex align-items-center">
+<span class="avatar rounded bg-azure-lt me-3"><i class="ti ti-layout-kanban"></i></span>
+<div><div class="kpi">0 <small>tasks</small></div><div class="reason">Tasks in flight</div></div></div></div></div></div><div class="col-6 col-lg-3"><div class="card card-sm"><div class="card-body"><div class="d-flex align-items-center">
+<span class="avatar rounded bg-indigo-lt me-3"><i class="ti ti-hand-stop"></i></span>
+<div><div class="kpi">0 <small>items</small></div><div class="reason">Waiting on you</div></div></div></div></div></div><div class="col-6 col-lg-3"><div class="card card-sm"><div class="card-body"><div class="d-flex align-items-center">
+<span class="avatar rounded bg-green-lt me-3"><i class="ti ti-coin"></i></span>
+<div><div class="kpi">$0.00 <small>caps OFF</small></div><div class="reason">Spend today</div></div></div></div></div></div></div>
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">Your goal for orch</h3><div class="card-actions"></div></div><div class="card-body  "><p class="text-secondary mb-2">Start here. Try: <em>“Add a --json flag to the status command and cover it with tests.”</em></p>
+<form data-fake="Delivered to orch when it is safe to type (same path as the TUI send box)." data-title="Message queued" class="sendbox">
+<label class="visually-hidden" for="msg-orch">Goal for orch</label>
+<input class="form-control" id="msg-orch" type="text" placeholder="Type your goal for orch…" autocomplete="off">
+<button class="btn btn-primary" type="submit"><i class="ti ti-send me-1"></i>Send</button></form></div></div>
+<div class="row row-cards">
+  <div class="col-lg-8"><div class="d-flex align-items-center mb-2"><h3 class="mb-0">Team health</h3><span class="ms-2 reason">one chip per agent: icon + text, never colour alone</span></div>
+    <div class="row row-cards"><div class="col-12 col-sm-6 col-xl-4"><a href="agent.html" class="card agent-card text-reset text-decoration-none"><div class="card-body">
+<div class="d-flex align-items-center gap-3"><span class="avatar avatar-md avatar-orch" aria-hidden="true">OR</span><div class="flex-fill" style="min-width:0"><div class="fw-semibold">orch</div><div class="reason text-truncate">orchestrator · claude/opus</div></div></div>
+<div class="mt-2"><span class="chip chip-idle"><i class="ti ti-moon-stars"></i>idle</span></div>
+<div class="reason mt-2" style="min-height:2.4em">started 40s ago · waiting for a goal</div>
+<div class="d-flex justify-content-between mt-2 small"><span><span class="text-secondary">no task</span></span><span class="text-secondary">$0.00 today</span></div>
+</div></a></div><div class="col-12 col-sm-6 col-xl-4"><a href="agent.html" class="card agent-card text-reset text-decoration-none"><div class="card-body">
+<div class="d-flex align-items-center gap-3"><span class="avatar avatar-md avatar-pm" aria-hidden="true">PM</span><div class="flex-fill" style="min-width:0"><div class="fw-semibold">pm</div><div class="reason text-truncate">product manager · claude/sonnet</div></div></div>
+<div class="mt-2"><span class="chip chip-idle"><i class="ti ti-moon-stars"></i>idle</span></div>
+<div class="reason mt-2" style="min-height:2.4em">started 40s ago · waiting for a goal</div>
+<div class="d-flex justify-content-between mt-2 small"><span><span class="text-secondary">no task</span></span><span class="text-secondary">$0.00 today</span></div>
+</div></a></div><div class="col-12 col-sm-6 col-xl-4"><a href="agent.html" class="card agent-card text-reset text-decoration-none"><div class="card-body">
+<div class="d-flex align-items-center gap-3"><span class="avatar avatar-md avatar-principal" aria-hidden="true">PR</span><div class="flex-fill" style="min-width:0"><div class="fw-semibold">principal</div><div class="reason text-truncate">principal engineer · claude/opus</div></div></div>
+<div class="mt-2"><span class="chip chip-idle"><i class="ti ti-moon-stars"></i>idle</span></div>
+<div class="reason mt-2" style="min-height:2.4em">started 40s ago · waiting for a goal</div>
+<div class="d-flex justify-content-between mt-2 small"><span><span class="text-secondary">no task</span></span><span class="text-secondary">$0.00 today</span></div>
+</div></a></div><div class="col-12 col-sm-6 col-xl-4"><a href="agent.html" class="card agent-card text-reset text-decoration-none"><div class="card-body">
+<div class="d-flex align-items-center gap-3"><span class="avatar avatar-md avatar-eng" aria-hidden="true">EN</span><div class="flex-fill" style="min-width:0"><div class="fw-semibold">eng-1</div><div class="reason text-truncate">engineer · claude/sonnet</div></div></div>
+<div class="mt-2"><span class="chip chip-idle"><i class="ti ti-moon-stars"></i>idle</span></div>
+<div class="reason mt-2" style="min-height:2.4em">started 40s ago · waiting for a goal</div>
+<div class="d-flex justify-content-between mt-2 small"><span><span class="text-secondary">no task</span></span><span class="text-secondary">$0.00 today</span></div>
+</div></a></div><div class="col-12 col-sm-6 col-xl-4"><a href="agent.html" class="card agent-card text-reset text-decoration-none"><div class="card-body">
+<div class="d-flex align-items-center gap-3"><span class="avatar avatar-md avatar-eng" aria-hidden="true">EN</span><div class="flex-fill" style="min-width:0"><div class="fw-semibold">eng-2</div><div class="reason text-truncate">engineer · claude/sonnet</div></div></div>
+<div class="mt-2"><span class="chip chip-idle"><i class="ti ti-moon-stars"></i>idle</span></div>
+<div class="reason mt-2" style="min-height:2.4em">started 40s ago · waiting for a goal</div>
+<div class="d-flex justify-content-between mt-2 small"><span><span class="text-secondary">no task</span></span><span class="text-secondary">$0.00 today</span></div>
+</div></a></div><div class="col-12 col-sm-6 col-xl-4"><a href="agent.html" class="card agent-card text-reset text-decoration-none"><div class="card-body">
+<div class="d-flex align-items-center gap-3"><span class="avatar avatar-md avatar-eng" aria-hidden="true">EN</span><div class="flex-fill" style="min-width:0"><div class="fw-semibold">eng-3</div><div class="reason text-truncate">engineer · claude/sonnet</div></div></div>
+<div class="mt-2"><span class="chip chip-idle"><i class="ti ti-moon-stars"></i>idle</span></div>
+<div class="reason mt-2" style="min-height:2.4em">started 40s ago · waiting for a goal</div>
+<div class="d-flex justify-content-between mt-2 small"><span><span class="text-secondary">no task</span></span><span class="text-secondary">$0.00 today</span></div>
+</div></a></div><div class="col-12 col-sm-6 col-xl-4"><a href="agent.html" class="card agent-card text-reset text-decoration-none"><div class="card-body">
+<div class="d-flex align-items-center gap-3"><span class="avatar avatar-md avatar-eng" aria-hidden="true">EN</span><div class="flex-fill" style="min-width:0"><div class="fw-semibold">eng-4</div><div class="reason text-truncate">engineer · opencode/glm-5</div></div></div>
+<div class="mt-2"><span class="chip chip-idle"><i class="ti ti-moon-stars"></i>idle</span></div>
+<div class="reason mt-2" style="min-height:2.4em">started 40s ago · waiting for a goal</div>
+<div class="d-flex justify-content-between mt-2 small"><span><span class="text-secondary">no task</span></span><span class="text-secondary">$0.00 today</span></div>
+</div></a></div><div class="col-12 col-sm-6 col-xl-4"><a href="agent.html" class="card agent-card text-reset text-decoration-none"><div class="card-body">
+<div class="d-flex align-items-center gap-3"><span class="avatar avatar-md avatar-fg" aria-hidden="true">FG</span><div class="flex-fill" style="min-width:0"><div class="fw-semibold">fg-newbie</div><div class="reason text-truncate">focus group · claude/haiku</div></div></div>
+<div class="mt-2"><span class="chip chip-idle"><i class="ti ti-moon-stars"></i>idle</span></div>
+<div class="reason mt-2" style="min-height:2.4em">started 40s ago · waiting for a goal</div>
+<div class="d-flex justify-content-between mt-2 small"><span><span class="text-secondary">no task</span></span><span class="text-secondary">$0.00 today</span></div>
+</div></a></div><div class="col-12 col-sm-6 col-xl-4"><a href="agent.html" class="card agent-card text-reset text-decoration-none"><div class="card-body">
+<div class="d-flex align-items-center gap-3"><span class="avatar avatar-md avatar-fg" aria-hidden="true">FG</span><div class="flex-fill" style="min-width:0"><div class="fw-semibold">fg-power</div><div class="reason text-truncate">focus group · claude/haiku</div></div></div>
+<div class="mt-2"><span class="chip chip-idle"><i class="ti ti-moon-stars"></i>idle</span></div>
+<div class="reason mt-2" style="min-height:2.4em">started 40s ago · waiting for a goal</div>
+<div class="d-flex justify-content-between mt-2 small"><span><span class="text-secondary">no task</span></span><span class="text-secondary">$0.00 today</span></div>
+</div></a></div><div class="col-12 col-sm-6 col-xl-4"><a href="agent.html" class="card agent-card text-reset text-decoration-none"><div class="card-body">
+<div class="d-flex align-items-center gap-3"><span class="avatar avatar-md avatar-fg" aria-hidden="true">FG</span><div class="flex-fill" style="min-width:0"><div class="fw-semibold">fg-skeptic</div><div class="reason text-truncate">focus group · claude/haiku</div></div></div>
+<div class="mt-2"><span class="chip chip-idle"><i class="ti ti-moon-stars"></i>idle</span></div>
+<div class="reason mt-2" style="min-height:2.4em">started 40s ago · waiting for a goal</div>
+<div class="d-flex justify-content-between mt-2 small"><span><span class="text-secondary">no task</span></span><span class="text-secondary">$0.00 today</span></div>
+</div></a></div></div></div>
+  <div class="col-lg-4">
+    <div class="card mb-3"><div class="card-header"><h3 class="card-title">Needs attention</h3><div class="card-actions"><a href="inbox.html" class="small">Inbox</a></div></div><div class="card-body p-0 "><div class="empty-hint"><i class="ti ti-circle-check fs-1 text-success"></i><div class="mt-2 fw-semibold">Nothing needs you</div><div class="small">Alerts and questions from the team appear here.</div></div></div></div>
+    <div class="card mb-3"><div class="card-header"><h3 class="card-title">Spend and caps</h3><div class="card-actions"></div></div><div class="card-body  "><div class="d-flex justify-content-between"><span>Today</span><strong>$0.00</strong></div>
+<div class="bar mt-1"><i style="width:0"></i></div>
+<p class="reason mt-2 mb-0"><span class="chip chip-idle"><i class="ti ti-shield-off"></i>Spend caps: OFF</span> Set <span class="mono">defaults.spend_caps</span> in <span class="mono">.slai/team.yaml</span> to limit what a run can cost. Ten Claude sessions are running.</p></div></div>
+    <div class="card mb-3"><div class="card-header"><h3 class="card-title">Rate limits</h3><div class="card-actions"></div></div><div class="card-body  "><div class="mb-3"><div class="d-flex justify-content-between small"><span>5-hour window</span><strong>41%</strong></div><div class="bar ok mt-1"><i style="width:41%"></i></div><div class="reason mt-1">resets 14:20 · claude</div></div>
+<div class="mb-3"><div class="d-flex justify-content-between small"><span>Weekly</span><strong>27%</strong></div><div class="bar ok mt-1"><i style="width:27%"></i></div><div class="reason mt-1">resets Mon 09:00 · claude</div></div>
+<div><div class="d-flex justify-content-between small"><span>opencode (eng-4)</span><span class="na" title="OpenCode reports no rate-limit data to hooks, so there is nothing to show.">n/a</span></div><div class="reason mt-1">no limit data from this harness</div></div></div></div>
+    <div class="card mb-3"><div class="card-header"><h3 class="card-title">Recent activity</h3><div class="card-actions"></div></div><div class="card-body  "><div class="empty-hint">No activity yet. It starts when you send orch a goal.</div></div></div>
+  </div>
+</div>
+    </div></div>
+    <footer class="footer footer-transparent d-print-none"><div class="container-xl"><div class="small text-secondary">slai serve · same privileges as the TUI · it never approves, merges or types keystrokes into a pane · <a href="signin.html">sign-in page</a> · <a href="index-readonly.html">read-only mode</a></div></div></footer>
+  </div>
+</div>
+<div class="modal modal-blur fade" id="hold-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h3 class="modal-title">Hold the team</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body"><p class="text-secondary">Nothing is woken, nudged or restarted while the team is on hold. Sessions stay up and work in progress is untouched. Same as <span class="mono">slai hold</span> and <kbd>H</kbd> in the TUI.</p>
+    <label class="form-label" for="hold-input">Name (optional)</label><input class="form-control" id="hold-input" type="text" placeholder="release-window"></div>
+  <div class="modal-footer"><button class="btn" data-bs-dismiss="modal">Cancel</button><button class="btn btn-warning" data-hold-confirm><i class="ti ti-player-pause me-1"></i>Hold team</button></div>
+</div></div></div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3 mt-5" id="toasts" aria-live="polite"></div>
+<script src="vendor/tabler/js/tabler.min.js"></script>
+<script src="vendor/sortable/Sortable.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

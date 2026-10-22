@@ -1,0 +1,31 @@
+version: 1
+project:
+  name: sample
+  description: a project written long ago
+  main_branch: main
+  integration_branch: slai/integration
+defaults:
+  permission_mode: manual
+  max_turns_per_task: 40
+  max_concurrent_agents: 5
+  require_review: true
+models:
+  fable: claude-fable-5-1
+  haiku: haiku
+  opus: opus
+  sonnet: sonnet
+agents:
+  - id: orch
+    role: orchestrator
+    model: opus
+  - id: principal
+    role: principal_engineer
+    model: fable
+  - id: eng-1
+    role: engineer
+    model: sonnet
+    focus: backend
+  - id: fg-newbie
+    role: focus_group
+    model: haiku
+    persona: newbie

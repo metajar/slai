@@ -1,0 +1,80 @@
+{{define "content"}}
+<div class="row row-cards">
+  <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="card-title">Questions for you</h3></div>
+      {{if or .Data.Questions .Data.Notices}}<div class="card-body p-0 list-group list-group-flush">
+        {{range .Data.Questions}}<div class="list-group-item" data-needs-item>
+          <div class="d-flex gap-2 mb-2">
+            <span class="chip chip-user">question</span>
+            <div class="flex-fill"><strong>{{.Agent}}</strong> <span class="text-secondary small">· ask_user · {{.When}}</span>
+              <div>{{.Text}}</div>{{if .Reason}}<div class="reason">{{.Reason}}</div>{{end}}</div>
+          </div>
+          {{if not $.ReadOnly}}<div id="ans-state-{{.EventID}}" class="mb-2" role="status"></div>
+          <form class="sendbox" hx-post="/inbox/{{.EventID}}/answer" hx-target="#ans-state-{{.EventID}}" hx-swap="innerHTML">
+            <label class="visually-hidden" for="ans-{{.EventID}}">Answer {{.Agent}}</label>
+            <input class="form-control" id="ans-{{.EventID}}" name="answer" type="text" placeholder="Your answer…" maxlength="4000" required>
+            <button class="btn btn-primary" type="submit">Answer</button>
+          </form>{{else}}<div class="reason">Read-only: answer with <code>slai send {{.Agent}} "…"</code>.</div>{{end}}
+        </div>{{end}}
+        {{range .Data.Notices}}<div class="list-group-item" data-needs-item>
+          <div class="d-flex gap-2"><span class="chip chip-warn">supervisor notice</span>
+            <div class="flex-fill"><span class="text-secondary small">{{.When}}</span><div>{{.Text}}</div>
+              <div class="reason">Nobody is waiting on an answer: it clears by itself after 15 minutes, or when you act (for example <code>slai resume</code>).</div></div></div>
+        </div>{{end}}
+      </div>{{else}}<div class="card-body text-secondary">Nothing is waiting for you. When an agent asks you something it shows up here, and in the sidebar count.</div>{{end}}
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="card-title">Escalations</h3><div class="card-actions"><span class="reason">Dismiss hides it here only</span></div></div>
+      {{if .Data.Escalated}}<div class="card-body p-0 list-group list-group-flush">
+        {{range .Data.Escalated}}<div class="list-group-item" data-needs-item>
+          <div class="d-flex gap-2">
+            <span class="chip {{.Chip}}">{{.Kind}}</span>
+            <div class="flex-fill"><strong>{{.Agent}}</strong> · {{.Text}} <span class="text-secondary small">· since {{.When}}</span>
+              <div class="reason">{{.Next}}</div></div>
+            {{if not $.ReadOnly}}<form hx-post="/inbox/escalations/{{.Kind}}/{{.Agent}}/dismiss" hx-swap="none">
+              <button class="btn btn-sm btn-ghost-secondary" type="submit">Dismiss</button></form>{{end}}
+          </div>
+        </div>{{end}}
+      </div>{{else}}<div class="card-body text-secondary">No escalations need you.</div>{{end}}
+      {{if .Data.Dismissed}}<div class="card-footer">
+        <h4 class="h5">Dismissed (still active in slai)</h4>
+        <p class="reason">These are hidden from the count above but are not resolved: slai still has each one open.</p>
+        <ul class="list-unstyled mb-0">
+          {{range .Data.Dismissed}}<li class="d-flex gap-2 align-items-start mb-2">
+            <span class="chip {{.Chip}}">{{.Kind}}</span>
+            <div class="flex-fill"><strong>{{.Agent}}</strong> · {{.Text}} <span class="text-secondary small">· since {{.When}}</span></div>
+            {{if not $.ReadOnly}}<form hx-post="/inbox/escalations/{{.Kind}}/{{.Agent}}/restore" hx-swap="none">
+              <button class="btn btn-sm btn-ghost-secondary" type="submit">Show again</button></form>{{end}}
+          </li>{{end}}
+        </ul>
+      </div>{{end}}
+    </div>
+
+    {{if .Data.Answered}}<div class="card mb-3">
+      <div class="card-header"><h3 class="card-title">Answered today</h3></div>
+      <div class="card-body p-0 list-group list-group-flush">
+        {{range .Data.Answered}}<div class="list-group-item">
+          <div><strong>{{.Agent}}</strong> <span class="text-secondary small">asked {{.When}}</span></div>
+          <div>{{.Text}}</div>
+          <div class="reason">You answered {{.AnswerWhen}}: {{.Answer}}</div>
+        </div>{{end}}
+      </div>
+    </div>{{end}}
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-3"><div class="card-header"><h3 class="card-title">Count</h3></div>
+      <div class="card-body"><div class="kpi"><span id="needs-count">{{.Needs}}</span> <small>{{if eq .Needs 1}}item needs{{else}}items need{{end}} you</small></div>
+        <p class="reason mt-2 mb-0">The browser tab title and the sidebar badge show this count, so you can leave the page open on another monitor.</p></div></div>
+    <div class="card mb-3"><div class="card-header"><h3 class="card-title">Waiting on the team</h3></div>
+      {{if .Data.Waiting}}<div class="card-body p-0 list-group list-group-flush">
+        {{range .Data.Waiting}}<div class="list-group-item"><div class="d-flex gap-2">
+          <span class="chip chip-info">awaiting reply</span>
+          <div><strong>{{.From}} → {{.To}}</strong> <span class="text-secondary small">· ask · {{.When}}</span><div>{{.Body}}</div></div></div></div>{{end}}
+      </div>{{else}}<div class="card-body text-secondary">No agent is waiting on another agent's reply.</div>{{end}}
+    </div>
+  </div>
+</div>
+{{end}}

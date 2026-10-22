@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inbox · slai</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<script src="assets/theme.js"></script>
+<link rel="stylesheet" href="vendor/tabler/css/tabler.min.css">
+<link rel="stylesheet" href="vendor/icons/tabler-icons.min.css">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="page">
+  <aside class="navbar navbar-vertical navbar-expand-lg" aria-label="Main navigation">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+      <h1 class="navbar-brand navbar-brand-autodark mb-0"><a href="index.html" class="d-flex align-items-center text-reset text-decoration-none"><span class="brand-mark">s</span><span><span class="brand-name">slai</span><span class="brand-sub">demo-project</span></span></a></h1>
+      <div class="d-lg-none"><a class="btn btn-sm btn-ghost-secondary" href="inbox.html" aria-label="Inbox"><i class="ti ti-message-question"></i><span class="badge bg-red text-red-fg ms-1" data-needs-badge>5</span></a></div>
+      <div class="collapse navbar-collapse" id="sidebar-menu">
+        <ul class="navbar-nav pt-lg-3"><li class="nav-item"><a class="nav-link" href="index.html"><span class="nav-link-icon"><i class="ti ti-layout-dashboard"></i></span><span class="nav-link-title">Dashboard</span></a></li><li class="nav-item"><a class="nav-link" href="agents.html"><span class="nav-link-icon"><i class="ti ti-robot"></i></span><span class="nav-link-title">Agents</span></a></li><li class="nav-item"><a class="nav-link" href="board.html"><span class="nav-link-icon"><i class="ti ti-layout-kanban"></i></span><span class="nav-link-title">Board</span></a></li><li class="nav-item"><a class="nav-link" href="reviews.html"><span class="nav-link-icon"><i class="ti ti-eye-check"></i></span><span class="nav-link-title">Reviews</span><span class="badge bg-azure text-azure-fg">2</span></a></li><li class="nav-item"><a class="nav-link active" aria-current="page" href="inbox.html"><span class="nav-link-icon"><i class="ti ti-message-question"></i></span><span class="nav-link-title">Inbox</span><span class="badge bg-red text-red-fg" data-needs-badge>5</span></a></li><li class="nav-item"><a class="nav-link" href="stats.html"><span class="nav-link-icon"><i class="ti ti-chart-bar"></i></span><span class="nav-link-title">Stats</span></a></li><li class="nav-item"><a class="nav-link" href="memory.html"><span class="nav-link-icon"><i class="ti ti-brain"></i></span><span class="nav-link-title">Memory</span></a></li><li class="nav-item"><a class="nav-link" href="doctor.html"><span class="nav-link-icon"><i class="ti ti-stethoscope"></i></span><span class="nav-link-title">Doctor</span></a></li><li class="nav-item"><a class="nav-link" href="log.html"><span class="nav-link-icon"><i class="ti ti-list-details"></i></span><span class="nav-link-title">Log</span></a></li><li class="nav-item"><a class="nav-link" href="commit.html"><span class="nav-link-icon"><i class="ti ti-git-pull-request"></i></span><span class="nav-link-title">Commit preview</span></a></li></ul>
+        <div class="mt-auto p-3 d-none d-lg-block">
+          <div class="card card-sm"><div class="card-body">
+            <div class="d-flex align-items-center gap-2"><span class="dot ok pulse"></span><strong class="small">Supervisor running</strong></div>
+            <div class="reason mt-1">heartbeat 2s ago · pid 41873 · up 3h12m</div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="page-wrapper">
+    <div class="proto-ribbon">Prototype · fake data · nothing here talks to a real team</div>
+    <header class="navbar navbar-expand-md d-print-none sticky-top" style="background:var(--tblr-bg-surface);border-bottom:1px solid var(--tblr-border-color)">
+      <div class="container-xl">
+        <div class="d-flex align-items-center gap-2 flex-wrap w-100">
+          <span class="chip chip-ok"><i class="ti ti-heartbeat"></i>Supervisor ok</span>
+          <a class="chip chip-user text-decoration-none" href="inbox.html"><i class="ti ti-hand-stop"></i><span id="needs-count">5</span> need you</a>
+          <div class="ms-auto d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#hold-modal" data-hold-open><i class="ti ti-player-pause me-1"></i>Hold team</button>
+            <button class="btn btn-sm btn-warning" data-hold-release hidden><i class="ti ti-player-play me-1"></i>Release hold</button>
+            <button class="btn btn-sm btn-icon btn-ghost-secondary" id="theme-toggle" type="button" aria-label="Switch theme"><i class="ti ti-moon"></i></button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div class="page-header d-print-none"><div class="container-xl"><div class="row g-2 align-items-center">
+      <div class="col"><div class="page-pretitle">Questions and escalations</div><h2 class="page-title">Inbox</h2></div>
+      <div class="col-auto ms-auto"><div class="btn-list"></div></div>
+    </div></div></div>
+    <div class="page-body"><div class="container-xl">
+      
+      <div id="hold-banner" class="banner banner-hold mb-3" hidden role="status"><i class="ti ti-player-pause text-warning"></i><div><strong>Team on hold: <span id="hold-name">hold</span></strong> since 11:44 (just now). No wake-ups are being delivered, nothing is nudged or restarted; sessions stay up. <a href="#" data-hold-release-link>Use “Release hold” to resume.</a></div></div>
+      <div class="row row-cards"><div class="col-lg-8">
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">Questions for you</h3><div class="card-actions"></div></div><div class="card-body p-0 list-group list-group-flush"><div class="list-group-item" data-needs-item><div class="d-flex gap-2 mb-2"><span class="chip chip-user"><i class="ti ti-help"></i>question</span><div class="flex-fill"><strong>orch</strong> <span class="text-secondary small">· ask_user · 11:31</span><div>Should the serve prototype include a first-run variant of the dashboard?</div><div class="reason">Orchestrator wants to show a non-technical first screen to the focus group.</div></div></div>
+<div class="answer-state mb-2"></div><form class="sendbox" data-answer="orch"><label class="visually-hidden" for="ans-orch">Answer orch</label><input class="form-control" id="ans-orch" type="text" placeholder="Your answer…"><button class="btn btn-primary" type="submit"><i class="ti ti-send me-1"></i>Answer</button></form></div><div class="list-group-item" data-needs-item><div class="d-flex gap-2 mb-2"><span class="chip chip-user"><i class="ti ti-help"></i>question</span><div class="flex-fill"><strong>pm</strong> <span class="text-secondary small">· ask_user · 11:20</span><div>Do you want the focus group to review screenshots or the live files?</div><div class="reason">Personas could not open files in earlier rounds.</div></div></div>
+<div class="answer-state mb-2"></div><form class="sendbox" data-answer="pm"><label class="visually-hidden" for="ans-pm">Answer pm</label><input class="form-control" id="ans-pm" type="text" placeholder="Your answer…"><button class="btn btn-primary" type="submit"><i class="ti ti-send me-1"></i>Answer</button></form></div></div></div>
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">Escalations</h3><div class="card-actions"><span class="reason">Dismiss hides it here only</span></div></div><div class="card-body p-0 list-group list-group-flush"><div class="list-group-item" data-needs-item><div class="d-flex gap-2"><span class="chip chip-bad"><i class="ti ti-lock-exclamation"></i>stuck</span><div class="flex-fill"><strong>eng-4</strong> · Permission dialog open for 11 minutes <span class="text-secondary small">· since 11:31</span><div class="reason">Bash(rm -rf node_modules). The supervisor will not type over a dialog. Open the agent in the TUI (key 7) and answer it once.</div></div>
+<div class="btn-list flex-nowrap"><a class="btn btn-sm" href="agent.html">Open</a><button class="btn btn-sm btn-ghost-secondary" data-dismiss="modal-stuck">Dismiss</button></div></div></div><div class="list-group-item" data-needs-item><div class="d-flex gap-2"><span class="chip chip-warn"><i class="ti ti-clock-pause"></i>rate-limit</span><div class="flex-fill"><strong>fg-skeptic</strong> · Rate limit reached <span class="text-secondary small">· since 11:38</span><div class="reason">Resets 14:20 (in 38m). Wakes are held until then. Nothing is lost.</div></div>
+<div class="btn-list flex-nowrap"><a class="btn btn-sm" href="agent.html">Open</a><button class="btn btn-sm btn-ghost-secondary" data-dismiss="rate-limit">Dismiss</button></div></div></div><div class="list-group-item" data-needs-item><div class="d-flex gap-2"><span class="chip chip-bad"><i class="ti ti-skull"></i>revive-gave-up</span><div class="flex-fill"><strong>fg-power</strong> · Revive gave up after 3 tries <span class="text-secondary small">· since 11:41</span><div class="reason">The tmux session is gone. Press v on it in the TUI, or restart it from its page.</div></div>
+<div class="btn-list flex-nowrap"><a class="btn btn-sm" href="agent.html">Open</a><button class="btn btn-sm btn-ghost-secondary" data-dismiss="revive-gave-up">Dismiss</button></div></div></div></div></div>
+</div><div class="col-lg-4">
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">Count</h3><div class="card-actions"></div></div><div class="card-body  "><div class="kpi"><span id="needs-count">5</span> <small>items need you</small></div><p class="reason mt-2 mb-0">The browser tab title and the sidebar badge show this count, so you can leave the page open on another monitor.</p></div></div>
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">Waiting on the team</h3><div class="card-actions"></div></div><div class="card-body p-0 list-group list-group-flush"><div class="list-group-item"><div class="d-flex gap-2"><span class="chip chip-info"><i class="ti ti-message-reply"></i>awaiting reply</span><div><strong>pm → fg-skeptic</strong> <span class="text-secondary small">· ask · 11:27</span><div>React to the serve prototype screenshots.</div><div class="reason">fg-skeptic is rate limited until 14:20, so the reply will be late.</div></div></div></div></div></div>
+</div></div>
+    </div></div>
+    <footer class="footer footer-transparent d-print-none"><div class="container-xl"><div class="small text-secondary">slai serve · same privileges as the TUI · it never approves, merges or types keystrokes into a pane · <a href="signin.html">sign-in page</a> · <a href="index-readonly.html">read-only mode</a></div></div></footer>
+  </div>
+</div>
+<div class="modal modal-blur fade" id="hold-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h3 class="modal-title">Hold the team</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body"><p class="text-secondary">Nothing is woken, nudged or restarted while the team is on hold. Sessions stay up and work in progress is untouched. Same as <span class="mono">slai hold</span> and <kbd>H</kbd> in the TUI.</p>
+    <label class="form-label" for="hold-input">Name (optional)</label><input class="form-control" id="hold-input" type="text" placeholder="release-window"></div>
+  <div class="modal-footer"><button class="btn" data-bs-dismiss="modal">Cancel</button><button class="btn btn-warning" data-hold-confirm><i class="ti ti-player-pause me-1"></i>Hold team</button></div>
+</div></div></div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3 mt-5" id="toasts" aria-live="polite"></div>
+<script src="vendor/tabler/js/tabler.min.js"></script>
+<script src="vendor/sortable/Sortable.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

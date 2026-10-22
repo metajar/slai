@@ -1,0 +1,212 @@
+
+<section class="slai-col" data-col="assigned" aria-label="Assigned">
+  <header class="slai-col-head"><h3>Assigned</h3><span class="badge bg-secondary-lt">1</span></header>
+  <p class="slai-col-hint">handed to an engineer, not started</p>
+  <div class="slai-col-body" data-col="assigned">
+  <article class="slai-card" data-task="T-0001" data-col="assigned">
+    <div class="slai-card-top"><a class="slai-tid" href="/tasks/T-0001">T-0001</a>
+      <span class="slai-prio" title="priority 0: higher runs first">p0</span>
+      </div>
+    <a class="slai-card-title" href="/tasks/T-0001">Assigned one</a>
+    <div class="slai-card-meta">
+      <span class="slai-who"><span class="slai-dot slai-dot-ok" aria-hidden="true"></span>eng-1 <span class="visually-hidden">(working)</span></span>
+    </div>
+    <div class="slai-branch">slai/eng-1/x</div>
+    <details class="slai-menu">
+      <summary aria-label="Actions for T-0001">Actions</summary>
+      <div class="slai-menu-body">
+        <form class="slai-prio-form" hx-post="/tasks/T-0001/priority" hx-target="#board-msg" hx-swap="innerHTML">
+          <input type="hidden" name="view" value="">
+          <span class="slai-menu-label">Priority</span>
+          <button class="btn btn-sm btn-primary" name="spec" value="p0" type="submit" aria-pressed="true">p0</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p1" type="submit">p1</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p2" type="submit">p2</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p3" type="submit">p3</button>
+          <button class="btn btn-sm btn-outline-secondary" name="spec" value="top" type="submit">top</button>
+        </form>
+        <form hx-post="/tasks/T-0001/cancel" hx-target="#board-msg" hx-swap="innerHTML" hx-confirm="Cancel T-0001? Its engineer is told."><input type="hidden" name="view" value=""><button class="btn btn-sm btn-outline-danger" type="submit">Cancel task</button></form>
+      </div>
+    </details>
+  </article>
+  </div>
+</section><section class="slai-col" data-col="in_progress" aria-label="In progress">
+  <header class="slai-col-head"><h3>In progress</h3><span class="badge bg-secondary-lt">2</span></header>
+  <p class="slai-col-hint">being worked on (or being reworked after a review)</p>
+  <div class="slai-col-body" data-col="in_progress">
+  <article class="slai-card" data-task="T-0002" data-col="in_progress">
+    <div class="slai-card-top"><a class="slai-tid" href="/tasks/T-0002">T-0002</a>
+      <span class="slai-prio" title="priority 0: higher runs first">p0</span>
+      </div>
+    <a class="slai-card-title" href="/tasks/T-0002">Working one</a>
+    <div class="slai-card-meta">
+      <span class="slai-who"><span class="slai-dot slai-dot-ok" aria-hidden="true"></span>eng-1 <span class="visually-hidden">(working)</span></span>
+    </div>
+    <div class="slai-branch">slai/eng-1/x</div>
+    <details class="slai-menu">
+      <summary aria-label="Actions for T-0002">Actions</summary>
+      <div class="slai-menu-body">
+        <form class="slai-prio-form" hx-post="/tasks/T-0002/priority" hx-target="#board-msg" hx-swap="innerHTML">
+          <input type="hidden" name="view" value="">
+          <span class="slai-menu-label">Priority</span>
+          <button class="btn btn-sm btn-primary" name="spec" value="p0" type="submit" aria-pressed="true">p0</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p1" type="submit">p1</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p2" type="submit">p2</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p3" type="submit">p3</button>
+          <button class="btn btn-sm btn-outline-secondary" name="spec" value="top" type="submit">top</button>
+        </form>
+        <form hx-post="/tasks/T-0002/cancel" hx-target="#board-msg" hx-swap="innerHTML" hx-confirm="Cancel T-0002? Its engineer is told."><input type="hidden" name="view" value=""><button class="btn btn-sm btn-outline-danger" type="submit">Cancel task</button></form>
+      </div>
+    </details>
+  </article><article class="slai-card" data-task="T-0009" data-col="in_progress">
+    <div class="slai-card-top"><a class="slai-tid" href="/tasks/T-0009">T-0009</a>
+      <span class="slai-prio" title="priority 0: higher runs first">p0</span>
+      <span class="slai-round" title="review round 1">r1</span></div>
+    <a class="slai-card-title" href="/tasks/T-0009">Changes requested one</a>
+    <div class="slai-card-meta">
+      <span class="slai-who"><span class="slai-dot slai-dot-ok" aria-hidden="true"></span>eng-1 <span class="visually-hidden">(working)</span></span>
+      <span class="slai-chip slai-chip-info">changes requested</span>
+    </div>
+    <div class="slai-branch">slai/eng-1/x</div>
+    <details class="slai-menu">
+      <summary aria-label="Actions for T-0009">Actions</summary>
+      <div class="slai-menu-body">
+        <form class="slai-prio-form" hx-post="/tasks/T-0009/priority" hx-target="#board-msg" hx-swap="innerHTML">
+          <input type="hidden" name="view" value="">
+          <span class="slai-menu-label">Priority</span>
+          <button class="btn btn-sm btn-primary" name="spec" value="p0" type="submit" aria-pressed="true">p0</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p1" type="submit">p1</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p2" type="submit">p2</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p3" type="submit">p3</button>
+          <button class="btn btn-sm btn-outline-secondary" name="spec" value="top" type="submit">top</button>
+        </form>
+        <form hx-post="/tasks/T-0009/cancel" hx-target="#board-msg" hx-swap="innerHTML" hx-confirm="Cancel T-0009? Its engineer is told."><input type="hidden" name="view" value=""><button class="btn btn-sm btn-outline-danger" type="submit">Cancel task</button></form>
+      </div>
+    </details>
+  </article>
+  </div>
+</section><section class="slai-col" data-col="blocked" aria-label="Blocked">
+  <header class="slai-col-head"><h3>Blocked</h3><span class="badge bg-secondary-lt">2</span></header>
+  <p class="slai-col-hint">waiting on other tasks, or stuck on a problem</p>
+  <div class="slai-col-body" data-col="blocked">
+  <article class="slai-card" data-task="T-0003" data-col="blocked">
+    <div class="slai-card-top"><a class="slai-tid" href="/tasks/T-0003">T-0003</a>
+      <span class="slai-prio" title="priority 0: higher runs first">p0</span>
+      </div>
+    <a class="slai-card-title" href="/tasks/T-0003">Stuck on a problem</a>
+    <div class="slai-card-meta">
+      <span class="slai-who"><span class="slai-dot slai-dot-user" aria-hidden="true"></span>eng-2 <span class="visually-hidden">(waiting for you)</span></span>
+      <span class="slai-chip slai-chip-blocked" title="blocked by a problem: see the Inbox">blocked</span>
+      <span class="slai-chip slai-chip-user">needs you</span>
+    </div>
+    <div class="slai-branch">slai/eng-2/x</div>
+    <details class="slai-menu">
+      <summary aria-label="Actions for T-0003">Actions</summary>
+      <div class="slai-menu-body">
+        <form class="slai-prio-form" hx-post="/tasks/T-0003/priority" hx-target="#board-msg" hx-swap="innerHTML">
+          <input type="hidden" name="view" value="">
+          <span class="slai-menu-label">Priority</span>
+          <button class="btn btn-sm btn-primary" name="spec" value="p0" type="submit" aria-pressed="true">p0</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p1" type="submit">p1</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p2" type="submit">p2</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p3" type="submit">p3</button>
+          <button class="btn btn-sm btn-outline-secondary" name="spec" value="top" type="submit">top</button>
+        </form>
+        <form hx-post="/tasks/T-0003/unblock" hx-target="#board-msg" hx-swap="innerHTML"><input type="hidden" name="view" value=""><button class="btn btn-sm btn-outline-success" type="submit">Unblock</button></form>
+        <form hx-post="/tasks/T-0003/cancel" hx-target="#board-msg" hx-swap="innerHTML" hx-confirm="Cancel T-0003? Its engineer is told."><input type="hidden" name="view" value=""><button class="btn btn-sm btn-outline-danger" type="submit">Cancel task</button></form>
+      </div>
+    </details>
+  </article><article class="slai-card" data-task="T-0004" data-col="blocked">
+    <div class="slai-card-top"><a class="slai-tid" href="/tasks/T-0004">T-0004</a>
+      <span class="slai-prio" title="priority 0: higher runs first">p0</span>
+      </div>
+    <a class="slai-card-title" href="/tasks/T-0004">Waits for the working one</a>
+    <div class="slai-card-meta">
+      <span class="slai-who"><span class="slai-dot slai-dot-ok" aria-hidden="true"></span>eng-1 <span class="visually-hidden">(working)</span></span>
+      <span class="slai-chip slai-chip-waiting" title="waiting on other tasks to merge: nobody needs to act">waiting on T-0002</span>
+    </div>
+    <div class="slai-branch">slai/eng-1/x</div>
+    <details class="slai-menu">
+      <summary aria-label="Actions for T-0004">Actions</summary>
+      <div class="slai-menu-body">
+        <form class="slai-prio-form" hx-post="/tasks/T-0004/priority" hx-target="#board-msg" hx-swap="innerHTML">
+          <input type="hidden" name="view" value="">
+          <span class="slai-menu-label">Priority</span>
+          <button class="btn btn-sm btn-primary" name="spec" value="p0" type="submit" aria-pressed="true">p0</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p1" type="submit">p1</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p2" type="submit">p2</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p3" type="submit">p3</button>
+          <button class="btn btn-sm btn-outline-secondary" name="spec" value="top" type="submit">top</button>
+        </form>
+        <form hx-post="/tasks/T-0004/cancel" hx-target="#board-msg" hx-swap="innerHTML" hx-confirm="Cancel T-0004? Its engineer is told."><input type="hidden" name="view" value=""><button class="btn btn-sm btn-outline-danger" type="submit">Cancel task</button></form>
+      </div>
+    </details>
+  </article>
+  </div>
+</section><section class="slai-col" data-col="in_review" aria-label="In review">
+  <header class="slai-col-head"><h3>In review</h3><span class="badge bg-secondary-lt">1</span></header>
+  <p class="slai-col-hint">the principal is reviewing it</p>
+  <div class="slai-col-body" data-col="in_review">
+  <article class="slai-card" data-task="T-0005" data-col="in_review">
+    <div class="slai-card-top"><a class="slai-tid" href="/tasks/T-0005">T-0005</a>
+      <span class="slai-prio" title="priority 0: higher runs first">p0</span>
+      </div>
+    <a class="slai-card-title" href="/tasks/T-0005">In review one</a>
+    <div class="slai-card-meta">
+      <span class="slai-who"><span class="slai-dot slai-dot-ok" aria-hidden="true"></span>eng-1 <span class="visually-hidden">(working)</span></span>
+    </div>
+    <div class="slai-branch">slai/eng-1/x</div>
+    <details class="slai-menu">
+      <summary aria-label="Actions for T-0005">Actions</summary>
+      <div class="slai-menu-body">
+        <form class="slai-prio-form" hx-post="/tasks/T-0005/priority" hx-target="#board-msg" hx-swap="innerHTML">
+          <input type="hidden" name="view" value="">
+          <span class="slai-menu-label">Priority</span>
+          <button class="btn btn-sm btn-primary" name="spec" value="p0" type="submit" aria-pressed="true">p0</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p1" type="submit">p1</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p2" type="submit">p2</button><button class="btn btn-sm btn-outline-secondary" name="spec" value="p3" type="submit">p3</button>
+          <button class="btn btn-sm btn-outline-secondary" name="spec" value="top" type="submit">top</button>
+        </form>
+        <form hx-post="/tasks/T-0005/cancel" hx-target="#board-msg" hx-swap="innerHTML" hx-confirm="Cancel T-0005? Its engineer is told."><input type="hidden" name="view" value=""><button class="btn btn-sm btn-outline-danger" type="submit">Cancel task</button></form>
+      </div>
+    </details>
+  </article>
+  </div>
+</section><section class="slai-col" data-col="merged" aria-label="Merged">
+  <header class="slai-col-head"><h3>Merged</h3><span class="badge bg-secondary-lt">2</span></header>
+  <p class="slai-col-hint">on the integration branch (or finished non-code work)</p>
+  <div class="slai-col-body" data-col="merged">
+  <article class="slai-card" data-task="T-0010" data-col="merged">
+    <div class="slai-card-top"><a class="slai-tid" href="/tasks/T-0010">T-0010</a>
+      <span class="slai-prio" title="priority 0: higher runs first">p0</span>
+      </div>
+    <a class="slai-card-title" href="/tasks/T-0010">Finished spec</a>
+    <div class="slai-card-meta">
+      <span class="slai-who"><span class="slai-dot slai-dot-ok" aria-hidden="true"></span>eng-1 <span class="visually-hidden">(working)</span></span>
+      <span class="slai-chip slai-chip-info">done (no merge)</span>
+    </div>
+    <div class="slai-branch">slai/eng-1/x</div>
+  </article><article class="slai-card" data-task="T-0006" data-col="merged">
+    <div class="slai-card-top"><a class="slai-tid" href="/tasks/T-0006">T-0006</a>
+      <span class="slai-prio" title="priority 0: higher runs first">p0</span>
+      </div>
+    <a class="slai-card-title" href="/tasks/T-0006">Merged one</a>
+    <div class="slai-card-meta">
+      <span class="slai-who"><span class="slai-dot slai-dot-ok" aria-hidden="true"></span>eng-1 <span class="visually-hidden">(working)</span></span>
+    </div>
+    <div class="slai-branch">slai/eng-1/x</div>
+  </article>
+  </div>
+</section><section class="slai-col" data-col="cancelled" aria-label="Cancelled">
+  <header class="slai-col-head"><h3>Cancelled</h3><span class="badge bg-secondary-lt">1</span></header>
+  <p class="slai-col-hint">dropped</p>
+  <div class="slai-col-body" data-col="cancelled">
+  <article class="slai-card slai-card-cancelled" data-task="T-0007" data-col="cancelled">
+    <div class="slai-card-top"><a class="slai-tid" href="/tasks/T-0007">T-0007</a>
+      <span class="slai-prio" title="priority 0: higher runs first">p0</span>
+      </div>
+    <a class="slai-card-title" href="/tasks/T-0007">Cancelled one</a>
+    <div class="slai-card-meta">
+      <span class="slai-who"><span class="slai-dot slai-dot-ok" aria-hidden="true"></span>eng-1 <span class="visually-hidden">(working)</span></span>
+    </div>
+    <div class="slai-branch">slai/eng-1/x</div>
+  </article>
+  </div>
+</section><section class="slai-col" data-col="reverted" aria-label="Reverted">
+  <header class="slai-col-head"><h3>Reverted</h3><span class="badge bg-secondary-lt">1</span></header>
+  <p class="slai-col-hint">merged, then taken back out with slai revert</p>
+  <div class="slai-col-body" data-col="reverted">
+  <article class="slai-card" data-task="T-0008" data-col="reverted">
+    <div class="slai-card-top"><a class="slai-tid" href="/tasks/T-0008">T-0008</a>
+      <span class="slai-prio" title="priority 0: higher runs first">p0</span>
+      </div>
+    <a class="slai-card-title" href="/tasks/T-0008">Reverted one</a>
+    <div class="slai-card-meta">
+      <span class="slai-who"><span class="slai-dot slai-dot-ok" aria-hidden="true"></span>eng-1 <span class="visually-hidden">(working)</span></span>
+    </div>
+    <div class="slai-branch">slai/eng-1/x</div>
+  </article>
+  </div>
+</section>

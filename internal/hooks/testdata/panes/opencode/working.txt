@@ -1,0 +1,50 @@
+
+  ┃                                                                                                                                                             Spike shell command test
+  ┃  Run the shell command: echo spike-ok
+  ┃                                                                                                                                                             Context
+                                                                                                                                                                12,460 tokens
+     + Thought: 660ms                                                                                                                                           1% used
+                                                                                                                                                                $0.00 spent
+  ┃
+  ┃  $ echo spike-ok                                                                                                                                            MCP
+  ┃                                                                                                                                                             • slai MCP error -32000: Connection
+  ┃  spike-ok                                                                                                                                                     closed
+  ┃
+                                                                                                                                                                LSP
+     spike-ok                                                                                                                                                   LSPs are disabled
+
+     ▣  Build · GLM-5.3 · 23.5s
+
+  ┃
+  ┃  Reply with the single word ok.
+  ┃
+
+     ▣  Build · GLM-5.3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  ┃
+  ┃
+  ┃                                                                                                                                                             ~/coding/slai/.slai/worktrees/eng-2/.
+  ┃  Build · GLM-5.3 Zhipu AI Coding Plan                                                                                                                       spike/proj:main
+  ╹▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+   ■⬝⬝⬝⬝⬝⬝⬝  esc interrupt                                                                                                       12.5K (1%)  ctrl+p commands    • OpenCode 1.18.16
+
