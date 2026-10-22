@@ -15,7 +15,7 @@ download the new version, update the row, and say why in the commit.
 
 `slai.js` is ours, not vendored, but pinned like the others (the principal's condition for allowing a
 third script): any change to it shows up as a hash change in review. It is under 150 lines, opens one same-origin stream (`/events`, notices only) for the live regions, builds no
-HTML, evaluates nothing and handles no token; `slai_js_test.go` lints that. `theme.js` (under 20 lines) only sets `data-bs-theme` from `prefers-color-scheme` before first paint; it is loaded synchronously in `<head>` because the CSP forbids inline scripts. `slai.css` is ours and not pinned.
+HTML, evaluates nothing and handles no token; `scripts_lint_test.go` lints that for both slai.js and theme.js. `theme.js` (under 20 lines) only sets `data-bs-theme` from `prefers-color-scheme` before first paint; it is loaded synchronously in `<head>` because the CSP forbids inline scripts. `slai.css` is ours and not pinned.
 
 Tabler's icon font and its own JavaScript are deliberately not included: icons are inline
 SVG and the only scripts are htmx and SortableJS.
