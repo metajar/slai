@@ -20,6 +20,18 @@ var firstPartyScripts = []struct {
 	{name: "theme.js", maxLines: 60},
 }
 
+// code is src without comments (a comment is not executed, and these scripts describe in prose
+// what they must never do). Only block comments and whole-line // comments are removed, so a
+// "//" inside a string (a protocol-relative URL) is still seen.
+var (
+	blockComment = regexp.MustCompile(`(?s)/\*.*?\*/`)
+	lineComment  = regexp.MustCompile(`(?m)^\s*//.*$`)
+)
+
+func code(src string) string {
+	return lineComment.ReplaceAllString(blockComment.ReplaceAllString(src, ""), "")
+}
+
 func TestFirstPartyScriptsStaySmallAndHarmless(t *testing.T) {
 	bad := map[string]string{
 		`\beval\s*\(`:        "eval",
@@ -58,7 +70,7 @@ func TestFirstPartyScriptsStaySmallAndHarmless(t *testing.T) {
 			if f.allow[re] {
 				continue
 			}
-			if regexp.MustCompile(re).MatchString(src) {
+			if regexp.MustCompile(re).MatchString(code(src)) {
 				t.Errorf("%s contains %s", f.name, what)
 			}
 		}
@@ -72,7 +84,7 @@ func TestSlaiJSStreamAndPaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src := string(b)
+	src := code(string(b))
 	// the one stream it may open is the same-origin notice stream (W2); nothing else
 	for _, m := range regexp.MustCompile(`EventSource\s*\(([^)]*)\)`).FindAllStringSubmatch(src, -1) {
 		// "/events", or "/events" plus the ?watch= query watching() builds from the page's own
@@ -83,7 +95,7 @@ func TestSlaiJSStreamAndPaths(t *testing.T) {
 	}
 	// the paths it names are relative: /tasks/ for the board, /events for the stream
 	for _, m := range regexp.MustCompile(`["'](/[^"']*)["']`).FindAllStringSubmatch(src, -1) {
-		if !strings.HasPrefix(m[1], "/tasks/") && m[1] != "/events" {
+		if !strings.HasPrefix(m[1], "/tasks/") && m[1] != "/events" && m[1] != "/move" { // "/move" is the tail of "/tasks/" + id + "/move"
 			t.Errorf("slai.js names the path %q: it may only post under /tasks/ and read /events", m[1])
 		}
 	}
