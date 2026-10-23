@@ -136,3 +136,91 @@ func TestRequestReviewAgainWhileInReviewRepins(t *testing.T) {
 		t.Fatalf("approve after re-request: %v", ap)
 	}
 }
+
+// review_diff charges the reviewer's tokens to the reviewed task; approve and
+// request_changes stop doing so.
+func TestReviewerSpendCountsTowardTheTask(t *testing.T) {
+	for _, verdict := range []string{"approve", "request_changes"} {
+		t.Run(verdict, func(t *testing.T) {
+			curT = t
+			s := newSvc(t, true)
+			id := createTask(t, s)
+			must(s.GetTask(ctx, "eng-1", GetTaskArgs{TaskID: id}))
+			commitOnBranch(t, s, "slai/eng-1/"+id)
+			must(s.RequestReview(ctx, "eng-1", RequestReviewArgs{TaskID: id, Summary: "done"}))
+			taskOf := func() string {
+				if err := s.Store.AddUsage("prin", 10, 5, 0.01); err != nil {
+					t.Fatal(err)
+				}
+				u, err := s.Store.UsageByTask(0)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, ok := u[id]; ok {
+					return id
+				}
+				return ""
+			}
+			if taskOf() != "" {
+				t.Fatal("usage before review_diff was charged to the task")
+			}
+			must(s.ReviewDiff(ctx, "prin", TaskRef{TaskID: id}))
+			if got := taskOf(); got != id {
+				t.Fatalf("usage after review_diff carries task %q, want %q", got, id)
+			}
+			if verdict == "approve" {
+				must(s.Approve(ctx, "prin", ApproveArgs{TaskID: id}))
+			} else {
+				must(s.RequestChanges(ctx, "prin", RequestChangesArgs{TaskID: id, Comments: "fix"}))
+			}
+			if cur := s.Store.AgentTask("prin"); cur != "" {
+				t.Fatalf("current_task after %s = %q, want empty", verdict, cur)
+			}
+		})
+	}
+}
+
+// The T-0010 case: the reviewer saw one commit, the engineer rebased and re-requested review,
+// and approve must not silently take the new head.
+func TestApproveRefusesWhenHeadMovedSinceReviewDiff(t *testing.T) {
+	setup := func(t *testing.T) (*Service, string, string, string) {
+		curT = t
+		s := newSvc(t, true)
+		id := createTask(t, s)
+		must(s.GetTask(ctx, "eng-1", GetTaskArgs{TaskID: id}))
+		branch := "slai/eng-1/" + id
+		commitOnBranch(t, s, branch)
+		head1 := gitOut(t, s.Dir, "rev-parse", branch)
+		must(s.RequestReview(ctx, "eng-1", RequestReviewArgs{TaskID: id, Summary: "done"}))
+		must(s.ReviewDiff(ctx, "prin", TaskRef{TaskID: id}))
+		head2 := commitMore(t, s, branch, "late.txt")
+		must(s.RequestReview(ctx, "eng-1", RequestReviewArgs{TaskID: id, Summary: "again"}))
+		return s, id, head1, head2
+	}
+	t.Run("refused naming both shas", func(t *testing.T) {
+		s, id, head1, head2 := setup(t)
+		_, err := s.Approve(ctx, "prin", ApproveArgs{TaskID: id})
+		if err == nil || !strings.Contains(err.Error(), head1[:8]) || !strings.Contains(err.Error(), head2[:8]) || !strings.Contains(err.Error(), "head_moved_ok") {
+			t.Fatalf("err = %v", err)
+		}
+		for _, e := range must(s.Store.RecentEvents(50)) {
+			if e.Kind == "merge_requested" {
+				t.Fatal("a merge was queued")
+			}
+		}
+	})
+	t.Run("head_moved_ok approves the current head", func(t *testing.T) {
+		s, id, _, head2 := setup(t)
+		ap := j(must(s.Approve(ctx, "prin", ApproveArgs{TaskID: id, HeadMovedOK: true})))
+		if ap["approved_sha"] != head2 || lastMergeRequest(t, s)["sha"] != head2 {
+			t.Fatalf("approve: %v", ap)
+		}
+	})
+	t.Run("a fresh review_diff approves normally", func(t *testing.T) {
+		s, id, _, head2 := setup(t)
+		must(s.ReviewDiff(ctx, "prin", TaskRef{TaskID: id}))
+		if ap := j(must(s.Approve(ctx, "prin", ApproveArgs{TaskID: id}))); ap["approved_sha"] != head2 {
+			t.Fatalf("approve: %v", ap)
+		}
+	})
+}

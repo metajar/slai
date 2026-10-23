@@ -163,6 +163,7 @@ type ApproveArgs struct {
 	ACVerdicts []ACVerdictArg `json:"ac_verdicts,omitempty" jsonschema:"pass or fail for each acceptance criterion the engineer claimed (spec'd tasks); claims without a verdict are listed back to you"`
 	// SpecRewriteOK approves although the spec file was rewritten (not just appended to) since assignment.
 	FactVerdicts  []FactVerdictArg `json:"fact_verdicts,omitempty" jsonschema:"confirm or reject each fact the engineer proposed with request_review; only approve can verify a fact"`
+	HeadMovedOK   bool             `json:"head_moved_ok,omitempty" jsonschema:"set true to approve the branch head although it differs from the commit your last review_diff showed; the approval then covers the current head. Prefer calling review_diff again"`
 	SpecRewriteOK bool             `json:"spec_rewrite_ok,omitempty" jsonschema:"set true to approve although the task's spec file was edited or deleted (not just appended to) after assignment; the rewrite is recorded"`
 }
 type RequestChangesArgs struct {
@@ -879,6 +880,9 @@ func (s *Service) RequestReview(ctx context.Context, caller string, a RequestRev
 const (
 	kvReviewHead = "review.head." // the branch head when the engineer called request_review
 	kvReviewSeen = "review.seen." // the branch head when the reviewer last called review_diff
+	// kvReviewDiffed is like kvReviewSeen but survives a new request_review, so approve can
+	// tell "I reviewed an older commit than the one the engineer re-requested".
+	kvReviewDiffed = "review.diffed."
 )
 
 func shortSHA(sha string) string {
@@ -929,6 +933,12 @@ func (s *Service) ReviewDiff(ctx context.Context, caller string, a TaskRef) (any
 	head, _ := s.Git.RevParse(ctx, t.Branch)
 	if head != "" {
 		_ = s.Store.SetKV(kvReviewSeen+t.ID, head)
+		_ = s.Store.SetKV(kvReviewDiffed+t.ID, head)
+	}
+	// The reviewer's tokens from here until approve/request_changes count toward this task
+	// (per_task_usd). Never take over a task the reviewer is itself assigned.
+	if s.Store.AgentTask(caller) == "" {
+		_ = s.Store.ChargeAgentTo(caller, t.ID)
 	}
 	out := map[string]any{"task_id": t.ID, "branch": t.Branch, "integration_branch": s.integration(), "base_sha": base,
 		"integration_sha": tip, "reviewed_sha": head, "files": files, "truncated": d.Truncated, "patch": d.Patch,
@@ -940,6 +950,13 @@ func (s *Service) ReviewDiff(ctx context.Context, caller string, a TaskRef) (any
 		out["warnings"] = w
 	}
 	return out, nil
+}
+
+// endReviewSpend stops charging the reviewer's tokens to taskID (set by review_diff).
+func (s *Service) endReviewSpend(reviewer, taskID string) {
+	if s.Store.AgentTask(reviewer) == taskID {
+		_ = s.Store.ChargeAgentTo(reviewer, "")
+	}
 }
 
 func (s *Service) Approve(ctx context.Context, caller string, a ApproveArgs) (any, error) {
@@ -965,8 +982,14 @@ func (s *Service) Approve(ctx context.Context, caller string, a ApproveArgs) (an
 		pinned, _, _ = s.Store.GetKV(kvReviewHead + t.ID)
 	}
 	head, _ := s.Git.RevParse(ctx, t.Branch)
+	if a.HeadMovedOK && head != "" {
+		pinned = head
+	}
 	if pinned != "" && head != "" && head != pinned {
 		return nil, fmt.Errorf("%s has new commits since the review you saw (reviewed %s, branch is now at %s): call review_diff again and approve what it shows", t.Branch, shortSHA(pinned), shortSHA(head))
+	}
+	if diffed, _, _ := s.Store.GetKV(kvReviewDiffed + t.ID); diffed != "" && head != "" && head != diffed && !a.HeadMovedOK {
+		return nil, fmt.Errorf("%s is at %s but the last review_diff you ran showed %s: you have not reviewed what would merge. Call review_diff again and approve what it shows, or approve with head_moved_ok: true to accept the current head", t.Branch, shortSHA(head), shortSHA(diffed))
 	}
 	if pinned == "" {
 		pinned = head // nothing recorded (a task from before pinning): pin what is there now
@@ -996,6 +1019,7 @@ func (s *Service) Approve(ctx context.Context, caller string, a ApproveArgs) (an
 	if err := s.mergeRequested(caller, t.ID, a.Notes, pinned); err != nil {
 		return nil, err
 	}
+	s.endReviewSpend(caller, t.ID)
 	out := map[string]any{"status": "merge_queued", "approved_sha": pinned}
 	for k, v := range s.specNote(caller, t, spec, a.SpecRewriteOK) {
 		out[k] = v
@@ -1033,6 +1057,7 @@ func (s *Service) RequestChanges(ctx context.Context, caller string, a RequestCh
 	if err := s.Store.UpdateTaskStatus(t.ID, store.StatusChangesRequested); err != nil {
 		return nil, err
 	}
+	s.endReviewSpend(caller, t.ID)
 	nt, err := s.task(t.ID)
 	if err != nil {
 		return nil, err
