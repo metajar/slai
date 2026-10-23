@@ -96,6 +96,7 @@ func Handle(st *store.Store, agentID, event string, p Payload, opt Options) (Res
 	})
 	errs = append(errs, st.AddEvent(agentID, "hook:"+ev, string(data)))
 
+	stopRecorded := false
 	switch ev {
 	case "sessionstart":
 		errs = append(errs, noteSessionStart(st, agentID, p.Source))
@@ -132,13 +133,16 @@ func Handle(st *store.Store, agentID, event string, p Payload, opt Options) (Res
 			errs = append(errs, err)
 		}
 	case "stop":
+		recorded := true
 		if p.TranscriptPath != "" {
 			d, err := usage.Record(st, agentID, p.TranscriptPath, opt.Prices)
 			errs = append(errs, err)
 			if err == nil {
 				res.Usage, res.UsageOK = d, true
 			}
+			recorded = err == nil
 		}
+		stopRecorded = recorded
 	}
 	if u := p.Usage; u != nil && (u.Prompt > 0 || u.Output > 0 || u.Cost > 0) {
 		if err := st.AddUsage(agentID, max(u.Prompt, 0), max(u.Output, 0), max(u.Cost, 0)); err != nil {
@@ -146,6 +150,11 @@ func Handle(st *store.Store, agentID, event string, p Payload, opt Options) (Res
 		} else {
 			res.Usage, res.UsageOK = usage.Delta{Prompt: max(u.Prompt, 0), Output: max(u.Output, 0), CostUSD: max(u.Cost, 0)}, true
 		}
+	}
+	// The review charge (see store.KVReviewEndCharge) ends only once this turn's usage is
+	// written; if recording failed the supervisor's idle fallback ends it.
+	if stopRecorded {
+		st.FinishReviewCharge(agentID)
 	}
 	return res, errors.Join(errs...)
 }

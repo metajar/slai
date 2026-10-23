@@ -952,10 +952,12 @@ func (s *Service) ReviewDiff(ctx context.Context, caller string, a TaskRef) (any
 	return out, nil
 }
 
-// endReviewSpend stops charging the reviewer's tokens to taskID (set by review_diff).
+// endReviewSpend ends the charge of the reviewer's tokens to taskID (set by review_diff), but
+// not yet: usage rows are written when the turn ends, so the current task stays set until the
+// Stop hook (or the supervisor's idle fallback) has recorded this turn's usage.
 func (s *Service) endReviewSpend(reviewer, taskID string) {
 	if s.Store.AgentTask(reviewer) == taskID {
-		_ = s.Store.ChargeAgentTo(reviewer, "")
+		_ = s.Store.SetKV(store.KVReviewEndCharge+reviewer, taskID)
 	}
 }
 

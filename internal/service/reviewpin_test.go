@@ -7,6 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/oorbt/slai/internal/hooks"
+	"github.com/oorbt/slai/internal/store"
 )
 
 func gitOut(t *testing.T, dir string, args ...string) string {
@@ -173,8 +176,31 @@ func TestReviewerSpendCountsTowardTheTask(t *testing.T) {
 			} else {
 				must(s.RequestChanges(ctx, "prin", RequestChangesArgs{TaskID: id, Comments: "fix"}))
 			}
+			// The verdict is called mid-turn: the usage row for this turn is not written yet, so the
+			// charge must still be on until the Stop hook has recorded it.
+			if cur := s.Store.AgentTask("prin"); cur != id {
+				t.Fatalf("current_task right after %s = %q, want %q until the Stop hook", verdict, cur, id)
+			}
+			stop := func(prompt int64) {
+				t.Helper()
+				if _, err := hooks.Handle(s.Store, "prin", "stop", hooks.Payload{Usage: &hooks.NeutralUsage{Prompt: prompt, Output: 1, Cost: 0.5}}, hooks.Options{}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			stop(100) // the review turn's own usage row
 			if cur := s.Store.AgentTask("prin"); cur != "" {
-				t.Fatalf("current_task after %s = %q, want empty", verdict, cur)
+				t.Fatalf("current_task after the Stop hook = %q, want empty", cur)
+			}
+			if _, ok, _ := s.Store.GetKV(store.KVReviewEndCharge + "prin"); ok {
+				t.Fatal("end-charge key left behind")
+			}
+			u := must(s.Store.UsageByTask(0))
+			if got := u[id].CostUSD; got < 0.5 {
+				t.Fatalf("review turn's usage not on the task: %+v", u[id])
+			}
+			stop(200) // a second turn after the verdict carries no task
+			if again := must(s.Store.UsageByTask(0))[id].CostUSD; again != u[id].CostUSD {
+				t.Fatalf("second turn charged to the task: %v -> %v", u[id].CostUSD, again)
 			}
 		})
 	}
@@ -223,4 +249,23 @@ func TestApproveRefusesWhenHeadMovedSinceReviewDiff(t *testing.T) {
 			t.Fatalf("approve: %v", ap)
 		}
 	})
+}
+
+// If the Stop hook never fires (or its recording failed), the supervisor's idle fallback ends
+// the charge through the same store call.
+func TestReviewChargeEndsViaStoreFallback(t *testing.T) {
+	curT = t
+	s := newSvc(t, true)
+	id := createTask(t, s)
+	must(s.GetTask(ctx, "eng-1", GetTaskArgs{TaskID: id}))
+	commitOnBranch(t, s, "slai/eng-1/"+id)
+	must(s.RequestReview(ctx, "eng-1", RequestReviewArgs{TaskID: id, Summary: "done"}))
+	must(s.ReviewDiff(ctx, "prin", TaskRef{TaskID: id}))
+	must(s.Approve(ctx, "prin", ApproveArgs{TaskID: id}))
+	if !s.Store.FinishReviewCharge("prin") || s.Store.AgentTask("prin") != "" {
+		t.Fatalf("fallback did not clear the charge: task %q", s.Store.AgentTask("prin"))
+	}
+	if s.Store.FinishReviewCharge("prin") {
+		t.Fatal("nothing pending the second time")
+	}
 }

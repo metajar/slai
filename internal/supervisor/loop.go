@@ -21,14 +21,15 @@ import (
 
 // Tunables (PRD 3.3, 3.4, 8).
 const (
-	DefaultInterval = time.Second
-	WakeRetry       = 60 * time.Second  // re-wake an idle agent whose earlier nudge went unanswered
-	FallbackStale   = 30 * time.Second  // hook data older than this triggers pane polling
-	FallbackPoll    = 2 * time.Second   // pane poll period per agent
-	KVPaused        = "paused"          // global pause flag ("1" when paused)
-	KVPendingStart  = "startup.pending" // agent ids held back until Claude trusts the folder
-	KVMergeCursor   = "merge.cursor"    // last processed merge_requested event id
-	KVLoopReset     = "loop.reset_at"   // unix; loop-guard window never starts before this
+	DefaultInterval   = time.Second
+	WakeRetry         = 60 * time.Second  // re-wake an idle agent whose earlier nudge went unanswered
+	FallbackStale     = 30 * time.Second  // hook data older than this triggers pane polling
+	FallbackPoll      = 2 * time.Second   // pane poll period per agent
+	reviewChargeGrace = 10 * time.Second  // idle this long: the last turn's usage row is written
+	KVPaused          = "paused"          // global pause flag ("1" when paused)
+	KVPendingStart    = "startup.pending" // agent ids held back until Claude trusts the folder
+	KVMergeCursor     = "merge.cursor"    // last processed merge_requested event id
+	KVLoopReset       = "loop.reset_at"   // unix; loop-guard window never starts before this
 )
 
 type runtime struct {
@@ -280,6 +281,13 @@ func (s *Supervisor) wakeTick(ctx context.Context) {
 	if err != nil {
 		s.logf("wake: %v", err)
 		return
+	}
+	// Fallback for a review charge the Stop hook never ended (see store.KVReviewEndCharge):
+	// an agent idle for a while has had its last turn's usage recorded.
+	for _, a := range agents {
+		if idleish(a.Status) && s.idleFor(a) > reviewChargeGrace {
+			s.Store.FinishReviewCharge(a.ID)
+		}
 	}
 	pending, err := s.Store.PendingWake(s.now().Add(-WakeRetry).Unix())
 	if err != nil || len(pending) == 0 {
