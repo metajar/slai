@@ -27,7 +27,7 @@ Optional safety net: add a spend cap under `defaults:` in `.slai/team.yaml` (thi
     per_run_usd: 3
 ```
 
-Start the team and give orch the goal:
+Start the team and give orch the goal. Plain `slai` is the normal way to start (it starts the agents and supervisor and opens the dashboard). This demo uses the headless `slai up` instead, which does the same start without the dashboard, so every step is a copyable command; run `slai` if you would rather watch:
 
 ```sh
 slai up
