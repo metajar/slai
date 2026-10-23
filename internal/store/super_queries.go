@@ -211,6 +211,26 @@ func (s *Store) ChargeAgentTo(id, taskID string) error {
 	return err
 }
 
+// KVReviewEndCharge + agent holds the task whose review charge approve/request_changes
+// ended. The charge is cleared only after the turn's usage row is written (Stop hook, or the
+// supervisor's idle fallback), so the review turn's tokens still carry the task.
+const KVReviewEndCharge = "review.endcharge."
+
+// FinishReviewCharge applies a pending end-of-review: it clears the agent's current task when
+// it still equals the task recorded under KVReviewEndCharge, and removes the key. It reports
+// whether a key was pending.
+func (s *Store) FinishReviewCharge(agent string) bool {
+	task, ok, _ := s.GetKV(KVReviewEndCharge + agent)
+	if !ok || task == "" {
+		return false
+	}
+	if s.AgentTask(agent) == task {
+		_ = s.ChargeAgentTo(agent, "")
+	}
+	_ = s.DeleteKV(KVReviewEndCharge + agent)
+	return true
+}
+
 // AgentTask returns the agent's current task id ("" when none or no such agent).
 func (s *Store) AgentTask(id string) string {
 	var t string

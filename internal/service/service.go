@@ -937,8 +937,12 @@ func (s *Service) ReviewDiff(ctx context.Context, caller string, a TaskRef) (any
 	}
 	// The reviewer's tokens from here until approve/request_changes count toward this task
 	// (per_task_usd). Never take over a task the reviewer is itself assigned.
-	if s.Store.AgentTask(caller) == "" {
+	// A charge that only waits for the Stop hook (an earlier verdict this turn) is taken over:
+	// the whole turn then lands on the newest reviewed task.
+	cur := s.Store.AgentTask(caller)
+	if pend, _, _ := s.Store.GetKV(store.KVReviewEndCharge + caller); cur == "" || (pend != "" && cur == pend) {
 		_ = s.Store.ChargeAgentTo(caller, t.ID)
+		_ = s.Store.DeleteKV(store.KVReviewEndCharge + caller)
 	}
 	out := map[string]any{"task_id": t.ID, "branch": t.Branch, "integration_branch": s.integration(), "base_sha": base,
 		"integration_sha": tip, "reviewed_sha": head, "files": files, "truncated": d.Truncated, "patch": d.Patch,
@@ -952,10 +956,12 @@ func (s *Service) ReviewDiff(ctx context.Context, caller string, a TaskRef) (any
 	return out, nil
 }
 
-// endReviewSpend stops charging the reviewer's tokens to taskID (set by review_diff).
+// endReviewSpend ends the charge of the reviewer's tokens to taskID (set by review_diff), but
+// not yet: usage rows are written when the turn ends, so the current task stays set until the
+// Stop hook (or the supervisor's idle fallback) has recorded this turn's usage.
 func (s *Service) endReviewSpend(reviewer, taskID string) {
 	if s.Store.AgentTask(reviewer) == taskID {
-		_ = s.Store.ChargeAgentTo(reviewer, "")
+		_ = s.Store.SetKV(store.KVReviewEndCharge+reviewer, taskID)
 	}
 }
 
