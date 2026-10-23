@@ -194,6 +194,27 @@ func kindRows() []kindRow {
 				_ = e.s.Store.SetAgentStatus("eng-1", "idle")
 				e.s.wakeTick(e.ctx)
 			}},
+		{kind: EscNoDecision, agent: "orch", env: healthEnv, holds: []string{"paused"},
+			arm: func(e *kenv) {
+				tk, _ := e.s.Store.CreateTask(store.Task{Title: "silent", Assignee: "eng-2", CreatedBy: "orch", Status: store.StatusInProgress})
+				_ = e.s.Store.SetAgentStatus("eng-2", "idle")
+				e.s.saveDecisions(map[string]pendingDecision{tk.ID: {Owner: "eng-2", Since: e.now.Unix(), After: e.s.lastEventID()}})
+			},
+			fire: func(e *kenv) {
+				*e.now = e.now.Add(DecisionWithin + time.Second)
+				tasks, _ := e.s.Store.ListTasks("")
+				if !e.s.Paused() && !isPaused(e.s, "orch") {
+					e.s.decisionTick(tasks)
+				}
+			},
+			progress: func(e *kenv) {
+				tasks, _ := e.s.Store.ListTasks("")
+				for _, tk := range tasks {
+					_ = e.s.Store.UpdateTaskStatus(tk.ID, store.StatusCancelled)
+				}
+				tasks, _ = e.s.Store.ListTasks("")
+				e.s.decisionTick(tasks)
+			}},
 		{kind: EscWakeIgnored, agent: "orch", env: healthEnv, holds: []string{"paused"},
 			arm: func(e *kenv) {
 				id, _ := e.s.Store.AddMessage(store.Message{From: "slai", To: "orch", Kind: "note", Body: "decide"})

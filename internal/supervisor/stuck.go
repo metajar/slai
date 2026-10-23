@@ -120,11 +120,8 @@ func (s *Supervisor) stuckTick(ctx context.Context, agents []store.Agent, tasks 
 		if live, err := s.Tmux.HasSession(ctx, a.TmuxSession); err != nil || !live {
 			continue
 		}
-		if s.Store.Focused(a.ID, now) {
-			continue
-		}
-		if n, err := s.Tmux.ClientCount(ctx, a.TmuxSession); err != nil || n > 0 {
-			continue // someone is attached and may be typing
+		if s.userPresent(ctx, a) {
+			continue // focused in the TUI, or someone is attached and may be typing
 		}
 		pane, err := s.Tmux.CapturePane(ctx, a.TmuxSession, false, 0)
 		if err != nil {
