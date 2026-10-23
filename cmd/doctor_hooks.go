@@ -128,7 +128,7 @@ func hookHealth(w io.Writer, dir string, st *store.Store, agents []store.Agent, 
 				}
 			}
 			fmt.Fprintf(w, "  %s %s %s: %d%s%s, latest: %s\n", mark, a.ID, src.name, src.s.count, errAge(src.s.at, now), note, truncLine(src.s.last, 160))
-			fmt.Fprintf(w, "      meaning: %s\n      next: %s\n", errMeaning(src.kind, src.s.last), errNext(src.kind, a.ID, src.s.last))
+			fmt.Fprintf(w, "      meaning: %s\n      next: %s\n", errMeaning(src.kind, src.s.last), errNext(dir, src.kind, a.ID, src.s.last))
 		}
 	}
 	return failed
@@ -172,14 +172,18 @@ func errMeaning(kind, last string) string {
 	}
 }
 
-func errNext(kind, agent, last string) string {
+func errNext(dir, kind, agent, last string) string {
 	switch {
 	case kind == "mcp" && strings.Contains(last, mcpNoStamp):
 		return "check the agent (`slai doctor --panes`); if it can still call slai tools, ignore this. slai restarts it once on its own"
 	case kind == "mcp":
 		return "check the agent (`slai doctor --panes`); restart it if its slai tools keep failing"
 	default:
-		return "see .slai/run/" + agent + "/hook.log, and run `slai doctor --panes` to check what the agent is doing"
+		// hook.log is written only when a hook errors: name it only when it is there
+		if _, err := os.Stat(filepath.Join(dir, ".slai", "run", agent, "hook.log")); err == nil {
+			return "see .slai/run/" + agent + "/hook.log, and run `slai doctor --panes` to check what the agent is doing"
+		}
+		return "run `slai doctor --panes` to check what the agent is doing (there is no hook.log: nothing has written a hook error to a file)"
 	}
 }
 

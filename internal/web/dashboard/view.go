@@ -24,8 +24,10 @@ type Input struct {
 	Identity map[string]agentrows.Identity
 	// Context is each agent's context size and last reset (agentrows.ContextOf); a missing entry reads as not recorded.
 	Context map[string]agentrows.Context
-	Tasks   []store.Task
-	Esc     []store.Escalation
+	// Who is the "Who is working" block (agentrows.WhoAll): one entry per registered agent.
+	Who   []agentrows.Who
+	Tasks []store.Task
+	Esc   []store.Escalation
 	// Questions maps an agent waiting on the user to its latest ask_user text.
 	Questions map[string]string
 	Heartbeat int64 // supervisor heartbeat (unix), 0 = never
@@ -38,8 +40,12 @@ type Input struct {
 	ReadOnly  bool
 }
 
+// WhoRow is one line of the "Who is working" block.
+type WhoRow struct{ ID, State, Last, Slai string }
+
 // View is the rendered model.
 type View struct {
+	Who      []WhoRow // "Who is working": first on the page
 	Sentence string
 	Banners  []Banner
 	Cards    []Card
@@ -122,6 +128,9 @@ type GlossRow struct{ Word, Text string }
 // Build computes the view.
 func Build(in Input) View {
 	v := View{}
+	for _, w := range in.Who {
+		v.Who = append(v.Who, WhoRow{ID: w.ID, State: w.State, Last: w.Last, Slai: w.Slai})
+	}
 	byID := map[string]store.Agent{}
 	for _, a := range in.Agents {
 		byID[a.ID] = a

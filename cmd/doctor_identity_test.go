@@ -101,3 +101,94 @@ func TestDoctorIdentityCheck(t *testing.T) {
 		t.Errorf("mismatch KV not reported: %s", buf.String())
 	}
 }
+
+func TestDoctorIdentityRunChecks(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.Open(filepath.Join(t.TempDir(), "s.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	run := func(id string) string { return filepath.Join(dir, ".slai", "run", id) }
+	good := func(id string) {
+		if err := (claude.Spec{AgentID: id, ProjectDir: dir, WorkDir: dir, SystemPrompt: "You are **" + id + "**."}).WriteRunFiles(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	good("orch")
+	good("eng-1")
+	good("eng-2")
+	live := map[string]bool{"orch": true, "eng-1": true, "eng-2": true, "pm": true}
+	isLive := func(id string) bool { return live[id] }
+	agents := []string{"orch", "eng-1", "eng-2", "pm", "never-started"}
+	// pm runs with the pre-pinning format: no --agent, no env pin
+	os.MkdirAll(run("pm"), 0o755)
+	os.WriteFile(filepath.Join(run("pm"), "mcp.json"), []byte(`{"mcpServers":{"slai":{"command":"slai","args":["mcp"]}}}`), 0o644)
+	os.WriteFile(filepath.Join(run("pm"), "settings.json"), []byte(`{"hooks":{}}`), 0o644)
+	os.WriteFile(filepath.Join(run("pm"), "system.md"), []byte("You are pm."), 0o644)
+	// eng-1's system.md is empty; eng-2's names someone else
+	os.WriteFile(filepath.Join(run("eng-1"), "system.md"), []byte("  \n"), 0o644)
+	os.WriteFile(filepath.Join(run("eng-2"), "system.md"), []byte("You are eng-9."), 0o644)
+
+	var buf bytes.Buffer
+	bad := identityRunChecks(&buf, st, dir, agents, isLive)
+	out := buf.String()
+	for _, want := range []string{
+		"✗ pm is running with run files that do not pin its identity",
+		"✗ eng-1's system.md is empty",
+		"✗ eng-2's system.md does not name eng-2",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+	if bad != 3 || strings.Contains(out, "orch") || strings.Contains(out, "never-started") {
+		t.Errorf("bad = %d, want 3 (orch is fine, never-started has no run dir):\n%s", bad, out)
+	}
+	// the same unpinned files for an agent that is not running are only the existing warning
+	live["pm"] = false
+	buf.Reset()
+	identityRunChecks(&buf, st, dir, []string{"pm"}, isLive)
+	if strings.Contains(buf.String(), "is running with run files") {
+		t.Errorf("a stopped agent flagged as running:\n%s", buf.String())
+	}
+	// a missing system.md for an agent that has run files
+	os.Remove(filepath.Join(run("eng-1"), "system.md"))
+	buf.Reset()
+	if n := identityRunChecks(&buf, st, dir, []string{"eng-1"}, isLive); n != 1 || !strings.Contains(buf.String(), "✗ eng-1 has no system.md") {
+		t.Errorf("missing system.md: %d\n%s", n, buf.String())
+	}
+}
+
+func TestDoctorFlagsAgentsSharingASessionID(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.Open(filepath.Join(t.TempDir(), "s.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	for _, a := range []string{"orch", "eng-1", "eng-2"} {
+		os.MkdirAll(filepath.Join(dir, ".slai", "run", a), 0o755)
+	}
+	os.WriteFile(filepath.Join(dir, ".slai", "run", "orch", "session-id"), []byte("aaaaaaaa-1111\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".slai", "run", "eng-1", "session-id"), []byte("bbbbbbbb-2222\n"), 0o644)
+	var buf bytes.Buffer
+	if n := sharedSessionChecks(&buf, st, dir, []string{"orch", "eng-1", "eng-2"}); n != 0 || buf.Len() != 0 {
+		t.Fatalf("distinct ids flagged: %d %q", n, buf.String())
+	}
+	// two agents' SessionStart hooks report the same session id (how /tmp/minion's orch lost its identity)
+	_ = st.AddEvent("orch", "hook:sessionstart", `{"session":"cccccccc-3333","source":"resume"}`)
+	_ = st.AddEvent("eng-2", "hook:sessionstart", `{"session":"cccccccc-3333","source":"resume"}`)
+	_ = st.AddEvent("eng-2", "hook:sessionstart", `{"session":"dddddddd-4444","source":"startup"}`)
+	buf.Reset()
+	n := sharedSessionChecks(&buf, st, dir, []string{"orch", "eng-1", "eng-2"})
+	if n != 1 || !strings.Contains(buf.String(), "✗ eng-2 and orch share session id cccccccc…") {
+		t.Fatalf("events: %d\n%s", n, buf.String())
+	}
+	// the same id in two session-id files
+	os.WriteFile(filepath.Join(dir, ".slai", "run", "eng-1", "session-id"), []byte("aaaaaaaa-1111\n"), 0o644)
+	buf.Reset()
+	if n := sharedSessionChecks(&buf, st, dir, []string{"orch", "eng-1", "eng-2"}); n != 2 || !strings.Contains(buf.String(), "eng-1 and orch share session id aaaaaaaa…") {
+		t.Fatalf("files: %d\n%s", n, buf.String())
+	}
+}

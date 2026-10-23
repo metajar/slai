@@ -141,6 +141,7 @@ func (m *mod) input(ctx context.Context) (Input, error) {
 			}
 		}
 	}
+	in.Who = agentrows.WhoAll(d.Store, team, agents, in.Health, now)
 	in.Gate = gates.Wake(ids)
 	in.Esc, _ = d.Store.OpenEscalations()
 	in.Heartbeat, _, _ = d.Store.SupervisorHeartbeat()

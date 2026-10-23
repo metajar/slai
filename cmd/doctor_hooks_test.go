@@ -53,7 +53,7 @@ func TestHookHealthGolden(t *testing.T) {
       next: check the agent (` + "`slai doctor --panes`" + `); restart it if its slai tools keep failing
   ! warn: orch hook errors: 1 (age unknown), latest: plain text failure
       meaning: the slai hook for this agent failed, so the board may show stale status for it
-      next: see .slai/run/orch/hook.log, and run ` + "`slai doctor --panes`" + ` to check what the agent is doing
+      next: run ` + "`slai doctor --panes`" + ` to check what the agent is doing (there is no hook.log: nothing has written a hook error to a file)
   ✗ orch mcp errors: 2 (within the last hour) [no slai tool call since], latest: no slai tool call stamp 1m0s after an mcp__slai__ call started
       meaning: an slai tool call started but no completion was recorded; usually the call was interrupted or the agent was busy, sometimes its MCP server is not answering
       next: check the agent (` + "`slai doctor --panes`" + `); if it can still call slai tools, ignore this. slai restarts it once on its own
