@@ -55,7 +55,15 @@ func run(m *testing.M) int {
 			return 1
 		}
 	}
-	return m.Run()
+	code := m.Run()
+	// Anything still running from this run's binaries outlived its test.
+	if desc := reapLeaks(2*time.Second, binDir); len(desc) > 0 {
+		fmt.Fprintf(os.Stderr, "e2e: %d process(es) outlived the run (killed now):\n  %s\n", len(desc), strings.Join(desc, "\n  "))
+		if code == 0 {
+			code = 1
+		}
+	}
+	return code
 }
 
 // project is one isolated slai project plus its private tmux server.
@@ -81,6 +89,7 @@ func newProject(t *testing.T, o opts) *project {
 	if skipWhy != "" {
 		t.Skip(skipWhy)
 	}
+	t.Cleanup(acquireSlot(t)) // registered first, so it runs last: the slot is held through teardown
 	tmp := t.TempDir()
 	p := &project{t: t, dir: filepath.Join(tmp, "repo"), sock: fmt.Sprintf("slai-e2e-%d-%d", os.Getpid(), time.Now().UnixNano()%1e9)}
 	p.fakeLg = filepath.Join(tmp, "fakeclaude.log")
@@ -164,6 +173,7 @@ func (p *project) cleanup() {
 	k := exec.Command("tmux", "-L", p.sock, "kill-server")
 	_ = k.Run()
 	tmux.RemoveSocket(p.sock)
+	p.auditLeaks()
 }
 
 func (p *project) sh(name string, args ...string) string {
