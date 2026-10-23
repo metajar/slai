@@ -561,7 +561,7 @@ func (s *Store) ClaimInbox(agent string) ([]Message, error) {
 	}
 	defer tx.Rollback()
 	rows, err := tx.Query(`SELECT id, from_agent, to_agent, kind, task_id, reply_to, body, created_at, delivered_at, woken_at
-FROM messages WHERE to_agent=? AND delivered_at=0 ORDER BY id`, agent)
+FROM messages WHERE to_agent=? AND delivered_at=0 AND NOT EXISTS (SELECT 1 FROM kv WHERE key = 'inbox.hold.' || messages.id) ORDER BY id`, agent)
 	if err != nil {
 		return nil, err
 	}

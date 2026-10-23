@@ -231,6 +231,25 @@ func (s *Store) FinishReviewCharge(agent string) bool {
 	return true
 }
 
+// KVInboxHold + message id marks a message get_inbox must not hand out yet: an assignment
+// whose worktree switch failed (the agent would start it on the wrong branch). The supervisor
+// retries the switch every tick and releases the hold when it succeeds.
+const KVInboxHold = "inbox.hold."
+
+// HoldInbox keeps message id out of its recipient's get_inbox until ReleaseInbox.
+func (s *Store) HoldInbox(id int64) error { return s.SetKV(KVInboxHold+strconv.FormatInt(id, 10), "1") }
+
+// ReleaseInbox lets a held message through again.
+func (s *Store) ReleaseInbox(id int64) error {
+	return s.DeleteKV(KVInboxHold + strconv.FormatInt(id, 10))
+}
+
+// InboxHeld reports whether message id is held back.
+func (s *Store) InboxHeld(id int64) bool {
+	_, ok, _ := s.GetKV(KVInboxHold + strconv.FormatInt(id, 10))
+	return ok
+}
+
 // AgentTask returns the agent's current task id ("" when none or no such agent).
 func (s *Store) AgentTask(id string) string {
 	var t string

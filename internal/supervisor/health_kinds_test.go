@@ -160,6 +160,38 @@ func kindRows() []kindRow {
 				e.s.stuckGiveUp(a, cfg, 0, "kill failed")
 			},
 			progress: func(e *kenv) { e.progressed("eng-1"); e.s.healthTick(e.ctx) }},
+		{kind: EscSwitchFailed, agent: "eng-1", env: healthEnv, holds: []string{"paused", "focused"},
+			arm: func(e *kenv) {
+				wt := e.s.taskWorktree(store.Agent{ID: "eng-1"})
+				if err := os.Rename(wt, wt+".off"); err != nil {
+					e.t.Fatal(err)
+				}
+				tk, _ := e.s.Store.CreateTask(store.Task{Title: "D", Assignee: "eng-1", CreatedBy: "orch", Status: store.StatusAssigned})
+				_, _ = e.s.Store.AddMessage(store.Message{From: "orch", To: "eng-1", Kind: "assignment", TaskID: tk.ID, Body: "do D"})
+				_ = e.s.Store.SetAgentStatus("eng-1", "idle")
+				// the switch has been failing for longer than SwitchEscalateAfter
+				_ = e.s.Store.SetKV(kvPrepFail+"eng-1", itoa64(e.now.Add(-SwitchEscalateAfter-time.Minute).Unix()))
+			},
+			fire: func(e *kenv) { e.s.wakeTick(e.ctx) },
+			progress: func(e *kenv) {
+				wt := e.s.taskWorktree(store.Agent{ID: "eng-1"})
+				_ = os.Rename(wt+".off", wt)
+				_ = e.s.Store.SetAgentStatus("eng-1", "idle")
+				e.s.wakeTick(e.ctx)
+			}},
+		{kind: EscWakeIgnored, agent: "orch", env: healthEnv, holds: []string{"paused"},
+			arm: func(e *kenv) {
+				id, _ := e.s.Store.AddMessage(store.Message{From: "slai", To: "orch", Kind: "note", Body: "decide"})
+				first := e.now.Add(-GiveUpAfter - time.Minute).Unix()
+				e.s.saveWake("orch", wakeState{id: id, n: MaxUnansweredWakes, firstAt: first, lastAt: e.now.Unix() - 1})
+				_ = e.s.Store.SetAgentStatus("orch", "idle")
+			},
+			fire: func(e *kenv) { e.s.wakeTick(e.ctx) },
+			progress: func(e *kenv) {
+				e.progressed("orch") // a slai tool call after the last wake
+				_ = e.s.Store.SetAgentStatus("orch", "idle")
+				e.s.wakeTick(e.ctx)
+			}},
 		{kind: EscStalled, agent: "eng-1", env: healthEnv, noHold: "raised by the reminder ladder after its own nudges, which skip held agents",
 			arm: func(e *kenv) { e.task("eng-1") },
 			fire: func(e *kenv) {
