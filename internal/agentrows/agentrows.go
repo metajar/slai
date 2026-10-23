@@ -14,6 +14,7 @@ import (
 	"github.com/oorbt/slai/internal/config"
 	"github.com/oorbt/slai/internal/service"
 	"github.com/oorbt/slai/internal/store"
+	"github.com/oorbt/slai/internal/usage"
 )
 
 // Group is one section of the agent list.
@@ -221,6 +222,7 @@ type Row struct {
 	Harness, Tag    string // claude | opencode | pi, and its short tag ("" for claude)
 	Model           string // compact model name
 	Identity        Identity
+	Context         Context
 }
 
 // Identity is what an agent's row says about its identity grounding: when it was last
@@ -277,12 +279,68 @@ func (i Identity) GroundText(now time.Time) string {
 	return "re-grounded " + Age(now.Sub(time.Unix(i.GroundAt, 0))) + " ago"
 }
 
+// Context is an agent's conversation size and when it was last reset.
+type Context struct {
+	Tokens      int64 // latest-turn prompt size (usage.Context); 0 = not recorded yet
+	LastResetAt int64 // unix time of the latest context_reset event, 0 = never
+	Threshold   int64 // defaults.context_reset.threshold_tokens (default 150000)
+	AgentID     string
+}
+
+// ContextOf reads an agent's context size and last reset from the store.
+func ContextOf(st *store.Store, id string, threshold int) Context {
+	c := Context{AgentID: id, Threshold: int64(threshold)}
+	if n, _, ok := usage.Context(st, id); ok {
+		c.Tokens = n
+	}
+	if evs, err := st.EventsByKind(id, "context_reset", 1); err == nil && len(evs) > 0 {
+		c.LastResetAt = evs[0].At
+	}
+	return c
+}
+
+// Over reports whether the context is past the threshold.
+func (c Context) Over() bool { return c.Tokens > 0 && c.Threshold > 0 && c.Tokens > c.Threshold }
+
+// Size words the context size: "ctx 142k", or "ctx 162k (over threshold; run `slai clear eng-1`)".
+// "" when nothing is recorded yet.
+func (c Context) Size() string {
+	if c.Tokens <= 0 {
+		return ""
+	}
+	s := "ctx " + Tokens(c.Tokens)
+	if c.Over() {
+		s += " (over threshold; run `slai clear " + c.AgentID + "`)"
+	}
+	return s
+}
+
+// Reset words the last reset: "reset 3m ago" or "never reset".
+func (c Context) Reset(now time.Time) string {
+	if c.LastResetAt == 0 {
+		return "never reset"
+	}
+	return "reset " + Age(now.Sub(time.Unix(c.LastResetAt, 0))) + " ago"
+}
+
+// Tokens renders a token count compactly: 850, 142k, 1.2M.
+func Tokens(n int64) string {
+	switch {
+	case n < 1000:
+		return fmt.Sprintf("%d", n)
+	case n < 1_000_000:
+		return fmt.Sprintf("%dk", (n+500)/1000)
+	}
+	return fmt.Sprintf("%.1fM", float64(n)/1e6)
+}
+
 // Input is what Build needs besides the agent and its health.
 type Input struct {
 	Titles   map[string]string // task id -> title
 	Events   []store.Event     // newest first
 	Harness  string            // the agent's harness kind
 	Identity Identity          // the agent's identity grounding (IdentityOf)
+	Context  Context           // the agent's context size and last reset (ContextOf)
 	Now      time.Time
 	Text     ActivityText
 }
@@ -299,6 +357,6 @@ func Build(a store.Agent, h service.Health, in Input) Row {
 		ID: a.ID, Role: a.Role, Group: GroupKey(a.Role), Status: a.Status, StatusLabel: StatusLabel(a.Status), Waiting: IsWaiting(a.Status),
 		Task: a.CurrentTask, TaskTitle: in.Titles[a.CurrentTask], Activity: Activity(a, in.Titles[a.CurrentTask], in.Events, in.Text),
 		Age: StatusAge(a, in.Now), Liveness: h.Liveness, Reason: Reason(h), ChipLabel: chip, ChipDetail: detail,
-		Harness: kind, Tag: HarnessTag(kind), Model: ShortModel(a.Model), Identity: in.Identity,
+		Harness: kind, Tag: HarnessTag(kind), Model: ShortModel(a.Model), Identity: in.Identity, Context: in.Context,
 	}
 }

@@ -83,6 +83,28 @@ type Defaults struct {
 	// IdentityEveryBoardChecks re-sends the orchestrator's identity line with every Nth board
 	// check slai sends it. Unset means 10; negative turns it off.
 	IdentityEveryBoardChecks int `yaml:"identity_every_board_checks,omitempty"`
+	// ContextReset configures how large an agent's conversation may grow before slai points
+	// at `slai clear`. Auto turns on resetting an idle agent that is over the threshold by
+	// itself (off by default in v1); the status and dashboard hint works either way.
+	ContextReset ContextReset `yaml:"context_reset,omitempty"`
+}
+
+// DefaultContextThresholdTokens is the last-turn prompt size past which an agent's context
+// is flagged when defaults.context_reset.threshold_tokens is not set.
+const DefaultContextThresholdTokens = 150000
+
+// ContextReset is defaults.context_reset.
+type ContextReset struct {
+	Auto            bool `yaml:"auto,omitempty"`
+	ThresholdTokens int  `yaml:"threshold_tokens,omitempty"`
+}
+
+// ContextThreshold is the prompt size over which an agent's context is flagged (default 150000).
+func (d Defaults) ContextThreshold() int {
+	if d.ContextReset.ThresholdTokens > 0 {
+		return d.ContextReset.ThresholdTokens
+	}
+	return DefaultContextThresholdTokens
 }
 
 // IdentityEvery is how many board checks pass between identity lines for the orchestrator

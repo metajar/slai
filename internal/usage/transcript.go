@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/oorbt/slai/internal/store"
 )
@@ -16,6 +18,9 @@ type Totals struct {
 	Tokens
 	CostUSD  float64
 	Messages int
+	// Last is the final assistant message's usage: its prompt side (Last.Prompt()) is how big
+	// the conversation was when the agent last answered, i.e. its context size.
+	Last Tokens
 }
 
 type line struct {
@@ -87,6 +92,7 @@ func ParseReader(r io.Reader, ov Overrides) (Totals, error) {
 		tot.CacheWrite += e.t.CacheWrite
 		tot.CostUSD += Cost(e.t, PriceFor(e.model, ov))
 		tot.Messages++
+		tot.Last = e.t
 	}
 	return tot, nil
 }
@@ -133,6 +139,9 @@ func Record(st *store.Store, agent, transcript string, ov Overrides) (Delta, err
 			break
 		}
 	}
+	if tot.Messages > 0 {
+		_ = SetContext(st, agent, tot.Last.Prompt())
+	}
 	cur := mark{transcript, tot.Prompt(), tot.Output, tot.CostUSD}
 	d := Delta{cur.Prompt - prev.Prompt, cur.Output - prev.Output, cur.Cost - prev.Cost}
 	if d.Prompt <= 0 && d.Output <= 0 && d.CostUSD <= 1e-12 {
@@ -145,4 +154,25 @@ func Record(st *store.Store, agent, transcript string, ov Overrides) (Delta, err
 	}
 	b, _ := json.Marshal(cur)
 	return d, st.AddEvent(agent, MarkKind, string(b))
+}
+
+// KVContext + agent holds "tokens|unix": the prompt size of the agent's latest turn (its
+// context size) and when it was recorded. A new session's first turn overwrites it.
+const KVContext = "usage.ctx."
+
+// SetContext records the agent's latest-turn prompt size.
+func SetContext(st *store.Store, agent string, tokens int64) error {
+	return st.SetKV(KVContext+agent, strconv.FormatInt(tokens, 10)+"|"+strconv.FormatInt(time.Now().Unix(), 10))
+}
+
+// Context reads it back: tokens, when recorded (unix), and whether there is one.
+func Context(st *store.Store, agent string) (tokens, at int64, ok bool) {
+	v, found, err := st.GetKV(KVContext + agent)
+	if err != nil || !found {
+		return 0, 0, false
+	}
+	a, b, _ := strings.Cut(v, "|")
+	tokens, err1 := strconv.ParseInt(a, 10, 64)
+	at, _ = strconv.ParseInt(b, 10, 64)
+	return tokens, at, err1 == nil
 }
