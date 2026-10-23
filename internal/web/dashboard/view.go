@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oorbt/slai/internal/agentrows"
 	"github.com/oorbt/slai/internal/config"
 	"github.com/oorbt/slai/internal/ratelimit"
 	"github.com/oorbt/slai/internal/service"
@@ -19,8 +20,10 @@ type Input struct {
 	Team   *config.Team
 	Agents []store.Agent
 	Health map[string]service.Health
-	Tasks  []store.Task
-	Esc    []store.Escalation
+	// Identity is each agent's identity grounding (agentrows.IdentityOf); a missing entry reads as never re-grounded.
+	Identity map[string]agentrows.Identity
+	Tasks    []store.Task
+	Esc      []store.Escalation
 	// Questions maps an agent waiting on the user to its latest ask_user text.
 	Questions map[string]string
 	Heartbeat int64 // supervisor heartbeat (unix), 0 = never
@@ -74,6 +77,8 @@ type Chip struct{ Class, Icon, Label, Reason, Gloss string }
 type AgentCard struct {
 	ID, Role, Harness, Task, Status, Last string
 	Chip                                  Chip
+	Grounded                              string // "re-grounded 3m ago" / "never re-grounded"
+	Correction                            string // the open identity correction, "" when none
 }
 
 // Spend is the spend card.
@@ -143,6 +148,8 @@ func Build(in Input) View {
 		}
 		counts[live]++
 		card := AgentCard{ID: a.ID, Role: a.Role, Task: a.CurrentTask, Status: a.Status, Chip: chipOf(live, h.Reason)}
+		id := in.Identity[a.ID]
+		card.Grounded, card.Correction = id.GroundText(in.Now), id.Correction
 		if c, ok := cfg[a.ID]; ok {
 			card.Harness = c.HarnessKind() + " · " + c.Model
 		}

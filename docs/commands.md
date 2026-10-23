@@ -18,6 +18,7 @@ Terms such as *orch*, *dashboard*, *worktree* and *integration branch* are defin
 | `slai attach <agent>` | Opens that agent's tmux pane to watch it. | `slai attach eng-1` |
 | `slai up` | Like `slai` but headless: starts agents and the supervisor without opening the dashboard. | `slai up` |
 | `slai hold` / `slai resume` | Stop the whole team from being woken (e.g. overnight) / lift it. | `slai hold` |
+| `slai ground <agent>` | Reminds an agent who it is: queues its identity line (name, role, what it is for), and the next wake-up opens with it, typed only when the agent is idle and its pane is safe. Asking again while one is still waiting changes nothing. `slai status` shows when each agent was last re-grounded (`last_ground_at` in `--json`) and any open identity correction. | `slai ground eng-1` |
 | `slai priority <task> <n\|up\|down\|top>` | Sets a task's priority; higher runs first. | `slai priority T-0004 top` |
 | `slai commit` | Previews, then commits the team's finished work onto your current branch. | `slai commit` |
 | `slai down` / `slai clean` | Stop everything / also remove slai's runtime state. | `slai down` |

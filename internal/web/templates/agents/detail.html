@@ -60,6 +60,7 @@
           <dt class="col-5">Degraded features</dt><dd class="col-7">{{.Data.Degraded}}</dd>
           <dt class="col-5">5h / weekly</dt><dd class="col-7">{{.Data.Row.Gauges}}</dd>
           <dt class="col-5">Liveness</dt><dd class="col-7">{{.Data.Row.Liveness}}{{if .Data.Row.Reason}}: {{.Data.Row.Reason}}{{end}}</dd>
+          <dt class="col-5">Identity</dt><dd class="col-7">{{.Data.Row.Grounded}}{{if .Data.Row.Correction}}<div><span class="badge bg-orange-lt">identity correction</span> {{.Data.Row.Correction}}</div>{{end}}</dd>
         </dl>
       </div>
       <div class="card-header"><h3 class="card-title">Recent health events</h3></div>

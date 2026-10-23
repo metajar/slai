@@ -13,7 +13,7 @@
   <div class="table-responsive"><table class="table table-vcenter card-table">
     <thead><tr><th scope="col">Agent</th><th scope="col">Status</th><th scope="col">Current task</th><th scope="col">In this status</th><th scope="col">Harness · model</th></tr></thead>
     <tbody>{{range .Rows}}<tr>
-      <td><a href="/agents/{{.ID}}"><strong>{{.ID}}</strong></a><div class="text-secondary small">{{.Role}}</div></td>
+      <td><a href="/agents/{{.ID}}"><strong>{{.ID}}</strong></a><div class="text-secondary small">{{.Role}} · {{.Grounded}}</div>{{if .Correction}}<div class="small"><span class="badge bg-orange-lt" title="slai sent this agent its identity again">identity correction</span> {{.Correction}}</div>{{end}}</td>
       <td>{{template "chips" .}}</td>
       <td>{{if .Task}}<span class="text-nowrap">{{.Task}}</span> <span class="text-secondary small">{{.TaskTitle}}</span>{{else}}<span class="text-secondary small">{{.Activity}}</span>{{end}}</td>
       <td class="text-nowrap">{{if .Ago}}{{.Ago}} ago{{else}}<span class="text-secondary">never</span>{{end}}</td>

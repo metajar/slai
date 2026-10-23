@@ -32,6 +32,8 @@ type Row struct {
 	ChipLabel       string // TUI health chip: "", "gated", "stale", "rate-limited", ...
 	Ago             string // how long ago the status changed (agentrows.StatusAge), "" if never
 	Paused          bool
+	Grounded        string // "re-grounded 3m ago" / "never re-grounded" (agentrows.Identity)
+	Correction      string // the open identity correction, "" when none
 	Gauges          string // "n/a — not supported by pi" when the harness has no subscription gauges
 	NoGauges        bool   // the harness has no plan gauges at all (the list says so in its harness cell)
 }
@@ -81,8 +83,10 @@ type Inputs struct {
 	Events []store.Event // newest first
 	Paused map[string]bool
 	Health map[string]service.Health
-	Team   *config.Team
-	Now    time.Time
+	// Identity is each agent's identity grounding (agentrows.IdentityOf); a missing entry reads as never re-grounded.
+	Identity map[string]agentrows.Identity
+	Team     *config.Team
+	Now      time.Time
 }
 
 // BuildRows is the list's row builder: every agent in the store, grouped like the TUI list
@@ -100,11 +104,13 @@ func BuildRows(st *store.Store, team *config.Team, now time.Time) ([]Row, error)
 	paused, _ := st.PausedAgents()
 	cfg := service.GateConfigOf(team)
 	health := map[string]service.Health{}
+	ident := map[string]agentrows.Identity{}
 	for _, a := range agents {
+		ident[a.ID] = agentrows.IdentityOf(st, a.ID)
 		alive := a.Status != "dead" && a.Status != ""
 		health[a.ID] = service.AgentHealthGated(st, a.ID, alive, now, cfg)
 	}
-	return RowsFrom(Inputs{Agents: agents, Tasks: tasks, Events: events, Paused: paused, Health: health, Team: team, Now: now}), nil
+	return RowsFrom(Inputs{Agents: agents, Tasks: tasks, Events: events, Paused: paused, Health: health, Identity: ident, Team: team, Now: now}), nil
 }
 
 // RowsFrom builds the rows from already-read inputs. Every field of the row that the TUI list
@@ -118,10 +124,10 @@ func RowsFrom(in Inputs) []Row {
 	var rows []Row
 	for _, a := range in.Agents {
 		kind := agentrows.HarnessOf(in.Team, a.ID)
-		c := agentrows.Build(a, in.Health[a.ID], agentrows.Input{Titles: titles, Events: in.Events, Harness: kind, Now: in.Now, Text: text})
+		c := agentrows.Build(a, in.Health[a.ID], agentrows.Input{Titles: titles, Events: in.Events, Harness: kind, Identity: in.Identity[a.ID], Now: in.Now, Text: text})
 		r := Row{ID: c.ID, Role: c.Role, Group: c.Group, Status: c.Status, StatusLabel: c.StatusLabel, Waiting: c.Waiting,
 			Task: c.Task, TaskTitle: c.TaskTitle, Activity: c.Activity, Harness: c.Harness, Tag: c.Tag, Model: c.Model,
-			Liveness: c.Liveness, Reason: c.Reason, ChipLabel: c.ChipLabel, Ago: c.Age, Paused: in.Paused[a.ID]}
+			Liveness: c.Liveness, Reason: c.Reason, ChipLabel: c.ChipLabel, Ago: c.Age, Paused: in.Paused[a.ID], Grounded: c.Identity.GroundText(in.Now), Correction: c.Identity.Correction}
 		if gaugesNA(kind) {
 			r.Gauges = "n/a — not supported by " + kind
 			r.NoGauges = true
