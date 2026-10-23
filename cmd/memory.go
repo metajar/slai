@@ -161,17 +161,33 @@ func (e *memEnv) ls(ctx context.Context, onlyStale bool) error {
 	return nil
 }
 
-// jsonFact is one row of `slai memory ls --json`.
+// jsonFact is a fact as the memory store holds it (the file's own fields) plus what slai
+// computes now against the integration branch: State (fresh, stale, unverified, invalid) and,
+// for a stale or invalid one, Reason.
 type jsonFact struct {
-	ID      string        `json:"id"`
-	Kind    string        `json:"kind"`
-	Status  string        `json:"status"` // the state: fresh, stale, unverified or invalid
-	Reason  string        `json:"reason,omitempty"`
-	Path    string        `json:"path"` // the first cited path, "" when none
-	Paths   []memory.Path `json:"paths"`
-	Age     string        `json:"age"`
-	Created string        `json:"created"`
-	Author  string        `json:"author,omitempty"`
+	ID             string        `json:"id"`
+	Kind           string        `json:"kind,omitempty"`
+	Status         string        `json:"status,omitempty"` // the file's: proposed or verified
+	Author         string        `json:"author,omitempty"`
+	VerifiedBy     string        `json:"verified_by,omitempty"`
+	IntegrationSHA string        `json:"integration_sha,omitempty"`
+	Created        string        `json:"created,omitempty"`
+	Paths          []memory.Path `json:"paths"`
+	Decision       string        `json:"decision,omitempty"`
+	Check          string        `json:"check,omitempty"`
+	Text           string        `json:"text,omitempty"`
+	State          string        `json:"state"`
+	Reason         string        `json:"reason,omitempty"`
+	Age            string        `json:"age"`
+}
+
+func (e *memEnv) jsonFactOf(v factView) jsonFact {
+	paths := v.Paths
+	if paths == nil {
+		paths = []memory.Path{}
+	}
+	return jsonFact{ID: v.ID, Kind: v.Kind, Status: v.Fact.Status, Author: v.Author, VerifiedBy: v.VerifiedBy, IntegrationSHA: v.IntegrationSHA,
+		Created: v.Created, Paths: paths, Decision: v.Decision, Check: v.Check, Text: v.Text, State: v.State, Reason: v.Reason, Age: e.age(v.Created)}
 }
 
 // lsJSON is `slai memory ls --json`: the same facts as the table, invalid files included
@@ -188,26 +204,17 @@ func (e *memEnv) lsJSON(ctx context.Context, onlyStale bool) error {
 		if onlyStale && v.State != factStale {
 			continue
 		}
-		p := v.firstPath()
-		if p == "-" {
-			p = ""
-		}
-		paths := v.Paths
-		if paths == nil {
-			paths = []memory.Path{}
-		}
-		out.Facts = append(out.Facts, jsonFact{ID: v.ID, Kind: v.Kind, Status: v.State, Reason: v.Reason, Path: p,
-			Paths: paths, Age: e.age(v.Created), Created: v.Created, Author: v.Author})
+		out.Facts = append(out.Facts, e.jsonFactOf(v))
 	}
 	if !onlyStale {
 		for _, b := range bad {
-			out.Facts = append(out.Facts, jsonFact{ID: b.ID, Status: factInvalid, Reason: b.Reason, Paths: []memory.Path{}, Age: "-"})
+			out.Facts = append(out.Facts, jsonFact{ID: b.ID, Paths: []memory.Path{}, State: factInvalid, Reason: b.Reason, Age: "-"})
 		}
 	}
 	return writeJSON(e.out, out)
 }
 
-// showJSON is `slai memory show <id> --json`: the fact, its recorded vs current blobs and its state.
+// showJSON is `slai memory show <id> --json`: the fact, its state and its recorded vs current blobs.
 func (e *memEnv) showJSON(ctx context.Context, id string) error {
 	raw, err := os.ReadFile(filepath.Join(e.mem.Dir, id+".md"))
 	if err != nil {
@@ -220,22 +227,14 @@ func (e *memEnv) showJSON(ctx context.Context, id string) error {
 		State    string `json:"state"`   // ok, CHANGED or MISSING
 	}
 	out := struct {
-		ID        string      `json:"id"`
-		File      string      `json:"file"`
-		Status    string      `json:"status"` // fresh, stale, unverified or invalid
-		Reason    string      `json:"reason,omitempty"`
-		Kind      string      `json:"kind,omitempty"`
-		Author    string      `json:"author,omitempty"`
-		Verified  string      `json:"verified_by,omitempty"`
-		Created   string      `json:"created,omitempty"`
-		Text      string      `json:"text,omitempty"`
-		Check     string      `json:"check,omitempty"`
+		jsonFact
+		File      string      `json:"file"` // the raw memory file
 		Against   string      `json:"against"`
 		Grounding []grounding `json:"grounding"`
-	}{ID: id, File: string(raw), Against: e.rev, Grounding: []grounding{}}
+	}{File: string(raw), Against: e.rev, Grounding: []grounding{}}
 	f, err := e.mem.Get(id)
 	if err != nil {
-		out.Status, out.Reason = factInvalid, err.Error()
+		out.jsonFact = jsonFact{ID: id, Paths: []memory.Path{}, State: factInvalid, Reason: err.Error(), Age: "-"}
 		return writeJSON(e.out, out)
 	}
 	names := make([]string, len(f.Paths))
@@ -250,6 +249,7 @@ func (e *memEnv) showJSON(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
+	out.jsonFact = e.jsonFactOf(v)
 	for _, p := range f.Paths {
 		now, ok := cur[p.Path]
 		g := grounding{Path: p.Path, Recorded: p.Blob, Current: now, State: "ok"}
@@ -261,8 +261,6 @@ func (e *memEnv) showJSON(ctx context.Context, id string) error {
 		}
 		out.Grounding = append(out.Grounding, g)
 	}
-	out.Status, out.Reason, out.Kind, out.Author, out.Verified, out.Created, out.Text, out.Check =
-		v.State, v.Reason, f.Kind, f.Author, f.VerifiedBy, f.Created, f.Text, f.Check
 	return writeJSON(e.out, out)
 }
 

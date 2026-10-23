@@ -198,12 +198,15 @@ func runDoctorChecks(ctx context.Context, dir string, fix, all bool, w io.Writer
 	return bad, nil
 }
 
-// doctorCheck is one line of the doctor report. Status is ok, warn, fail or info (a note that
-// is neither a pass nor a problem, e.g. "no state.db yet").
+// doctorCheck is one line of the doctor report.
 type doctorCheck struct {
-	Name    string `json:"name"`
-	Status  string `json:"status"`
-	Message string `json:"message"`
+	Name   string `json:"name"`
+	OK     bool   `json:"ok"`     // false for a warning or a failure
+	Detail string `json:"detail"` // what the check found
+	Hint   string `json:"hint"`   // what to do about it, "" when the report gives none
+	// Level is ok, warn, fail or info (a note that is neither a pass nor a problem, e.g. "no
+	// state.db yet"); OK is true for ok and info.
+	Level string `json:"level"`
 }
 
 // doctorTeam is one other slai team, as in the "Other slai teams" section.
@@ -296,9 +299,24 @@ func parseDoctorChecks(text string) []doctorCheck {
 		if name == "" {
 			name = doctorCheckName(msg)
 		}
-		checks = append(checks, doctorCheck{Name: name, Status: status, Message: msg})
+		detail, hint := splitHint(msg)
+		checks = append(checks, doctorCheck{Name: name, OK: status == "ok" || status == "info", Detail: detail, Hint: hint, Level: status})
 	}
 	return checks
+}
+
+var hintRe = regexp.MustCompile("(?:run|use|try) `[^`]+`(?: [^`;()]*)?")
+
+// splitHint separates what a line found from what it says to do: the text after " — ", or a
+// "run `...`" phrase inside it. Detail keeps the whole line when there is no hint.
+func splitHint(msg string) (detail, hint string) {
+	if i := strings.Index(msg, " — "); i >= 0 {
+		return msg[:i], msg[i+len(" — "):]
+	}
+	if m := hintRe.FindString(msg); m != "" {
+		return msg, strings.TrimSpace(m)
+	}
+	return msg, ""
 }
 
 // doctorCheckNames gives a stable name to the checks whose first word is not one: matched in

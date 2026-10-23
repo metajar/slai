@@ -31,15 +31,16 @@ func TestVersionJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var v struct {
-		Version, Build, Revision, Built, OS, Arch string
-		Dirty                                     bool
-	}
+	var v struct{ Version, Commit, Build string }
+	var raw map[string]any
 	if err := json.Unmarshal([]byte(out), &v); err != nil {
 		t.Fatalf("not one JSON document: %v\n%s", err, out)
 	}
-	if v.Version == "" || v.Build == "" || v.Revision == "" || v.Built == "" || v.OS == "" || v.Arch == "" {
+	if v.Version == "" || v.Build == "" || v.Commit == "" {
 		t.Fatalf("version json = %+v", v)
+	}
+	if err := json.Unmarshal([]byte(out), &raw); err != nil || len(raw) != 3 {
+		t.Errorf("want exactly version, commit and build: %v %v", raw, err)
 	}
 	text, _ := runCmd(t, versionCmd())
 	if !strings.Contains(text, "slai "+v.Version) || !strings.Contains(text, "build "+v.Build) {
@@ -60,8 +61,8 @@ func TestMemoryLsAndShowJSON(t *testing.T) {
 	}
 	var ls struct {
 		Facts []struct {
-			ID, Kind, Status, Path, Age, Reason string
-			Paths                               []memory.Path
+			ID, Kind, Status, State, Age, Reason, Author, Text string
+			Paths                                              []memory.Path
 		}
 	}
 	if err := json.Unmarshal(out.Bytes(), &ls); err != nil {
@@ -69,7 +70,7 @@ func TestMemoryLsAndShowJSON(t *testing.T) {
 	}
 	got := map[string]string{}
 	for _, f := range ls.Facts {
-		got[f.ID] = f.Status
+		got[f.ID] = f.State
 	}
 	want := map[string]string{fresh.ID: "fresh", old.ID: "stale", "f-badbad00": "invalid"}
 	for id, st := range want {
@@ -78,7 +79,7 @@ func TestMemoryLsAndShowJSON(t *testing.T) {
 		}
 	}
 	for _, f := range ls.Facts {
-		if f.ID == fresh.ID && (f.Path != "internal/lane/lane.go" || len(f.Paths) != 1 || f.Kind != "gotcha" || f.Age != "0d") {
+		if f.ID == fresh.ID && (len(f.Paths) != 1 || f.Paths[0].Path != "internal/lane/lane.go" || f.Kind != "gotcha" || f.Status != "verified" || f.Age != "0d" || f.Text == "" || f.Author != "eng-1") {
 			t.Errorf("fresh row = %+v", f)
 		}
 		if f.ID == old.ID && f.Reason == "" {
@@ -99,14 +100,14 @@ func TestMemoryLsAndShowJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	var sh struct {
-		ID, File, Status, Kind, Against string
-		Grounding                       []struct{ Path, Recorded, Current, State string }
+		ID, File, State, Status, Kind, Against string
+		Grounding                              []struct{ Path, Recorded, Current, State string }
 	}
 	if err := json.Unmarshal(out.Bytes(), &sh); err != nil {
 		t.Fatalf("show --json is not one JSON document: %v\n%s", err, out.String())
 	}
 	cur := gitIn(t, e.dir, "rev-parse", "slai/integration:cmd/app/main.go")
-	if sh.ID != old.ID || sh.Status != "stale" || sh.Kind != "architecture" || sh.Against != "slai/integration" || !strings.Contains(sh.File, "App entry is cmd/app.") ||
+	if sh.ID != old.ID || sh.State != "stale" || sh.Status != "verified" || sh.Kind != "architecture" || sh.Against != "slai/integration" || !strings.Contains(sh.File, "App entry is cmd/app.") ||
 		len(sh.Grounding) != 1 || sh.Grounding[0].State != "CHANGED" || sh.Grounding[0].Recorded != old.Paths[0].Blob || sh.Grounding[0].Current != cur {
 		t.Fatalf("show json = %+v (current blob %s)", sh, cur)
 	}
@@ -114,7 +115,7 @@ func TestMemoryLsAndShowJSON(t *testing.T) {
 	if err := e.showJSON(ctx, "f-badbad00"); err != nil {
 		t.Fatal(err)
 	}
-	if err := json.Unmarshal(out.Bytes(), &sh); err != nil || sh.Status != "invalid" {
+	if err := json.Unmarshal(out.Bytes(), &sh); err != nil || sh.State != "invalid" {
 		t.Fatalf("invalid fact: %v %+v", err, sh)
 	}
 	if err := e.showJSON(ctx, "f-nope"); err == nil {
@@ -137,7 +138,10 @@ func TestDoctorJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	var rep struct {
-		Checks     []struct{ Name, Status, Message string }
+		Checks []struct {
+			Name, Detail, Hint, Level string
+			OK                        bool
+		}
 		Problems   int
 		Orphans    []doctorTeam
 		OtherTeams []doctorTeam `json:"other_teams"`
@@ -150,10 +154,10 @@ func TestDoctorJSON(t *testing.T) {
 	}
 	byName := map[string]string{}
 	for _, c := range rep.Checks {
-		if c.Name == "" || c.Message == "" || (c.Status != "ok" && c.Status != "warn" && c.Status != "fail" && c.Status != "info") {
+		if c.Name == "" || c.Detail == "" || (c.Level != "ok" && c.Level != "warn" && c.Level != "fail" && c.Level != "info") || c.OK != (c.Level == "ok" || c.Level == "info") {
 			t.Errorf("bad check %+v", c)
 		}
-		byName[c.Name] = c.Status
+		byName[c.Name] = c.Level
 	}
 	if byName["git-repository"] != "ok" || byName["team.yaml"] != "ok" {
 		t.Errorf("checks = %v", byName)
@@ -167,12 +171,13 @@ func TestDoctorJSON(t *testing.T) {
 }
 
 func TestParseDoctorChecks(t *testing.T) {
-	got := parseDoctorChecks("✓ tmux    tmux 3.4\n✗ git     missing — install git\n! warn: worktree for eng-1 missing (/x)\n- no state.db yet\nteam health:\n  ✓ supervisor running (pid 1)\n  ⚠ supervisor is running an older slai build\n  eng-1        idle         reason=- last-activity=never escalation=none\nOther slai teams:\n  ORPHAN /x [slai_1*] 1 session(s)\n  stop the orphans with `slai down --orphans`\n")
+	got := parseDoctorChecks("✓ tmux    tmux 3.4\n✗ git     missing — install git\n! warn: worktree for eng-1 missing (/x); `slai` recreates it\n- no state.db yet\nteam health:\n  ✓ supervisor running (pid 1)\n  ⚠ supervisor is running an older slai build\n  eng-1        idle         reason=- last-activity=never escalation=none\nOther slai teams:\n  ORPHAN /x [slai_1*] 1 session(s)\n  stop the orphans with `slai down --orphans`\n")
 	want := []doctorCheck{
-		{"tmux", "ok", "tmux tmux 3.4"}, {"git", "fail", "git missing — install git"}, {"worktree", "warn", "worktree for eng-1 missing (/x)"},
-		{"state.db", "info", "no state.db yet"}, {"team health", "ok", "supervisor running (pid 1)"},
-		{"team health", "warn", "supervisor is running an older slai build"},
-		{"team health", "info", "eng-1 idle reason=- last-activity=never escalation=none"},
+		{"tmux", true, "tmux tmux 3.4", "", "ok"}, {"git", false, "git missing", "install git", "fail"},
+		{"worktree", false, "worktree for eng-1 missing (/x); `slai` recreates it", "", "warn"},
+		{"state.db", true, "no state.db yet", "", "info"}, {"team health", true, "supervisor running (pid 1)", "", "ok"},
+		{"team health", false, "supervisor is running an older slai build", "", "warn"},
+		{"team health", true, "eng-1 idle reason=- last-activity=never escalation=none", "", "info"},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("got %+v", got)

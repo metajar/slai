@@ -44,15 +44,15 @@ func readVCS() vcsInfo {
 	return v
 }
 
-// versionInfo is what `slai version` reports, as text or (--json) as one document.
+// versionInfo is what `slai version` reports. The text form prints more (build time, platform);
+// --json is {version, commit, build}.
 type versionInfo struct {
 	Version  string `json:"version"`
+	Commit   string `json:"commit"` // "unknown" when the binary carries no VCS stamp
 	Build    string `json:"build"`
-	Revision string `json:"revision"` // "unknown" when the binary carries no VCS stamp
-	Dirty    bool   `json:"dirty"`
-	Built    string `json:"built"` // "unknown" when the binary carries no VCS stamp
-	OS       string `json:"os"`
-	Arch     string `json:"arch"`
+	Dirty    bool   `json:"-"`
+	Built    string `json:"-"`
+	OS, Arch string `json:"-"`
 }
 
 func readVersion() versionInfo {
@@ -71,12 +71,12 @@ func readVersion() versionInfo {
 	if version != "" {
 		ver = version
 	}
-	return versionInfo{Version: ver, Build: buildinfo.ID(), Revision: rev, Dirty: v.Dirty, Built: built, OS: runtime.GOOS, Arch: runtime.GOARCH}
+	return versionInfo{Version: ver, Build: buildinfo.ID(), Commit: rev, Dirty: v.Dirty, Built: built, OS: runtime.GOOS, Arch: runtime.GOARCH}
 }
 
 func versionString() string {
 	v := readVersion()
-	rev := v.Revision
+	rev := v.Commit
 	if v.Dirty {
 		rev += " (dirty)"
 	}
