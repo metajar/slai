@@ -33,7 +33,7 @@ func newRootCmd() *cobra.Command {
 			return runTUI(c.Context())
 		},
 	}
-	root.AddCommand(initCmd(), upCmd(), downCmd(), attachCmd(), statusCmd(), doctorCmd(), memoryCmd(), superviseCmd(), sendCmd(), replyCmd(), holdCmd(), resumeCmd(), priorityCmd(), revertCmd(), cleanCmd(), commitCmd(), serveCmd())
+	root.AddCommand(initCmd(), upCmd(), downCmd(), attachCmd(), statusCmd(), doctorCmd(), memoryCmd(), superviseCmd(), sendCmd(), replyCmd(), holdCmd(), resumeCmd(), priorityCmd(), groundCmd(), revertCmd(), cleanCmd(), commitCmd(), serveCmd())
 	root.AddCommand(mcpCmd(), toolCmd(), hookCmd(), statuslineCmd(), versionCmd())
 	root.SetHelpTemplate(root.HelpTemplate() + "{{if not .HasParent}}\n" + rootHelpFooter + "\n{{slaiNextStep}}\n{{end}}")
 	return root

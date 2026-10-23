@@ -625,3 +625,23 @@ func TestAgentsListShowsPlanLimitsOnceNotAColumn(t *testing.T) {
 		t.Error("an agent on pi does not say it has no gauges")
 	}
 }
+
+// C8: the list and the detail page show when an agent was last re-grounded and any open
+// identity correction (the same facts `slai status` prints).
+func TestListAndDetailShowIdentityGrounding(t *testing.T) {
+	h := seed(t, &fakeActions{})
+	page := h.Get("/agents")
+	if !strings.Contains(page.Body, "never re-grounded") || strings.Contains(page.Body, "identity correction") {
+		t.Fatalf("a never-grounded team:\n%s", page.Body)
+	}
+	_ = h.Store.AddEvent("eng-1", "identity_ground", `{"source":"user"}`)
+	_ = h.Store.AddEvent("eng-1", "identity_correction", `{"reason":"acted on a task that is not its own"}`)
+	for _, p := range []string{"/agents", "/agents/eng-1"} {
+		body := h.Get(p).Body
+		for _, want := range []string{"re-grounded", "identity correction", "acted on a task that is not its own"} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s lacks %q", p, want)
+			}
+		}
+	}
+}

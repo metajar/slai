@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oorbt/slai/internal/agentrows"
 	"github.com/oorbt/slai/internal/config"
 	"github.com/oorbt/slai/internal/health"
 	"github.com/oorbt/slai/internal/ratelimit"
@@ -652,5 +653,24 @@ func TestGlossaryPanelCoversRound2Words(t *testing.T) {
 	}
 	if !strings.Contains(body, `id="spend-protection"`) || !strings.Contains(body, "Protected by:") {
 		t.Error("the caps panel has no protection line")
+	}
+}
+
+// C8: each agent card says when the agent was last re-grounded and shows an open identity correction.
+func TestAgentCardsShowIdentityGrounding(t *testing.T) {
+	in := baseInput()
+	in.Agents = []store.Agent{agent("eng-1", "working"), agent("eng-2", "working")}
+	in.Health["eng-1"] = service.Health{Liveness: "busy", LastActivity: now.Unix() - 30}
+	in.Health["eng-2"] = service.Health{Liveness: "busy", LastActivity: now.Unix() - 30}
+	in.Identity = map[string]agentrows.Identity{"eng-1": {GroundAt: now.Unix() - 180, Source: "user", Correction: "sent a message signed as orch", CorrectionAt: now.Unix() - 10}}
+	cards := map[string]AgentCard{}
+	for _, c := range Build(in).Active {
+		cards[c.ID] = c
+	}
+	if c := cards["eng-1"]; c.Grounded != "re-grounded 3m ago" || c.Correction != "sent a message signed as orch" {
+		t.Errorf("eng-1 card = %+v", c)
+	}
+	if c := cards["eng-2"]; c.Grounded != "never re-grounded" || c.Correction != "" {
+		t.Errorf("eng-2 card = %+v", c)
 	}
 }

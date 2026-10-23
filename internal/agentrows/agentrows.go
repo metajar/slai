@@ -220,15 +220,71 @@ type Row struct {
 	ChipDetail      string // the chip's reason
 	Harness, Tag    string // claude | opencode | pi, and its short tag ("" for claude)
 	Model           string // compact model name
+	Identity        Identity
+}
+
+// Identity is what an agent's row says about its identity grounding: when it was last
+// re-grounded (a restart or compaction re-ground by the hooks, or `slai ground`) and any
+// identity correction raised since.
+type Identity struct {
+	GroundAt int64  // unix time of the last re-ground event, 0 when never
+	Source   string // what re-grounded it: a SessionStart source, or "user"
+	// Correction is the open identity_correction's text ("" when none is open): the newest
+	// correction event that no re-ground has followed.
+	Correction   string
+	CorrectionAt int64
+}
+
+// IdentityOf reads the agent's identity state from its events.
+func IdentityOf(st *store.Store, id string) Identity {
+	var out Identity
+	var groundID int64 // event ids order events recorded in the same second
+	for _, kind := range []string{"identity_reground", "identity_ground"} {
+		if evs, err := st.EventsByKind(id, kind, 1); err == nil && len(evs) > 0 && evs[0].ID > groundID {
+			groundID = evs[0].ID
+			out.GroundAt = evs[0].At
+			var d struct{ Source string }
+			_ = json.Unmarshal([]byte(evs[0].Data), &d)
+			out.Source = d.Source
+			if kind == "identity_ground" {
+				out.Source = "user"
+			}
+		}
+	}
+	if evs, err := st.EventsByKind(id, "identity_correction", 1); err == nil && len(evs) > 0 && evs[0].ID > groundID {
+		var d struct{ Reason, Text, Signal string }
+		_ = json.Unmarshal([]byte(evs[0].Data), &d)
+		out.Correction = firstNonEmpty(d.Reason, d.Text, d.Signal, "identity correction")
+		out.CorrectionAt = evs[0].At
+	}
+	return out
+}
+
+func firstNonEmpty(ss ...string) string {
+	for _, s := range ss {
+		if s != "" {
+			return s
+		}
+	}
+	return ""
+}
+
+// GroundText words the last re-ground for a row: "re-grounded 3m ago" or "never re-grounded".
+func (i Identity) GroundText(now time.Time) string {
+	if i.GroundAt == 0 {
+		return "never re-grounded"
+	}
+	return "re-grounded " + Age(now.Sub(time.Unix(i.GroundAt, 0))) + " ago"
 }
 
 // Input is what Build needs besides the agent and its health.
 type Input struct {
-	Titles  map[string]string // task id -> title
-	Events  []store.Event     // newest first
-	Harness string            // the agent's harness kind
-	Now     time.Time
-	Text    ActivityText
+	Titles   map[string]string // task id -> title
+	Events   []store.Event     // newest first
+	Harness  string            // the agent's harness kind
+	Identity Identity          // the agent's identity grounding (IdentityOf)
+	Now      time.Time
+	Text     ActivityText
 }
 
 // Build computes one agent's row from the stored agent and the classifier's verdict h. It is
@@ -243,6 +299,6 @@ func Build(a store.Agent, h service.Health, in Input) Row {
 		ID: a.ID, Role: a.Role, Group: GroupKey(a.Role), Status: a.Status, StatusLabel: StatusLabel(a.Status), Waiting: IsWaiting(a.Status),
 		Task: a.CurrentTask, TaskTitle: in.Titles[a.CurrentTask], Activity: Activity(a, in.Titles[a.CurrentTask], in.Events, in.Text),
 		Age: StatusAge(a, in.Now), Liveness: h.Liveness, Reason: Reason(h), ChipLabel: chip, ChipDetail: detail,
-		Harness: kind, Tag: HarnessTag(kind), Model: ShortModel(a.Model),
+		Harness: kind, Tag: HarnessTag(kind), Model: ShortModel(a.Model), Identity: in.Identity,
 	}
 }

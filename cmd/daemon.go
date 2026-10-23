@@ -14,6 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/oorbt/slai/internal/agentrows"
 	"github.com/oorbt/slai/internal/buildinfo"
 	"github.com/oorbt/slai/internal/config"
 	"github.com/oorbt/slai/internal/service"
@@ -209,6 +210,12 @@ type statusAgent struct {
 	DeniedCount int `json:"denied_count"`
 	// AskID is the ask_user event the agent is waiting on for you (answer it with `slai reply`).
 	AskID int64 `json:"ask_id,omitempty"`
+	// LastGroundAt is when the agent was last re-grounded in who it is (unix; 0 = never): a
+	// restart or compaction re-ground, or `slai ground`.
+	LastGroundAt int64 `json:"last_ground_at"`
+	// IdentityCorrection is the open identity correction (slai told the agent who it is after
+	// a sign it was confused), "" when none.
+	IdentityCorrection string `json:"identity_correction,omitempty"`
 }
 
 type statusHold struct {
@@ -294,7 +301,8 @@ func statusCmd() *cobra.Command {
 				if live && st == "waiting_on_user" {
 					askID = service.OpenAskID(s.Store, ta.ID)
 				}
-				out.Agents = append(out.Agents, statusAgent{ta.ID, ta.Role, model, st, a.CurrentTask, denied[ta.ID], askID})
+				id := agentrows.IdentityOf(s.Store, ta.ID)
+				out.Agents = append(out.Agents, statusAgent{ta.ID, ta.Role, model, st, a.CurrentTask, denied[ta.ID], askID, id.GroundAt, id.Correction})
 			}
 			tasks, err := s.Store.ListTasks("")
 			if err != nil {
@@ -312,7 +320,7 @@ func statusCmd() *cobra.Command {
 				return enc.Encode(out)
 			}
 			for _, a := range out.Agents {
-				fmt.Printf("%-12s %-20s %-8s %-16s %s%s\n", a.ID, a.Role, a.Model, a.Status, a.CurrentTask, deniedNote(a.DeniedCount))
+				fmt.Printf("%-12s %-20s %-8s %-16s %s%s\n", a.ID, a.Role, a.Model, a.Status, a.CurrentTask, deniedNote(a.DeniedCount)+identityNote(a, time.Now()))
 				if a.AskID != 0 {
 					fmt.Printf("  %s is asking you (ask %d). Answer with: slai reply %d \"...\"\n", a.ID, a.AskID, a.AskID)
 				}
@@ -468,6 +476,19 @@ func printHealth(s *supervisor.Supervisor, openTasks int) {
 	if running {
 		fmt.Println(nextStep(s.Team, true, openTasks))
 	}
+}
+
+// identityNote is the status-line suffix for identity grounding: when the agent was last
+// re-grounded and any open identity correction; nothing for an agent never re-grounded.
+func identityNote(a statusAgent, now time.Time) string {
+	var out string
+	if a.LastGroundAt != 0 {
+		out = "  re-grounded " + agentrows.Age(now.Sub(time.Unix(a.LastGroundAt, 0))) + " ago"
+	}
+	if a.IdentityCorrection != "" {
+		out += "  identity-correction: " + a.IdentityCorrection
+	}
+	return out
 }
 
 // deniedNote is the status-line suffix for lane denials; nothing when there are none.
