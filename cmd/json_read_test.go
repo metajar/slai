@@ -133,7 +133,7 @@ func TestDoctorJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
-	bad, err := doctorJSON(context.Background(), d, false, false, &out)
+	bad, err := doctorJSON(context.Background(), d, false, false, nil, &out)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +164,7 @@ func TestDoctorJSON(t *testing.T) {
 	}
 	// the same checks as the text report
 	var text strings.Builder
-	runDoctorChecks(context.Background(), d, false, false, &text)
+	runDoctorChecks(context.Background(), d, false, false, nil, &text)
 	if n := strings.Count(text.String(), "\n"); len(rep.Checks) != n {
 		t.Errorf("%d checks in json, %d lines in the text:\n%s", len(rep.Checks), n, text.String())
 	}
@@ -190,10 +190,10 @@ func TestParseDoctorChecks(t *testing.T) {
 }
 
 func TestDoctorJSONListsOrphans(t *testing.T) {
-	t.Setenv("SLAI_NO_ORPHAN_SCAN", "")
-	cur, gone, _ := orphanEnv(t)
+	cur, gone, c := orphanEnv(t)
+	f := hermetic(c, cur)
 	var out bytes.Buffer
-	if _, err := doctorJSON(context.Background(), cur, false, false, &out); err != nil {
+	if _, err := doctorJSON(context.Background(), cur, false, false, &f, &out); err != nil {
 		t.Fatal(err)
 	}
 	var rep struct {

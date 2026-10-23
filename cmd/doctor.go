@@ -18,6 +18,7 @@ import (
 	"github.com/oorbt/slai/internal/buildinfo"
 	"github.com/oorbt/slai/internal/config"
 	"github.com/oorbt/slai/internal/git"
+	"github.com/oorbt/slai/internal/orphans"
 	"github.com/oorbt/slai/internal/service"
 	"github.com/oorbt/slai/internal/store"
 	"github.com/oorbt/slai/internal/supervisor"
@@ -126,7 +127,7 @@ func doctorCmd() *cobra.Command {
 				return err
 			}
 			if asJSON {
-				bad, err := doctorJSON(c.Context(), dir, fix, all, c.OutOrStdout())
+				bad, err := doctorJSON(c.Context(), dir, fix, all, cliOrphanFinder(dir), c.OutOrStdout())
 				if err != nil {
 					return err
 				}
@@ -135,7 +136,7 @@ func doctorCmd() *cobra.Command {
 				}
 				return nil
 			}
-			bad, err := runDoctorChecks(c.Context(), dir, fix, all, c.OutOrStdout())
+			bad, err := runDoctorChecks(c.Context(), dir, fix, all, cliOrphanFinder(dir), c.OutOrStdout())
 			if err != nil {
 				return err
 			}
@@ -155,7 +156,7 @@ func doctorCmd() *cobra.Command {
 // runDoctorChecks is `slai doctor`: every check, printed to w, run for the project at dir.
 // It returns the number of failures (warnings do not count). The CLI and the web UI's
 // Doctor page both call it, so they report the same checks.
-func runDoctorChecks(ctx context.Context, dir string, fix, all bool, w io.Writer) (int, error) {
+func runDoctorChecks(ctx context.Context, dir string, fix, all bool, f *orphans.Finder, w io.Writer) (int, error) {
 	bad := 0
 	for _, t := range []check{
 		{"tmux", "install tmux (apt install tmux / brew install tmux)", "-V"},
@@ -194,8 +195,8 @@ func runDoctorChecks(ctx context.Context, dir string, fix, all bool, w io.Writer
 	bad += projectChecks(ctx, dir, fix, w)
 	bad += doctorMemory(ctx, dir, w)
 	bad += doctorHarnesses(ctx, dir, w)
-	if os.Getenv("SLAI_NO_ORPHAN_SCAN") == "" { // test harnesses set it: do not look at the host's other teams
-		bad += doctorOtherTeams(ctx, orphanFinder(dir), all, w)
+	if f != nil {
+		bad += doctorOtherTeams(ctx, *f, all, w)
 	}
 	return bad, nil
 }
@@ -225,9 +226,9 @@ type doctorTeam struct {
 // doctorJSON is `slai doctor --json`: the same checks as the text report (parsed from it, so the
 // two can never disagree), the orphaned teams (always) and the other teams (with --all). It
 // returns the same problem count the text mode does, so the exit code is unchanged.
-func doctorJSON(ctx context.Context, dir string, fix, all bool, w io.Writer) (int, error) {
+func doctorJSON(ctx context.Context, dir string, fix, all bool, f *orphans.Finder, w io.Writer) (int, error) {
 	var buf bytes.Buffer
-	bad, err := runDoctorChecks(ctx, dir, fix, all, &buf)
+	bad, err := runDoctorChecks(ctx, dir, fix, all, f, &buf)
 	if err != nil {
 		return 0, err
 	}
@@ -237,8 +238,8 @@ func doctorJSON(ctx context.Context, dir string, fix, all bool, w io.Writer) (in
 		Orphans    []doctorTeam  `json:"orphans"`
 		OtherTeams []doctorTeam  `json:"other_teams"` // healthy teams, listed only with --all
 	}{Checks: parseDoctorChecks(buf.String()), Problems: bad, Orphans: []doctorTeam{}, OtherTeams: []doctorTeam{}}
-	if os.Getenv("SLAI_NO_ORPHAN_SCAN") == "" {
-		if teams, err := OtherTeams(ctx, dir); err == nil {
+	if f != nil {
+		if teams, err := f.Teams(ctx); err == nil {
 			for _, t := range teams {
 				d := doctorTeam{Project: t.Project, Prefix: t.Prefix, Sessions: len(t.Sessions), Processes: len(t.Procs), Orphan: t.Orphan, Reason: t.Reason}
 				if !t.LastActivity.IsZero() {

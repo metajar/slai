@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/oorbt/slai/internal/orphans"
@@ -19,6 +20,16 @@ func orphanFinder(dir string) orphans.Finder {
 		clients = append(clients, tmux.New(""))
 	}
 	return orphans.Finder{Clients: clients, Current: orphans.ProjectRoots(dir)}
+}
+
+// cliOrphanFinder is the finder `slai doctor` and the web Doctor page use: the real host's,
+// or nil (no scan) when a test harness sets SLAI_NO_ORPHAN_SCAN.
+func cliOrphanFinder(dir string) *orphans.Finder {
+	if os.Getenv("SLAI_NO_ORPHAN_SCAN") != "" {
+		return nil
+	}
+	f := orphanFinder(dir)
+	return &f
 }
 
 // OtherTeams lists the slai teams that are not the current project's, orphans
