@@ -14,7 +14,7 @@ import (
 )
 
 // HookEvents are the Claude Code hook events slai listens to.
-var HookEvents = []string{"SessionStart", "UserPromptSubmit", "PreToolUse", "Notification", "Stop"}
+var HookEvents = []string{"SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "Notification", "Stop"}
 
 // Spec describes one agent launch.
 type Spec struct {

@@ -117,9 +117,14 @@ func runHook(event string, in io.Reader, getenv func(string) string) (out []byte
 	}
 	defer st.Close()
 	opt := hooks.Options{ProjectDir: project}
-	if team, err := config.Load(filepath.Join(project, ".slai", "team.yaml")); err == nil {
+	team, terr := config.Load(filepath.Join(project, ".slai", "team.yaml"))
+	if terr == nil {
 		opt.MaxTurnsPerTask = team.Defaults.MaxTurnsPerTask
 		opt.IdentityLine = func(id string) string { return roles.IdentityLineFor(team, id) }
+	}
+	if event == "posttooluse" && !neutral {
+		// mail that arrived during a long turn; records nothing and changes no status
+		return postToolNotice(st, team, agent, p.ToolName, time.Now())
 	}
 	res, err := handleHook(st, agent, event, p, opt)
 	if neutral && event == "sessionstart" {
