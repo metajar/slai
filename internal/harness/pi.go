@@ -123,6 +123,9 @@ func renderPiExtension(s LaunchSpec) (string, error) {
 
 // WriteRunFiles writes system.md and pi-extension.mjs. It is idempotent.
 func (piHarness) WriteRunFiles(s LaunchSpec) error {
+	if err := claude.CheckSystemPrompt(s.ProjectDir, s.AgentID, s.SystemPrompt); err != nil {
+		return err
+	}
 	dir := piRunDir(s.ProjectDir, s.AgentID)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
@@ -134,7 +137,7 @@ func (piHarness) WriteRunFiles(s LaunchSpec) error {
 	if err := os.WriteFile(PiExtensionPath(s.ProjectDir, s.AgentID), []byte(ext), 0o644); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dir, "system.md"), []byte(s.SystemPrompt), 0o644)
+	return writeSystemPrompt(s, dir)
 }
 
 // Command returns the shell line run inside tmux. Identity is set inline on the

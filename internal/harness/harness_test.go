@@ -33,7 +33,7 @@ func TestForCoversEveryKindAndRejectsUnknown(t *testing.T) {
 // has: these goldens were captured before the harness package existed.
 func TestClaudeCommandIsByteIdentical(t *testing.T) {
 	h, _ := For(Claude)
-	ls := LaunchSpec{AgentID: "eng-1", Model: "sonnet", PermissionMode: "manual", ProjectDir: "/p", WorkDir: "/p/.slai/worktrees/eng-1", SystemPrompt: "x"}
+	ls := LaunchSpec{AgentID: "eng-1", Model: "sonnet", PermissionMode: "manual", ProjectDir: "/p", WorkDir: "/p/.slai/worktrees/eng-1", SystemPrompt: "You are **eng-1**."}
 	const tail = ` --append-system-prompt "$(cat '/p/.slai/run/eng-1/system.md')" --settings '/p/.slai/run/eng-1/settings.json' --permission-mode 'manual' --mcp-config '/p/.slai/run/eng-1/mcp.json'`
 	const sid = "11111111-2222-4333-8444-555555555555"
 	fresh := func(flag, id string) string {
@@ -58,7 +58,7 @@ func TestClaudeCommandIsByteIdentical(t *testing.T) {
 		t.Errorf("resume:\n%s", got)
 	}
 	// and it is the same function as before
-	old := claude.Spec{AgentID: "eng-1", Model: "sonnet", PermissionMode: "manual", ProjectDir: "/p", WorkDir: "/p/.slai/worktrees/eng-1", SystemPrompt: "x", SessionID: sid}
+	old := claude.Spec{AgentID: "eng-1", Model: "sonnet", PermissionMode: "manual", ProjectDir: "/p", WorkDir: "/p/.slai/worktrees/eng-1", SystemPrompt: "You are **eng-1**.", SessionID: sid}
 	ls.Resume = false
 	if h.Command(ls) != old.Command() {
 		t.Error("adapter differs from claude.Spec.Command")
@@ -68,7 +68,7 @@ func TestClaudeCommandIsByteIdentical(t *testing.T) {
 func TestClaudeRunFilesAreUnchanged(t *testing.T) {
 	d := t.TempDir()
 	h, _ := For(Claude)
-	ls := LaunchSpec{AgentID: "orch", Model: "opus", PermissionMode: "auto", ProjectDir: d, WorkDir: d, SlaiBin: "slai", SystemPrompt: "you are orch", Deny: []string{"Bash(git push:*)"}}
+	ls := LaunchSpec{AgentID: "orch", Model: "opus", PermissionMode: "auto", ProjectDir: d, WorkDir: d, SlaiBin: "slai", SystemPrompt: "You are **orch**.", Deny: []string{"Bash(git push:*)"}}
 	if err := h.WriteRunFiles(ls); err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func TestClaudeRunFilesAreUnchanged(t *testing.T) {
 		viaHarness[f] = string(b)
 	}
 	d2 := t.TempDir()
-	old := claude.Spec{AgentID: "orch", Model: "opus", PermissionMode: "auto", ProjectDir: d2, WorkDir: d2, SlaiBin: "slai", SystemPrompt: "you are orch", Deny: []string{"Bash(git push:*)"}}
+	old := claude.Spec{AgentID: "orch", Model: "opus", PermissionMode: "auto", ProjectDir: d2, WorkDir: d2, SlaiBin: "slai", SystemPrompt: "You are **orch**.", Deny: []string{"Bash(git push:*)"}}
 	if err := old.WriteRunFiles(); err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +161,7 @@ func TestIdentityIsPinnedDespiteAmbientEnv(t *testing.T) {
 			if k != Claude {
 				model = "zai/glm-5.3"
 			}
-			ls := LaunchSpec{AgentID: "eng-1", Model: model, PermissionMode: "manual", ProjectDir: d, WorkDir: d, SlaiBin: "slai", SystemPrompt: "x", SessionID: "11111111-2222-4333-8444-555555555555"}
+			ls := LaunchSpec{AgentID: "eng-1", Model: model, PermissionMode: "manual", ProjectDir: d, WorkDir: d, SlaiBin: "slai", SystemPrompt: "You are **eng-1**.", SessionID: "11111111-2222-4333-8444-555555555555"}
 			if err := h.WriteRunFiles(ls); err != nil {
 				if errors.Is(err, ErrNotImplemented) {
 					t.Skip("adapter not implemented yet")

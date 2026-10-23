@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oorbt/slai/internal/claude"
 	"github.com/oorbt/slai/internal/hooks"
 	"github.com/oorbt/slai/internal/tmux"
 )
@@ -42,6 +43,27 @@ func For(kind Kind) (Harness, error) {
 		names = append(names, string(k))
 	}
 	return nil, fmt.Errorf("unknown harness %q (want one of %s)", kind, strings.Join(names, ", "))
+}
+
+// ErrNoIdentity is wrapped by the error WriteRunFiles returns when an agent's role prompt is
+// empty or does not name it: the launch is refused rather than starting an ungrounded session.
+var ErrNoIdentity = claude.ErrNoIdentity
+
+// writeSystemPrompt checks and writes <run dir>/system.md, the file every harness feeds to
+// its system-prompt channel, and reads it back: a file that is not what was meant to be
+// there (disk full, truncated) refuses the launch like an empty prompt does.
+func writeSystemPrompt(s LaunchSpec, dir string) error {
+	if err := claude.CheckSystemPrompt(s.ProjectDir, s.AgentID, s.SystemPrompt); err != nil {
+		return err
+	}
+	p := filepath.Join(dir, "system.md")
+	if err := os.WriteFile(p, []byte(s.SystemPrompt), 0o644); err != nil {
+		return err
+	}
+	if b, err := os.ReadFile(p); err != nil || string(b) != s.SystemPrompt {
+		return fmt.Errorf("agent %s: %w: %s was not written intact; refusing to launch", s.AgentID, ErrNoIdentity, p)
+	}
+	return nil
 }
 
 // LaunchSpec is everything slai knows about one agent launch.

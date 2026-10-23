@@ -60,7 +60,7 @@ func TestDoctorIdentityCheck(t *testing.T) {
 	defer st.Close()
 	run := func(id string) string { return filepath.Join(dir, ".slai", "run", id) }
 	// current format
-	if err := (claude.Spec{AgentID: "orch", ProjectDir: dir, WorkDir: dir}).WriteRunFiles(); err != nil {
+	if err := (claude.Spec{AgentID: "orch", ProjectDir: dir, WorkDir: dir, SystemPrompt: "You are **orch**."}).WriteRunFiles(); err != nil {
 		t.Fatal(err)
 	}
 	// old format: no --agent, no env

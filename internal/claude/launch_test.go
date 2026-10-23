@@ -88,7 +88,7 @@ func TestSessionIDsArePerAgentAndStable(t *testing.T) {
 // Identity is pinned in every generated file, never left to the inherited process env.
 func TestRunFilesPinAgentIdentity(t *testing.T) {
 	d := t.TempDir()
-	s := Spec{AgentID: "orch", ProjectDir: d, WorkDir: d, SlaiBin: "slai"}
+	s := Spec{AgentID: "orch", ProjectDir: d, WorkDir: d, SlaiBin: "slai", SystemPrompt: "You are **orch**."}
 	if err := s.WriteRunFiles(); err != nil {
 		t.Fatal(err)
 	}
