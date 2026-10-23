@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"os"
 	"regexp"
 	"strings"
@@ -34,5 +35,28 @@ func TestReadmeQuickstartIsShort(t *testing.T) {
 	}
 	if n >= 10 {
 		t.Fatalf("quickstart has %d non-blank lines, want < 10", n)
+	}
+}
+
+func TestRootHelpPointsAtCommandTable(t *testing.T) {
+	var out bytes.Buffer
+	root := newRootCmd()
+	root.SetOut(&out)
+	root.SetArgs([]string{"--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), rootHelpFooter) || !strings.Contains(rootHelpFooter, "docs/commands.md") {
+		t.Fatalf("root help lacks footer:\n%s", out.String())
+	}
+	var sub bytes.Buffer
+	root = newRootCmd()
+	root.SetOut(&sub)
+	root.SetArgs([]string{"send", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(sub.String(), rootHelpFooter) {
+		t.Fatalf("subcommand help should not carry the root footer:\n%s", sub.String())
 	}
 }
