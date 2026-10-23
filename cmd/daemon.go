@@ -280,13 +280,13 @@ func statusCmd() *cobra.Command {
 			if h, ok := s.CurrentHold(); ok {
 				out.Hold = &statusHold{h.Name, h.Since}
 			}
-			_, supUp := supervisor.Running(s.Dir)
 			rows := map[string]store.Agent{}
 			for _, a := range agents {
 				rows[a.ID] = a
 			}
 			// Every configured agent is listed, even before anything has started: an agent with
-			// no live session is "dead" only once a supervisor should have it up, else "-".
+			// no live session is "dead" if slai ever registered it (it had a session, now gone: after
+			// `slai down`, a crash), and "-" if it is only configured and has never been started.
 			for _, ta := range s.Team.Agents {
 				a, known := rows[ta.ID]
 				live := false
@@ -296,7 +296,7 @@ func statusCmd() *cobra.Command {
 				st := a.Status
 				switch {
 				case live:
-				case supUp && known:
+				case known:
 					st = "dead"
 				default:
 					st = "-"

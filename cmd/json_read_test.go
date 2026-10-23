@@ -203,7 +203,14 @@ func TestDoctorJSONListsOrphans(t *testing.T) {
 	if err := json.Unmarshal(out.Bytes(), &rep); err != nil {
 		t.Fatalf("%v\n%s", err, out.String())
 	}
-	if len(rep.Orphans) != 1 || rep.Orphans[0].Project != gone || !rep.Orphans[0].Orphan || rep.Orphans[0].Sessions != 2 {
-		t.Fatalf("orphans = %+v (gone=%s)", rep.Orphans, gone)
+	// the host may have orphans of its own (leaked test processes): look for this test's
+	found := false
+	for _, o := range rep.Orphans {
+		if o.Project == gone {
+			found = o.Orphan && o.Sessions == 2
+		}
+	}
+	if !found {
+		t.Fatalf("orphans = %+v, want %s with 2 sessions", rep.Orphans, gone)
 	}
 }

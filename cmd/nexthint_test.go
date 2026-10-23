@@ -70,6 +70,27 @@ func TestStatusGoldenSupervisorDown(t *testing.T) {
 	}
 }
 
+// "-" means configured but never started. An agent slai registered (it had a session) and whose
+// session is gone, as after `slai down`, reads dead whether or not a supervisor runs.
+func TestStatusAfterDownShowsDeadNotDash(t *testing.T) {
+	dir := project(t, true)
+	st, err := store.Open(filepath.Join(dir, ".slai", "state.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.UpsertAgent(store.Agent{ID: "orch", Role: "orchestrator", Model: "opus", TmuxSession: "slai_gone_orch"}); err != nil {
+		t.Fatal(err)
+	}
+	st.Close()
+	got := runStatus(t)
+	if !strings.Contains(got, "orch         orchestrator         opus     dead") || !strings.Contains(got, "eng-1        engineer             sonnet   -") {
+		t.Fatalf("want orch dead (it was registered) and eng-1 - (never started):\n%s", got)
+	}
+	if !strings.HasSuffix(got, "supervisor: not running. Next: `slai`\n") {
+		t.Fatalf("hint:\n%s", got)
+	}
+}
+
 func TestStatusGoldenUpNoTasksAndRunning(t *testing.T) {
 	dir := project(t, true)
 	l, err := supervisor.Acquire(dir)
