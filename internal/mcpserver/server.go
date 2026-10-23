@@ -73,7 +73,7 @@ func New(svc *service.Service, caller string) (*mcp.Server, error) {
 		})
 	reg(srv, svc, caller, allowed, "review_diff", "Return the diff of a task branch against the integration branch (max 2000 lines), plus the task's spec_path and the engineer's per-AC claims (ac_claims, review_no) so you can answer each criterion.",
 		func(ctx context.Context, a service.TaskRef) (any, error) { return svc.ReviewDiff(ctx, caller, a) })
-	reg(srv, svc, caller, allowed, "approve", "Approve a task in review; the supervisor merges it. For a spec'd task pass ac_verdicts: {ac, pass, note} for each acceptance criterion the engineer claimed. Claims with no verdict come back in unanswered_claims and warnings (a warning, not a refusal).",
+	reg(srv, svc, caller, allowed, "approve", "Approve a task in review; the supervisor merges it. For a spec'd task pass ac_verdicts: {ac, pass, note} for each acceptance criterion the engineer claimed. Approve REFUSES, recording nothing, while any claimed criterion has no verdict: the error lists the missing claims exactly as the engineer wrote them; answer each with that label verbatim (a paraphrased label does not answer a claim).",
 		func(ctx context.Context, a service.ApproveArgs) (any, error) { return svc.Approve(ctx, caller, a) })
 	reg(srv, svc, caller, allowed, "request_changes", "Send a task in review back to its engineer with comments. For a spec'd task pass ac_verdicts: {ac, pass, note} for each acceptance criterion the engineer claimed; they are recorded with the task and summarised in the engineer's note. Claims with no verdict come back in unanswered_claims and warnings.",
 		func(ctx context.Context, a service.RequestChangesArgs) (any, error) {
