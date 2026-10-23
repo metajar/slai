@@ -367,6 +367,20 @@ func kindRows() []kindRow {
 				*e.now = e.now.Add(TeamRetry + time.Second)
 				e.s.teamTick(e.ctx)
 			}},
+		{kind: EscTeamStalled, agent: "team", env: driverEnv, noHold: "team-wide: nobody is being acted on, the user is only told",
+			arm: func(e *kenv) {
+				e.task("eng-1")
+				_ = e.s.Store.SetAgentStatus("eng-1", "idle")
+			},
+			fire: func(e *kenv) {
+				*e.now = e.now.Add(TeamStalledAfter + time.Minute)
+				e.s.teamTick(e.ctx)
+			},
+			progress: func(e *kenv) {
+				_ = e.s.Store.SetAgentStatus("eng-1", "working")
+				*e.now = e.now.Add(StalledScanEvery + time.Second)
+				e.s.teamTick(e.ctx)
+			}},
 	}
 }
 
