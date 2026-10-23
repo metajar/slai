@@ -247,12 +247,28 @@ func (s *Supervisor) teamStalledTick() {
 		case "working", "waiting_on_user", "rate_limited":
 			open = nil // somebody is busy, or the user or the rate limit is what we wait for
 		}
-		if at := s.lastActivity(a); at > moved {
+		// Only what the agent itself did counts: a hook or a slai tool call. Its status_at is
+		// moved by slai (the optimistic "working" after a typed wake-up), which a stall's own
+		// reminders would use to keep the team looking alive forever.
+		if at, err := s.Store.LastHookEventAt(a.ID); err == nil && at > moved {
 			moved = at
 		}
+		if seen := int64(atoi(s.kvGet(kvLastSeen + a.ID))); seen > moved {
+			moved = seen
+		}
 	}
-	if ms, err := s.Store.RecentMessages(1); err == nil && len(ms) > 0 && ms[0].CreatedAt > moved {
-		moved = ms[0].CreatedAt
+	// Likewise only agents' messages: slai's reminders and board checks keep arriving for the
+	// whole stall, and a manual `slai send` is already counted as a manual nudge.
+	if ms, err := s.Store.RecentMessages(200); err == nil {
+		for _, m := range ms { // newest first
+			if m.From == "slai" || m.From == "user" {
+				continue
+			}
+			if m.CreatedAt > moved {
+				moved = m.CreatedAt
+			}
+			break
+		}
 	}
 	if len(open) == 0 || now.Sub(time.Unix(moved, 0)) < TeamStalledAfter {
 		_ = s.Store.ClearEscalation("team", EscTeamStalled)

@@ -116,3 +116,28 @@ func TestRecordManualNudge(t *testing.T) {
 		t.Fatal("counted a nudge to an agent that owes nothing")
 	}
 }
+
+// While a team is stalled slai itself keeps writing: a reminder to each idle owner every
+// NudgeEvery and a board check to the orchestrator every DigestEvery. None of that is the
+// team moving, so the notice must still come, once, after TeamStalledAfter.
+func TestTeamStalledNoticeIsNotDefeatedByASlaiOwnReminders(t *testing.T) {
+	s, now, _ := stalledEnv(t)
+	s.Store.SetClock(s.Now) // slai's own notes are stamped with the test clock, as they are in real time
+	ctx := context.Background()
+	for i := 0; i < 9; i++ { // 27 minutes in 3-minute steps
+		*now = now.Add(3 * time.Minute)
+		s.driveTick(ctx)
+		s.teamTick(ctx)
+		for _, to := range []string{"eng-1", "orch"} { // delivered and ignored, as in a real stall
+			for _, m := range mustUndelivered(t, s, to) {
+				_ = s.Store.MarkDelivered(m.ID)
+			}
+		}
+	}
+	if !hasEvent(s, "digest") && !hasEvent(s, "nudge") {
+		t.Fatal("fixture invalid: the driver sent no reminder or board check")
+	}
+	if got := eventCount(s, EscTeamStalled); got != 1 {
+		t.Fatalf("team_stalled events = %d after 27 quiet minutes with slai reminders, want exactly 1", got)
+	}
+}
