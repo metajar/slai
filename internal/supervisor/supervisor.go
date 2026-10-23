@@ -61,6 +61,7 @@ func (s *Supervisor) Session(agentID string) string { return tmux.SessionName(s.
 
 // Prepare creates the integration branch (idempotent).
 func (s *Supervisor) Prepare(ctx context.Context) error {
+	_ = s.writeAgentsFile() // best effort: a read-only .slai must not stop the team
 	return s.Git.EnsureBranch(ctx, s.Team.Project.IntegrationBranch, s.Team.Project.MainBranch)
 }
 

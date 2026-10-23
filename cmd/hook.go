@@ -13,6 +13,7 @@ import (
 
 	"github.com/oorbt/slai/internal/config"
 	"github.com/oorbt/slai/internal/hooks"
+	"github.com/oorbt/slai/internal/roles"
 	"github.com/oorbt/slai/internal/store"
 	"github.com/oorbt/slai/internal/supervisor"
 )
@@ -118,6 +119,7 @@ func runHook(event string, in io.Reader, getenv func(string) string) (out []byte
 	opt := hooks.Options{ProjectDir: project}
 	if team, err := config.Load(filepath.Join(project, ".slai", "team.yaml")); err == nil {
 		opt.MaxTurnsPerTask = team.Defaults.MaxTurnsPerTask
+		opt.IdentityLine = func(id string) string { return roles.IdentityLineFor(team, id) }
 	}
 	res, err := handleHook(st, agent, event, p, opt)
 	if neutral && event == "sessionstart" {

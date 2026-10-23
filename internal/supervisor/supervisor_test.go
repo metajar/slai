@@ -13,6 +13,7 @@ import (
 	"github.com/oorbt/slai/internal/claude"
 	"github.com/oorbt/slai/internal/config"
 	"github.com/oorbt/slai/internal/git"
+	"github.com/oorbt/slai/internal/hooks"
 	"github.com/oorbt/slai/internal/store"
 	"github.com/oorbt/slai/internal/tmux"
 )
@@ -778,4 +779,60 @@ func TestSequentialMergesNoDuplicateSubjectsAndApproverNotified(t *testing.T) {
 	if got != 2 {
 		t.Errorf("approver got %d merge outcome notes, want 2", got)
 	}
+}
+
+// .slai/agents.json is written on start and rewritten when the team changes.
+func TestAgentsFileWrittenAndRewritten(t *testing.T) {
+	tm := team(2)
+	s := unitEnv(t, tm)
+	if err := s.Prepare(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	read := func() string {
+		b, err := os.ReadFile(AgentsFilePath(s.Dir))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	if got := read(); !strings.Contains(got, `"id": "eng-1"`) || strings.Contains(got, `"eng-9"`) {
+		t.Fatalf("agents.json:\n%s", got)
+	}
+	s.Team.Agents = append(s.Team.Agents, config.Agent{ID: "eng-9", Role: config.RoleEngineer, Model: "sonnet"})
+	if err := s.Prepare(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(read(), `"eng-9"`) {
+		t.Fatalf("agents.json not rewritten after a team change:\n%s", read())
+	}
+}
+
+// After a gap the wake line opens with the identity sentence; an ordinary wake does not.
+func TestWakeLineOpensWithIdentityAfterAGap(t *testing.T) {
+	s := tmuxEnv(t, team(5))
+	ctx := context.Background()
+	s.Store.AddMessage(store.Message{From: "orch", To: "eng-1", Body: "a"})
+	s.Store.SetKV(hooks.KVIdentityPending+"eng-1", "compact")
+	s.Tick(ctx)
+	waitPane(t, s, "eng-1", "You are eng-1, the engineer of this team (see `whoami`).")
+	if _, ok, _ := s.Store.GetKV(hooks.KVIdentityPending + "eng-1"); ok {
+		t.Fatal("pending flag not cleared after the line was typed")
+	}
+	s.Store.AddMessage(store.Message{From: "orch", To: "eng-2", Body: "b"})
+	s.Tick(ctx)
+	waitPane(t, s, "eng-2", "[slai] You have 1 new items. Call get_inbox.")
+	if strings.Contains(pane(t, s, "eng-2"), "You are eng-2") {
+		t.Fatal("an ordinary wake carried the identity sentence")
+	}
+}
+
+// A restart wake (the revive_fresh path) also opens with it.
+func TestRestartWakeLineOpensWithIdentity(t *testing.T) {
+	s := tmuxEnv(t, team(5))
+	ctx := context.Background()
+	s.Store.SetKV(kvRestarted+"eng-1", "1")
+	s.Store.AddMessage(store.Message{From: "orch", To: "eng-1", Body: "a"})
+	s.Tick(ctx)
+	waitPane(t, s, "eng-1", "You are eng-1, the engineer of this team")
+	waitPane(t, s, "eng-1", "[slai] You were restarted and lost your previou")
 }

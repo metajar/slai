@@ -16,6 +16,7 @@ import (
 	"github.com/oorbt/slai/internal/config"
 	"github.com/oorbt/slai/internal/git"
 	"github.com/oorbt/slai/internal/hooks"
+	"github.com/oorbt/slai/internal/roles"
 	"github.com/oorbt/slai/internal/store"
 )
 
@@ -363,6 +364,13 @@ func (s *Supervisor) wakeTick(ctx context.Context) {
 		} else if restarted {
 			line = fmt.Sprintf("[slai] You were restarted and lost your previous context. You have %d new items. Call get_inbox, then get_task.", len(msgs))
 		}
+		// after any gap in its context the line opens with who the agent is
+		pending := s.kvGet(hooks.KVIdentityPending+a.ID) != ""
+		if restarted || upgraded || pending {
+			if ident := roles.IdentityLineFor(s.Team, a.ID); ident != "" {
+				line = ident + " " + line
+			}
+		}
 		// assignments and post-restart/upgrade wakes point at the task's memory: one sentence,
 		// no fact text (the pack is fetched through get_task / get_memory)
 		if task := s.wakeMemoryTask(a, msgs, restarted || upgraded); task != "" {
@@ -376,6 +384,9 @@ func (s *Supervisor) wakeTick(ctx context.Context) {
 		}
 		if restarted {
 			_ = s.Store.DeleteKV(kvRestarted + a.ID)
+		}
+		if pending {
+			_ = s.Store.DeleteKV(hooks.KVIdentityPending + a.ID)
 		}
 		if upgraded {
 			_ = s.Store.DeleteKV(kvUpgraded + a.ID)

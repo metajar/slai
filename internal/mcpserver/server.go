@@ -41,6 +41,8 @@ func New(svc *service.Service, caller string) (*mcp.Server, error) {
 		}
 	})
 
+	reg(srv, svc, caller, allowed, "whoami", "Who you are: your agent id, role, one-line responsibilities, current task, who you report to and your teammates. slai answers from its own record of this connection, so it is always right; call it whenever you are unsure who you are, especially after a restart, /clear or compaction. Takes no arguments.",
+		func(ctx context.Context, _ struct{}) (any, error) { return svc.Whoami(ctx, caller) })
 	reg(srv, svc, caller, allowed, "get_inbox", "Return and mark delivered all unread messages and task assignments.",
 		func(ctx context.Context, _ struct{}) (any, error) { return svc.GetInbox(ctx, caller) })
 	reg(srv, svc, caller, allowed, "get_board", "List tasks (id, title, assignee, status, branch, parent, depends_on, waiting_on = dependencies not yet merged or cancelled) and each agent's liveness with a short reason when it is not alive/idle, plus status, current_task and last_activity, and a supervisor {running, heartbeat_age_s} entry: alive (active, owes work), idle (session up, nothing owed: healthy), busy (mid-turn), blocked (waiting on a permission/trust prompt or on the user), gated (owes work but slai is deliberately not waking it), stale (owes work or has unread items but silent for 10+ min), dead (session gone) or rate_limited. Agents also carry paused, held_until (unix; loop-guard hold) and queued_for_slot (max_concurrent_agents is full); an agent that owes work but is gated has liveness gated (not blocked: nobody needs to act) with reason paused / held until HH:MM / spend capped / queued for slot, never stale. The board has wake_gate {paused, spend_capped, loop_hold}: when set, wake-ups are not being delivered, so do not ping.",
@@ -83,7 +85,7 @@ func New(svc *service.Service, caller string) (*mcp.Server, error) {
 		func(ctx context.Context, a service.ReplyArgs) (any, error) { return svc.Reply(ctx, caller, a) })
 	reg(srv, svc, caller, allowed, "ping", "Liveness and identity check on another agent: sends it a ping and waits (default 60s) for its pong. Returns alive, identity_mismatch (naming assigned and reported ids) or no_response, plus last_seen. An agent that is mid-turn may not see the ping before the timeout, so no_response means \"did not answer\", not proof it is gone: use a longer timeout_seconds or check get_board liveness/last_seen.",
 		func(ctx context.Context, a service.PingArgs) (any, error) { return svc.Ping(ctx, caller, a) })
-	reg(srv, svc, caller, allowed, "pong", "Answer a liveness ping: pass the ping message's id and the output of `echo $SLAI_AGENT_ID`.",
+	reg(srv, svc, caller, allowed, "pong", "Answer a liveness ping: pass the ping message's id as message_id. Nothing else is needed; slai knows who you are.",
 		func(ctx context.Context, a service.PongArgs) (any, error) { return svc.Pong(ctx, caller, a) })
 	reg(srv, svc, caller, allowed, "finish", "Declare the user's request complete (only when no task is open). Give the final summary.",
 		func(ctx context.Context, a service.FinishArgs) (any, error) { return svc.Finish(ctx, caller, a) })

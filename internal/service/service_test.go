@@ -128,11 +128,11 @@ func TestRoleMatrix(t *testing.T) {
 	s := newSvc(t, true)
 	all := Tools
 	allowed := map[string][]string{
-		"orch":  {"create_task", "update_task", "get_board", "send_message", "ask_user", "get_inbox", "cancel_task", "finish", "ping", "pong", "reply", "remember", "recall", "get_memory"},
-		"pm":    {"get_board", "get_task", "report", "send_message", "ask", "ask_user", "get_inbox", "pong", "reply", "remember", "recall", "get_memory"},
-		"prin":  {"get_board", "review_diff", "approve", "request_changes", "send_message", "ask", "get_inbox", "pong", "reply", "remember", "recall", "get_memory"},
-		"eng-1": {"get_task", "report", "request_review", "ask", "send_message", "get_inbox", "pong", "reply", "remember", "recall", "get_memory"},
-		"fg":    {"get_inbox", "reply", "get_board", "pong", "recall", "get_memory"},
+		"orch":  {"create_task", "update_task", "get_board", "send_message", "ask_user", "get_inbox", "cancel_task", "finish", "ping", "pong", "reply", "remember", "recall", "get_memory", "whoami"},
+		"pm":    {"get_board", "get_task", "report", "send_message", "ask", "ask_user", "get_inbox", "pong", "reply", "remember", "recall", "get_memory", "whoami"},
+		"prin":  {"get_board", "review_diff", "approve", "request_changes", "send_message", "ask", "get_inbox", "pong", "reply", "remember", "recall", "get_memory", "whoami"},
+		"eng-1": {"get_task", "report", "request_review", "ask", "send_message", "get_inbox", "pong", "reply", "remember", "recall", "get_memory", "whoami"},
+		"fg":    {"get_inbox", "reply", "get_board", "pong", "recall", "get_memory", "whoami"},
 	}
 	for who, ok := range allowed {
 		set := map[string]bool{}

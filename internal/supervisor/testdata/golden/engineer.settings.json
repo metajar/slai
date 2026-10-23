@@ -73,6 +73,7 @@
       "mcp__slai__remember",
       "mcp__slai__recall",
       "mcp__slai__get_memory",
+      "mcp__slai__whoami",
       "Edit(/<PROJ>/.slai/worktrees/eng-1/**)"
     ],
     "deny": [

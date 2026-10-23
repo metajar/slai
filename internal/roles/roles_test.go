@@ -71,7 +71,7 @@ func TestRenderOverrideAndUnknown(t *testing.T) {
 }
 
 func TestAllowedTools(t *testing.T) {
-	want := map[string]int{config.RoleOrchestrator: 14, config.RolePM: 12, config.RolePrincipal: 12, config.RoleEngineer: 11, config.RoleFocusGroup: 6}
+	want := map[string]int{config.RoleOrchestrator: 15, config.RolePM: 13, config.RolePrincipal: 13, config.RoleEngineer: 12, config.RoleFocusGroup: 7}
 	for r, n := range want {
 		got := AllowedTools(r)
 		if len(got) != n {

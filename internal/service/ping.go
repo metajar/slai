@@ -14,9 +14,10 @@ import (
 
 // Liveness: every tool call stamps the caller's last_seen (KV "lastseen.<agent>").
 // ping(agent) sends a "ping" message and waits for the agent to answer with
-// pong(message_id, agent_id), where agent_id is $SLAI_AGENT_ID as the agent's
-// own shell sees it. The pong also records which identity the MCP server
-// answered as, so a flipped identity shows up as a mismatch, not silence.
+// pong(message_id). Who answered comes from the MCP connection (slai mcp --agent), never
+// from the agent's shell, so a pong needs no environment. An old prompt may still pass
+// agent_id (the shell's $SLAI_AGENT_ID); it is ignored unless it names someone else, which
+// shows up as a mismatch, not silence.
 
 const (
 	PingDefaultTimeout = 60 * time.Second
@@ -29,12 +30,12 @@ type PingArgs struct {
 }
 type PongArgs struct {
 	MessageID int64  `json:"message_id" jsonschema:"id of the ping message you are answering"`
-	AgentID   string `json:"agent_id" jsonschema:"the value of $SLAI_AGENT_ID in your own shell (run: echo $SLAI_AGENT_ID)"`
+	AgentID   string `json:"agent_id,omitempty" jsonschema:"deprecated and not needed: slai knows who you are from your connection"`
 }
 
 type pongRec struct {
 	AnsweredBy string `json:"answered_by"` // identity the MCP server runs as
-	Reported   string `json:"reported"`    // $SLAI_AGENT_ID the agent reported
+	Reported   string `json:"reported"`    // agent_id the agent volunteered (old prompts only), "" if none
 	At         int64  `json:"at"`
 }
 
@@ -103,7 +104,7 @@ func (s *Service) Ping(ctx context.Context, caller string, a PingArgs) (any, err
 	if a.TimeoutSeconds > 0 {
 		timeout = min(time.Duration(a.TimeoutSeconds)*time.Second, PingMaxTimeout)
 	}
-	body := "slai liveness check from " + caller + ". Do nothing else: run `echo $SLAI_AGENT_ID` in your shell, then call the `pong` tool with this message's id as message_id and that output as agent_id."
+	body := "slai liveness check from " + caller + ". Do nothing else: call the `pong` tool with this message's id as message_id."
 	id, err := s.Store.AddMessage(store.Message{From: caller, To: a.Agent, Kind: "ping", Body: body})
 	if err != nil {
 		return nil, err
@@ -132,7 +133,7 @@ func (s *Service) Ping(ctx context.Context, caller string, a PingArgs) (any, err
 		rec.Result = "no_response"
 		out["result"] = "no_response"
 		out["detail"] = fmt.Sprintf("no ack within %s. An agent that is mid-turn may not see the ping before the timeout, so this means \"did not answer\", not \"gone\": retry with a longer timeout_seconds or check get_board liveness / last_seen", timeout)
-	case pong.AnsweredBy != a.Agent || pong.Reported != a.Agent:
+	case pong.AnsweredBy != a.Agent || (pong.Reported != "" && pong.Reported != a.Agent):
 		rec.Result = "identity_mismatch"
 		rec.Note = fmt.Sprintf("assigned %s, MCP answered as %s, shell reported %s", a.Agent, pong.AnsweredBy, pong.Reported)
 		out["result"] = "identity_mismatch"

@@ -346,3 +346,59 @@ func TestToolRunning(t *testing.T) {
 		t.Fatal("ToolRunning wrong")
 	}
 }
+
+func identityOf(agent string) string {
+	return "You are " + agent + ", the engineer of this team (see `whoami`). You build."
+}
+
+// After a resume, compaction, /clear or a blank start right after a revive, the agent is
+// queued an inbox note that opens with who it is, and its next wake line is marked.
+func TestSessionStartReGroundsAfterAGap(t *testing.T) {
+	for _, tc := range []struct {
+		name, source string
+		revived      bool
+		want         bool
+	}{
+		{"resume", "resume", false, true},
+		{"compact", "compact", false, true},
+		{"clear", "clear", false, true},
+		{"startup after revive", "startup", true, true},
+		{"first startup", "startup", false, false},
+		{"unknown source", "", false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			st := newStore(t, "idle", "")
+			if tc.revived {
+				st.SetKV(KVRevived+"e1", strconv.FormatInt(time.Now().Unix(), 10))
+			}
+			if _, err := Handle(st, "e1", "SessionStart", Payload{Source: tc.source}, Options{IdentityLine: identityOf}); err != nil {
+				t.Fatal(err)
+			}
+			msgs, _ := st.UndeliveredFor("e1")
+			pending, hasPending, _ := st.GetKV(KVIdentityPending + "e1")
+			var identity []string
+			for _, m := range msgs {
+				if strings.HasPrefix(m.Body, "You are e1, the engineer of this team") {
+					identity = append(identity, m.Body)
+				}
+			}
+			if tc.want && (len(identity) != 1 || !hasPending || pending != tc.source) {
+				t.Fatalf("no re-ground: msgs=%v pending=%v/%q", msgs, hasPending, pending)
+			}
+			if !tc.want && (len(identity) != 0 || hasPending) {
+				t.Fatalf("re-grounded without a gap: %v %v", msgs, hasPending)
+			}
+		})
+	}
+}
+
+// Without an IdentityLine (no team.yaml to build it from) nothing is queued.
+func TestSessionStartWithoutIdentitySourceQueuesNothing(t *testing.T) {
+	st := newStore(t, "idle", "")
+	if _, err := Handle(st, "e1", "SessionStart", Payload{Source: "compact"}, Options{}); err != nil {
+		t.Fatal(err)
+	}
+	if m, _ := st.UndeliveredFor("e1"); len(m) != 0 {
+		t.Fatalf("msgs = %v", m)
+	}
+}
