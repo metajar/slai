@@ -1,12 +1,12 @@
 # slai
 
-> **What it is:** slai runs a team of Claude Code agents (an orchestrator, engineers, optionally a principal reviewer) on one git repo, each a long-lived session in its own tmux pane with its own model, harness and permission settings.  
+> **What it is:** slai runs a team of Claude Code agents (an orchestrator, engineers, optionally a principal reviewer) on one git repo, each a long-lived session in its own tmux pane (tmux: a terminal multiplexer that keeps sessions running in the background) with its own model, harness and permission settings.  
 > **Who it is for:** a developer who wants to hand a multi-part goal to a team and review what lands, not to drive one agent turn by turn.  
-> **Claude Code subagents / agent teams** run inside one Claude Code session on one checkout; slai gives every engineer its own worktree and one branch per task, plus a task board in SQLite that survives restarts and spend caps (per agent, day, task and run).  
-> **Plain tmux + worktrees** is what you would wire up by hand; slai adds the shared task board, a principal review gate with per-criterion verdicts, merge to `slai/integration` behind your `project.test_command`, and liveness checks that revive dead agents.  
+> **Claude Code subagents / agent teams** run inside one Claude Code session on one checkout; slai gives every engineer its own worktree and one branch per task (a worktree is a second checkout of your repo in its own directory), plus a task board in SQLite that survives restarts and spend caps (per agent, day, task and run).  
+> **Plain tmux + worktrees** is what you would wire up by hand; slai adds the shared task board, a principal review gate (an engineer's work merges only after the principal engineer approves it, criterion by criterion), merge to `slai/integration` behind your `project.test_command`, and liveness checks that revive dead agents.  
 > **What it is not:** it does not touch your branches or remote until you run `slai commit`, and it never passes `--dangerously-skip-permissions`. New here? Start at [First 10 minutes](#first-10-minutes).
 
-Single-binary Go CLI that turns a git repo into a managed AI software team. **You only talk to the orchestrator (`orch`); every other pane is agents talking to each other, so you can ignore it.** Role-specialised Claude Code agents (orchestrator, product manager, principal engineer, engineers, focus group) each run in their own tmux session with their own model, coordinate through an MCP tool server backed by SQLite, and ship work through git worktrees and a principal-review gate. See `PRD.md` for the full design.
+Single-binary Go CLI that turns a git repo into a managed AI software team. **You only talk to the orchestrator (`orch`); every other pane is agents talking to each other, so you can ignore it.** Role-specialised Claude Code agents (orchestrator, product manager, principal engineer, engineers, focus group) each run in their own tmux session with their own model, coordinate through an MCP tool server (MCP is the protocol Claude Code uses to call tools; here the tools are slai's) backed by SQLite, and ship work through git worktrees and a principal-review gate. See `PRD.md` for the full design.
 
 ## Install
 
@@ -31,7 +31,15 @@ slai down            # stop supervisor and all agent sessions
 
 ## First 10 minutes
 
-From nothing to one merged task, using the `solo` preset (an orchestrator and one engineer: 2 Claude sessions, no principal, so no review gate). Commands you type start with `$`.
+From nothing to one merged task. There is one start path below: `slai init --yes --preset ...`. (If you run bare `slai` in a repo with no `.slai/team.yaml` it opens a setup wizard that asks the same questions.) Commands you type start with `$`.
+
+Pick a preset; this walk-through uses `solo`:
+
+| Preset | Starts | Review gate |
+| --- | --- | --- |
+| `solo` | 2 Claude sessions: `orch` and `eng-1` | none: no principal, so finished work merges without review |
+| `squad` (default) | 8: `orch`, `pm`, `principal`, `eng-1` (backend), `eng-2` (frontend), three focus-group personas | principal reviews every task |
+| `full` | 10: `squad` plus `eng-3` and `eng-4` | principal reviews every task |
 
 **How to read the outputs.** Output marked *(real)* was copied from a run of the binary built from this repo in a scratch repo (paths shortened). Output marked *(illustrative)* shows the shape, not exact text: a real run depends on your goal, models and timing.
 
@@ -58,7 +66,15 @@ From nothing to one merged task, using the `solo` preset (an orchestrator and on
    Will start 2 Claude sessions when you run `slai`. Spend caps: OFF (set defaults.spend_caps in .slai/team.yaml)
    ```
 
-   Nothing is running yet. **Spend caps: OFF** means no limit: set `defaults.spend_caps` now if you want one (see [What this costs](#what-this-costs)).
+   Nothing is running yet. **Spend caps: OFF** means no limit, and `0` or a missing cap also means no limit. Before you give the first goal, open `.slai/team.yaml` and, if you want a ceiling, add (amounts in USD):
+
+   ```yaml
+   defaults:
+     spend_caps:
+       daily_usd: 10      # whole team, per day; at 80% slai warns, at 100% it stops waking agents and asks you
+   ```
+
+   More caps (per agent, per task, per run): [What this costs](#what-this-costs).
 
 3. **Start the team.** *(the dashboard is illustrative)*
 
@@ -66,9 +82,21 @@ From nothing to one merged task, using the `solo` preset (an orchestrator and on
    $ slai
    ```
 
-   Bare `slai` starts the agent sessions, makes sure the supervisor is running and opens the dashboard. (`slai up` does the first two without the dashboard, for scripts and servers.) From another terminal, `slai status` now lists `orch` and `eng-1`; before you ran `slai` it would have listed them with `-` and ended `supervisor: not running. Next: slai`.
+   Bare `slai` starts the agent sessions, makes sure the supervisor is running and opens the dashboard. (`slai up` does the first two without the dashboard, for scripts and servers.) Before you run it, `slai status` lists the configured agents with `-` for liveness *(real)*:
 
-4. **Give the orchestrator a goal.** Type it in the dashboard, or from any terminal: *(illustrative)*
+   ```
+   $ slai status
+   orch         orchestrator         opus     -
+   eng-1        engineer             sonnet   -
+
+   supervisor: not running. Next: `slai`
+   ```
+
+   Once `slai` is running, the same command shows each agent's state.
+
+   **First run only: trust the folder.** Claude Code asks "do you trust this folder?" the first time it runs in a directory, and the dashboard shows a banner until you answer. Select `orch` in the list and press `a` (full-screen attach; `ctrl+q` comes back), choose **Yes, I trust this folder**, then `ctrl+q`. (`slai attach orch` does the same from a plain terminal.) slai never edits Claude's trust settings for you.
+
+4. **Give the orchestrator a goal.** From any terminal (or `o` in the dashboard, which opens a prompt to `orch`): *(illustrative)*
 
    ```
    $ slai send orch "add a --version flag to the CLI that prints the build version"
@@ -101,7 +129,7 @@ From nothing to one merged task, using the `solo` preset (an orchestrator and on
 
 8. **Stop.** `slai down` stops the supervisor and every agent session. If something goes wrong on the way, see [If the team goes wrong](#if-the-team-goes-wrong).
 
-Which command does what, for you versus for agents: [docs/commands.md](docs/commands.md). A recorded two-agent run with its measured token cost: [docs/demo.md](docs/demo.md). (Both arrive in separate tasks.)
+Which command does what, for you versus for agents: [docs/commands.md](docs/commands.md). A recorded two-agent run with its measured token cost: [docs/demo.md](docs/demo.md).
 
 ## What this costs
 
@@ -283,7 +311,7 @@ Other things the driver does:
 
 - **The orchestrator never goes quiet:** while tasks are open and nothing is moving it gets a periodic board digest; when the last task closes it is told to verify the result against the original request, then call `finish` with a summary. `slai status` shows the finished run and its summary.
 - **Crashes:** a dead agent that still has work or unread messages is revived automatically (at most 3 times per 10 min) into its **own** Claude session: each agent gets a persistent session id and revives with `--resume <that id>`, never `--continue` (which resumes whichever conversation in the directory is newest and would cross agents that share the project directory). `slai`'s dashboard respawns the supervisor if it dies, and a panic in one supervisor stage cannot stop the others.
-- **Guards never deadlock the team:** the message-loop guard counts only real chatter (not assignments, reports or review traffic) and holds a pair for 90 s, then releases itself. Wake-ups to an agent that ignores them are capped. An agent parked on `ask_user` still receives other work after 15 min. Leftover uncommitted files in an engineer's worktree are stashed (and the engineer told), not allowed to block the next task.
+- **Guards never deadlock the team:** the message-loop guard counts only real chatter (not assignments, reports or review traffic) and holds a pair for 90 s, then releases itself. Wake-ups to an agent that ignores them are capped: four reminders (90 s idle, then every 3 min), after which the orchestrator is told (see **Owed work** above). An agent parked on `ask_user` still receives other work after 15 min. Leftover uncommitted files in an engineer's worktree are stashed (and the engineer told), not allowed to block the next task.
 - **Merges don't lose approvals:** transient merge failures retry; the supervisor-owned integration checkout is reset before every merge; after four failures the task returns to its engineer and the engineer, principal and orchestrator are told. Cancelled work is never merged.
 - **Every task can finish:** tasks go to engineers (code, finished by `request_review` → merge) or the product manager (specs, finished by `report(done)`). `report(done)` on code that was never sent to review is refused with an explanation, a blocked task can be unblocked by the orchestrator with `update_task(status="in_progress")`, and reassigning a task gives the new engineer its own branch.
 
@@ -316,11 +344,13 @@ You only talk to `orch`. The other panes are machine traffic: agents hand each o
 
 | Role | Works in | Writes | slai tools |
 | --- | --- | --- | --- |
-| orchestrator | repo root | nothing | create_task, update_task, cancel_task, get_board, send_message, ask_user, get_inbox |
-| product_manager | repo root | `.slai/specs/**` | get_board, report, send_message, ask, ask_user, get_inbox |
-| principal_engineer | repo root | `.slai/decisions.md` | get_board, review_diff, approve, request_changes, send_message, ask, get_inbox |
-| engineer | `.slai/worktrees/<id>` | own worktree | get_task, report, request_review, ask, send_message, get_inbox |
+| orchestrator | repo root | nothing | create_task, update_task, cancel_task, get_board, send_message, ask_user, get_inbox, reply, finish |
+| product_manager | repo root | `.slai/specs/**` | get_board, get_task, report, send_message, ask, ask_user, get_inbox, reply |
+| principal_engineer | repo root | `.slai/decisions.md` | get_board, review_diff, approve, request_changes, send_message, ask, get_inbox, reply |
+| engineer | `.slai/worktrees/<id>` | own worktree | get_task, report, request_review, ask, send_message, get_inbox, reply |
 | focus_group | repo root | nothing | get_inbox, reply, get_board |
+
+Every role can also answer a liveness check, and every role except focus_group can write to the team's shared memory with `remember` (all roles can `recall` and `get_memory`; see [Team memory](#team-memory)). `reply` is the way any agent answers an `ask` sent to it; you answer an agent with `slai send`.
 
 ## TUI
 
