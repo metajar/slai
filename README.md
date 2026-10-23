@@ -105,10 +105,10 @@ Which command does what, for you versus for agents: [docs/commands.md](docs/comm
 
 ## What this costs
 
-Every agent is its own Claude session, billed to your Claude account: the default `squad` preset starts 8 of them (`solo` starts 2, `full` 10). They are only busy while there is work, but a long goal can use a lot. `slai init` and `slai up` print one line saying how many sessions start and whether spend caps are on:
+Every agent is its own Claude session, billed to your Claude account: the default `squad` preset starts 8 of them (`solo` starts 2, `full` 10). They are only busy while there is work, but a long goal can use a lot. `slai init` prints one line saying how many sessions will start and whether spend caps are on (`slai up` prints the same line, as "Starting", when it actually starts them):
 
 ```
-Starting 8 Claude sessions. Spend caps: OFF (set defaults.spend_caps in .slai/team.yaml)
+Will start 8 Claude sessions when you run `slai`. Spend caps: OFF (set defaults.spend_caps in .slai/team.yaml)
 ```
 
 To cap it, set `defaults.spend_caps` in `.slai/team.yaml` (see the config reference). At 80% of a cap the header warns; at 100% wake-ups pause and you are asked. `0` (or leaving a cap out) means **no cap**, not a zero-dollar cap.
@@ -118,8 +118,9 @@ To cap it, set `defaults.spend_caps` in `.slai/team.yaml` (see the config refere
 A tiny goal, start to finish. **The board states below are illustrative** (a real run varies with your goal, models and timing, and takes minutes, not seconds). The `slai commit --dry-run` and `slai clean` output is copied from a real scratch run in a throwaway repo.
 
 ```bash
-slai up
-# Starting 8 Claude sessions. Spend caps: OFF (set defaults.spend_caps in .slai/team.yaml)
+slai init --yes --preset squad --name app --description "demo"
+# Will start 8 Claude sessions when you run `slai`. Spend caps: OFF (set defaults.spend_caps in .slai/team.yaml)
+slai        # starts the sessions and opens the dashboard; send the goal below from another terminal
 slai send orch "add a --version flag to the CLI that prints the build version"
 ```
 
