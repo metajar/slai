@@ -5,12 +5,14 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"github.com/oorbt/slai/internal/health"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/oorbt/slai/internal/config"
+	"github.com/oorbt/slai/internal/health"
 	"github.com/oorbt/slai/internal/hooks"
 	"github.com/oorbt/slai/internal/ratelimit"
 	"github.com/oorbt/slai/internal/roles"
@@ -88,17 +90,12 @@ func (s *Supervisor) escalate(e escalation) bool {
 }
 
 // holdOff: never act on an agent that is paused, stopped on purpose, focused in
-// the TUI, or has someone attached to its session.
+// the TUI, or has someone attached to its session (see userPresent).
 func (s *Supervisor) holdOff(ctx context.Context, a store.Agent, paused map[string]bool) bool {
-	if paused[a.ID] || s.kvGet(kvStopped+a.ID) != "" || s.Store.Focused(a.ID, s.now()) {
+	if paused[a.ID] || s.kvGet(kvStopped+a.ID) != "" {
 		return true
 	}
-	if live, err := s.Tmux.HasSession(ctx, a.TmuxSession); err == nil && live {
-		if n, err := s.Tmux.ClientCount(ctx, a.TmuxSession); err != nil || n > 0 {
-			return true
-		}
-	}
-	return false
+	return s.userPresent(ctx, a)
 }
 
 // safeToType reports whether text plus Enter can be typed into the agent's pane
@@ -156,7 +153,13 @@ func (s *Supervisor) healthTick(ctx context.Context) {
 	s.clearResolved(ctx, agents, tasks)
 	for _, a := range agents {
 		cfg, ok := s.agentCfg(a.ID)
-		if !ok || s.holdOff(ctx, a, paused) {
+		if !ok {
+			continue
+		}
+		if s.holdOff(ctx, a, paused) {
+			if !paused[a.ID] && s.kvGet(kvStopped+a.ID) == "" {
+				s.presenceWatch(ctx, a) // a user is there: never type, but do not be silent about it
+			}
 			continue
 		}
 		s.guardAgent(ctx, a, cfg)
@@ -207,6 +210,8 @@ func (s *Supervisor) clearResolved(ctx context.Context, agents []store.Agent, ta
 			done = !ok || (lv() != health.Dead && s.progressAfter(a.ID, e.Since))
 		case EscUnreadStuck:
 			done = !ok || len(s.oldUnread(a.ID)) == 0
+		case EscAttachedBlocking:
+			done = s.presenceCleared(ctx, a, ok)
 		case EscHooksFailing:
 			at, _ := s.Store.LastHookEventAt(e.Agent)
 			done = !ok || lv() == health.Dead || at > e.Since || (at != 0 && s.now().Sub(time.Unix(at, 0)) < HooksSilentAfter)
@@ -390,17 +395,24 @@ func (s *Supervisor) modalAgent(ctx context.Context, a store.Agent, cfg config.A
 // ---- unread mail that never gets read (FM-6) ----
 
 // oldUnread lists undelivered messages to id whose wake line was typed at least
-// UnreadAfter ago. Mail that was never woken (concurrency cap, spend gate,
-// pause, focus) is the wake loop's business, not evidence of a stuck agent.
+// UnreadAfter ago, plus mail that waited that long because a user was attached or
+// focused (presenceWatch marks it): that mail was skipped on purpose, and once the user
+// has gone it is as overdue as a wake that went unanswered. Mail that was never woken for
+// any other reason (concurrency cap, spend gate, pause) is the wake loop's business, not
+// evidence of a stuck agent.
 func (s *Supervisor) oldUnread(id string) []store.Message {
 	msgs, err := s.Store.UndeliveredFor(id)
 	if err != nil {
 		return nil
 	}
 	cut := s.now().Add(-UnreadAfter).Unix()
+	skipped := int64(atoi(s.kvGet(kvPresenceSkip + id)))
 	var out []store.Message
 	for _, m := range msgs {
-		if m.WokenAt != 0 && m.WokenAt <= cut {
+		switch {
+		case m.WokenAt != 0 && m.WokenAt <= cut:
+			out = append(out, m)
+		case m.WokenAt == 0 && skipped != 0 && skipped <= cut && m.CreatedAt <= cut:
 			out = append(out, m)
 		}
 	}
@@ -735,7 +747,13 @@ func (s *Supervisor) hooksAgent(ctx context.Context, a store.Agent) {
 	}
 	// A tool call in flight, or subagents running for the session, legitimately fire no
 	// hooks, however long they run.
-	if hooks.ToolRunning(pane) || hooks.SubagentsWith(s.harnessOf(a.ID).PaneRules(), pane) > 0 {
+	rules := s.harnessOf(a.ID).PaneRules()
+	if hooks.ToolRunning(pane) || hooks.SubagentsWith(rules, pane) > 0 {
+		s.clearHookWatch(a.ID)
+		return
+	}
+	// Waiting on a background shell or monitor (the footer says so) fires no hooks either.
+	if hooks.BackgroundWith(rules, pane) != "" && !s.isBlockedPane(a, pane) {
 		s.clearHookWatch(a.ID)
 		return
 	}
@@ -760,8 +778,12 @@ func (s *Supervisor) hooksAgent(ctx context.Context, a store.Agent) {
 	if r, ok := hooks.LoadErr(s.Store, hooks.KVHookErr+a.ID); ok {
 		text += "; last hook error: " + firstLine(r.Last, 120)
 	}
+	where := "`slai doctor`"
+	if _, err := os.Stat(filepath.Join(s.Dir, ".slai", "run", a.ID, "hook.log")); err == nil {
+		where += fmt.Sprintf(" and .slai/run/%s/hook.log", a.ID) // written only when a hook errors
+	}
 	s.escalate(escalation{agent: a.ID, kind: EscHooksFailing, text: text,
-		orchMsg: fmt.Sprintf("%s: %s. slai cannot see its status or tool use, so liveness and nudges for it are unreliable. Check `slai doctor` and .slai/run/%s/hook.log.", a.ID, text, a.ID)})
+		orchMsg: fmt.Sprintf("%s: %s. slai cannot see its status or tool use, so liveness and nudges for it are unreliable. Check %s.", a.ID, text, where)})
 }
 
 func (s *Supervisor) clearHookWatch(id string) {
