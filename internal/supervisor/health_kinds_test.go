@@ -17,6 +17,7 @@ import (
 	"github.com/oorbt/slai/internal/hooks"
 	"github.com/oorbt/slai/internal/service"
 	"github.com/oorbt/slai/internal/store"
+	"github.com/oorbt/slai/internal/tmux"
 )
 
 // Every escalation kind must behave the same way: it fires exactly once however
@@ -150,6 +151,20 @@ func kindRows() []kindRow {
 				if _, err := e.s.Store.ClaimInbox("eng-1"); err != nil {
 					e.t.Fatal(err)
 				}
+				e.s.healthTick(e.ctx)
+			}},
+		{kind: EscAttachedBlocking, agent: "eng-1", env: healthEnv, holds: allHolds,
+			arm: func(e *kenv) {
+				_, _ = e.s.Store.AddMessage(store.Message{From: "orch", To: "eng-1", Kind: "note", Body: "please look"})
+				_ = e.s.Store.SetAgentStatus("eng-1", "idle")
+				standIn(e.t, attachedIdle(e.now, time.Hour))
+			},
+			fire: func(e *kenv) {
+				*e.now = e.now.Add(AttachedBlockingAfter + time.Second)
+				e.s.healthTick(e.ctx)
+			},
+			progress: func(e *kenv) {
+				standIn(e.t, func() ([]tmux.ClientInfo, error) { return nil, nil }) // the client detached
 				e.s.healthTick(e.ctx)
 			}},
 		{kind: EscStuckGaveUp, agent: "eng-1", env: healthEnv, noHold: "raised only by the stuck detector, whose hold handling stuck_test.go covers",

@@ -290,6 +290,39 @@ func (c *Client) ClientCount(ctx context.Context, session string) (int, error) {
 	return n, nil
 }
 
+// ClientInfo is one client attached to a session: its name and when it last saw input.
+type ClientInfo struct {
+	Name     string
+	Activity time.Time
+}
+
+// Clients lists the clients attached to the session with their last-input time
+// (#{client_activity}, epoch seconds).
+func (c *Client) Clients(ctx context.Context, session string) ([]ClientInfo, error) {
+	out, err := c.run(ctx, "list-clients", "-t", session, "-F", "#{client_activity} #{client_name}")
+	if err != nil {
+		return nil, err
+	}
+	return parseClients(out), nil
+}
+
+func parseClients(out string) []ClientInfo {
+	var cs []ClientInfo
+	for _, l := range strings.Split(out, "\n") {
+		l = strings.TrimSpace(l)
+		if l == "" {
+			continue
+		}
+		at, name, _ := strings.Cut(l, " ")
+		ci := ClientInfo{Name: name, Activity: time.Now()} // unknown activity reads as active: never type over it
+		if sec, err := strconv.ParseInt(at, 10, 64); err == nil {
+			ci.Activity = time.Unix(sec, 0)
+		}
+		cs = append(cs, ci)
+	}
+	return cs
+}
+
 // Key is one element of a key sequence for SendSeq: literal text (typed with
 // send-keys -l) or a named tmux key such as Enter, C-c, M-x, BTab, F5.
 type Key struct {
