@@ -161,6 +161,20 @@ func runAutopilot(lf *os.File, flags map[string]string) {
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
+		// Like Claude Code: /compact keeps the session and fires SessionStart (source
+		// "compact"); /clear starts a new session and fires it with source "clear".
+		switch strings.TrimSpace(line) {
+		case "/compact":
+			p.hook("sessionstart", map[string]any{"source": "compact"})
+			p.idlePrompt()
+			continue
+		case "/clear":
+			p.session = fmt.Sprintf("fake-%s-%d", p.id, time.Now().UnixNano())
+			p.transcript = filepath.Join(p.proj, ".slai", "run", p.id, "transcript-"+p.session+".jsonl")
+			p.hook("sessionstart", map[string]any{"source": "clear"})
+			p.idlePrompt()
+			continue
+		}
 		if p.once("swallow") {
 			logRec(lf, record{Event: "swallowed", Line: line, Agent: p.id})
 			continue
