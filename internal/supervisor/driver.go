@@ -147,12 +147,21 @@ func realTaskID(t store.Task) string {
 	return t.ID
 }
 
-func taskLine(t store.Task, now time.Time) string {
+// taskLine describes a task for a nudge or digest. The age is how long the task row has not
+// changed, not whether its owner is working: "no board change", never "idle".
+func taskLine(t store.Task, now time.Time) string { return taskLineLive(t, now, "") }
+
+// taskLineLive is taskLine with the owner's liveness (health.Classify) next to its name.
+func taskLineLive(t store.Task, now time.Time, live health.Liveness) string {
 	age := ""
 	if t.UpdatedAt > 0 {
-		age = ", idle " + now.Sub(time.Unix(t.UpdatedAt, 0)).Round(time.Minute).String()
+		age = ", no board change for " + now.Sub(time.Unix(t.UpdatedAt, 0)).Round(time.Minute).String()
 	}
-	return fmt.Sprintf("%s [%s] %s (%s%s)", t.ID, t.Status, t.Title, t.Assignee, age)
+	who := t.Assignee
+	if live != "" {
+		who += " " + live.String()
+	}
+	return fmt.Sprintf("%s [%s] %s (%s%s)", t.ID, t.Status, t.Title, who, age)
 }
 
 func signature(ts []store.Task) string {
@@ -185,6 +194,7 @@ func (s *Supervisor) driveTick(ctx context.Context) {
 	}
 	s.stuckTick(ctx, agents, tasks)
 	s.autoRevive(ctx, agents, tasks)
+	s.decisionTick(tasks)
 	for _, cfg := range s.Team.Agents {
 		a, ok := byID[cfg.ID]
 		if !ok || held[a.ID] || gate.blocked(a.ID) || !s.reachable(ctx, a) {
@@ -192,7 +202,7 @@ func (s *Supervisor) driveTick(ctx context.Context) {
 		}
 		switch cfg.Role {
 		case config.RoleOrchestrator:
-			s.driveOrchestrator(a, agents, tasks)
+			s.driveOrchestrator(ctx, a, agents, tasks)
 			if len(s.owedMessages(cfg)) > 0 { // asks the PM or others never got an answer to
 				s.nudgeOwner(cfg, a, tasks)
 			}
@@ -222,10 +232,7 @@ func (s *Supervisor) reachable(ctx context.Context, a store.Agent) bool {
 	if live, err := s.Tmux.HasSession(ctx, a.TmuxSession); err != nil || !live {
 		return false
 	}
-	if s.Store.Focused(a.ID, s.now()) {
-		return false
-	}
-	if n, err := s.Tmux.ClientCount(ctx, a.TmuxSession); err != nil || n > 0 {
+	if s.userPresent(ctx, a) { // focused in the TUI or a client attached
 		return false
 	}
 	if msgs, err := s.Store.UndeliveredFor(a.ID); err != nil || len(msgs) > 0 {
@@ -313,7 +320,7 @@ func (s *Supervisor) escalateStalled(cfg config.Agent, owed []store.Task) {
 // driveOrchestrator keeps the hub engaged: while tasks are open and nothing is
 // moving it gets a periodic board digest, and when the last task closes it is
 // told to verify the result and report to the user.
-func (s *Supervisor) driveOrchestrator(o store.Agent, agents []store.Agent, tasks []store.Task) {
+func (s *Supervisor) driveOrchestrator(ctx context.Context, o store.Agent, agents []store.Agent, tasks []store.Task) {
 	if s.idleFor(o) < OrchIdleAfter {
 		return
 	}
@@ -378,26 +385,71 @@ func (s *Supervisor) driveOrchestrator(o store.Agent, agents []store.Agent, task
 	if last, _ := strconv.ParseInt(s.kvGet(kvDigest+o.ID), 10, 64); last != 0 && now.Sub(time.Unix(last, 0)) < DigestEvery {
 		return
 	}
-	s.noteDigest(o, strconv.FormatInt(now.Unix(), 10), sig)
+	// Sort the open tasks by what the orchestrator can do about them. A task whose owner is
+	// busy and healthy needs nothing; one waiting on a merge or on review is queued; the rest
+	// need a decision. With nothing to decide there is no digest (it would cost a billable turn).
+	byID := map[string]store.Agent{}
+	for _, a := range agents {
+		byID[a.ID] = a
+	}
 	waiting, rest, why := waitingOnMerge(tasks)
+	var need, busyOK, inReview, stalled []store.Task
+	live := map[string]health.Liveness{}
+	for _, t := range rest {
+		l := s.ownerLiveness(ctx, byID, t.Assignee)
+		live[t.ID] = l
+		switch {
+		case t.Status == store.StatusInReview:
+			inReview = append(inReview, t)
+		case healthyBusy(l):
+			busyOK = append(busyOK, t)
+		default:
+			need = append(need, t)
+			if s.stalledTask(t, byID) {
+				stalled = append(stalled, t)
+			}
+		}
+	}
+	if len(need) == 0 {
+		return
+	}
+	s.noteDigest(o, strconv.FormatInt(now.Unix(), 10), sig)
+	lines = []string{fmt.Sprintf("Need a decision (%d; owner not busy):", len(need))}
+	for _, t := range need {
+		mark := ""
+		if s.stalledTask(t, byID) {
+			mark = " - NO ACTIVITY for " + s.quietFor(t, byID).Round(time.Minute).String()
+		}
+		lines = append(lines, "- "+taskLineLive(t, now, live[t.ID])+mark)
+	}
+	if len(busyOK) > 0 {
+		lines = append(lines, fmt.Sprintf("In progress, no action needed (%d; owner busy):", len(busyOK)))
+		for _, t := range busyOK {
+			lines = append(lines, "- "+taskLineLive(t, now, live[t.ID]))
+		}
+	}
+	if len(inReview) > 0 {
+		lines = append(lines, fmt.Sprintf("In review, waiting on the principal (%d; no action needed):", len(inReview)))
+		for _, t := range inReview {
+			lines = append(lines, "- "+taskLineLive(t, now, live[t.ID]))
+		}
+	}
 	if len(waiting) > 0 {
 		// Tasks held only by an unmerged dependency are queued, not stuck: they start
 		// by themselves (with a go-ahead note) when it merges.
-		lines = []string{fmt.Sprintf("Need a decision (%d):", len(rest))}
-		if len(rest) == 0 {
-			lines = []string{"Need a decision (0): everything open is waiting on a merge."}
-		}
-		for _, t := range rest {
-			lines = append(lines, "- "+taskLine(t, now))
-		}
 		lines = append(lines, fmt.Sprintf("Waiting on a merge (%d; queued, not stuck: each gets a go-ahead note when its dependency merges, so push the dependency through review instead of pinging them):", len(waiting)))
 		for _, t := range waiting {
 			lines = append(lines, fmt.Sprintf("- %s: waits for %s", taskLine(t, now), why[t.ID]))
 		}
 	}
-	body := fmt.Sprintf("Board check from slai: nothing has changed for %s and %d task(s) are still open:\n%s\nYou own getting this to completion. For each task decide the next action now: unblock it (answer the question, send specifics), reassign it, cancel it, split it, or ask_user if a human decision is needed. Don't end your turn just waiting; and don't wait on the focus group or anyone else for more than a few minutes. Proceed with sensible defaults and say what you assumed.",
-		stuckFor.Round(time.Minute), open, strings.Join(lines, "\n"))
+	ask := "For each task under \"Need a decision\" decide the next action now: unblock it (answer the question, send specifics to its owner), reassign it, split it, cancel it, or ask_user if a human decision is needed. Don't end your turn just waiting; and don't wait on the focus group or anyone else for more than a few minutes. Proceed with sensible defaults and say what you assumed."
+	if len(stalled) > 0 {
+		ask += fmt.Sprintf(" Tasks marked NO ACTIVITY need a recorded decision: slai counts an update_task, cancel_task or create_task on the task, a send_message to its owner, or an ask_user, and tells the user if there is none within %d minutes.", int(DecisionWithin/time.Minute))
+	}
+	body := fmt.Sprintf("Board check from slai: no board change for %s; %d open task(s), %d need a decision:\n%s\n%s",
+		stuckFor.Round(time.Minute), open, len(need), strings.Join(lines, "\n"), ask)
 	_, _ = s.Store.AddMessage(store.Message{From: "slai", To: o.ID, Kind: "note", Body: s.withOrchIdentity(o.ID, body)})
+	s.expectDecisions(stalled)
 	s.event(o.ID, "digest", map[string]any{"open": open})
 }
 

@@ -67,8 +67,8 @@ func (s *Supervisor) redirectTick(ctx context.Context) {
 	}
 }
 
-// attached reports whether a human client is attached to the agent's session.
+// attached reports whether a user is at the agent's pane (focused in the TUI or a client
+// attached); a failing tmux listing is not "attached" (see userPresent).
 func (s *Supervisor) attached(ctx context.Context, a store.Agent) bool {
-	n, err := s.Tmux.ClientCount(ctx, a.TmuxSession)
-	return err != nil || n > 0
+	return s.userPresent(ctx, a)
 }
