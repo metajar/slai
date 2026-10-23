@@ -111,6 +111,9 @@ func Handle(st *store.Store, agentID, event string, p Payload, opt Options) (Res
 			errs = append(errs, SaveSessionID(opt.ProjectDir, agentID, p.SessionID))
 		}
 		_, revived, _ := st.GetKV(KVRevived + agentID) // noteSessionStart consumes it
+		if noteContextReset(st, agentID) {
+			revived = true // a deliberate reset is a gap too, but never a revive_fresh alarm
+		}
 		errs = append(errs, noteSessionStart(st, agentID, p.Source))
 		errs = append(errs, noteIdentityGap(st, agentID, p.Source, revived, opt.IdentityLine))
 	case "pretooluse":
@@ -329,6 +332,32 @@ func noteSessionStart(st *store.Store, agent, source string) error {
 // from a revive without its conversation. The supervisor clears it once the orchestrator
 // has made progress again.
 const EscReviveFresh = "revive_fresh"
+
+// KVResetMark is set (+ agent) by the supervisor just before it restarts an agent for a
+// context reset; its value is a ResetMark. The SessionStart that follows records
+// context_reset instead of treating the fresh session as a lost one.
+const KVResetMark = "reset.mark."
+
+// ResetMark says why and how big the context was when slai reset the agent.
+type ResetMark struct {
+	Trigger      string `json:"trigger"` // user | orch | auto
+	Reason       string `json:"reason,omitempty"`
+	TokensBefore int64  `json:"tokens_before"`
+}
+
+// noteContextReset consumes the reset mark, if any, and records the context_reset event.
+func noteContextReset(st *store.Store, agent string) bool {
+	v, ok, _ := st.GetKV(KVResetMark + agent)
+	if !ok {
+		return false
+	}
+	_ = st.DeleteKV(KVResetMark + agent)
+	var m ResetMark
+	_ = json.Unmarshal([]byte(v), &m)
+	data, _ := json.Marshal(map[string]any{"agent": agent, "trigger": m.Trigger, "reason": m.Reason, "tokens_before": m.TokensBefore})
+	_ = st.AddEvent(agent, "context_reset", string(data))
+	return true
+}
 
 // KVIdentityPending is set (+ agent) when a SessionStart showed the agent's context was
 // reset; the supervisor's next wake-up line for it then opens with the identity sentence.

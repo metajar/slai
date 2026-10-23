@@ -131,6 +131,7 @@ func (s *Supervisor) Tick(ctx context.Context) {
 		{"blocked-reports", func() { s.blockedReportsTick(ctx) }},
 		{"redirect", func() { s.redirectTick(ctx) }},
 		{"worktree", func() { s.worktreeTick(ctx) }},
+		{"reset", func() { s.resetTick(ctx) }},
 		{"wake", func() { s.wakeTick(ctx) }},
 		{"notify", func() { s.notifyTick(ctx) }},
 	})

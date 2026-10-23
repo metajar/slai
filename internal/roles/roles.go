@@ -21,7 +21,7 @@ var AllRoles = []string{
 }
 
 var tools = map[string][]string{
-	config.RoleOrchestrator: {"create_task", "update_task", "get_board", "send_message", "ask_user", "get_inbox", "cancel_task", "finish", "ping", "pong", "reply", "remember", "recall", "get_memory", "whoami"},
+	config.RoleOrchestrator: {"create_task", "update_task", "get_board", "send_message", "ask_user", "get_inbox", "cancel_task", "finish", "ping", "pong", "reply", "remember", "recall", "get_memory", "whoami", "clear_context"},
 	config.RolePM:           {"get_board", "get_task", "report", "send_message", "ask", "ask_user", "get_inbox", "pong", "reply", "remember", "recall", "get_memory", "whoami"},
 	config.RolePrincipal:    {"get_board", "review_diff", "approve", "request_changes", "send_message", "ask", "get_inbox", "pong", "reply", "remember", "recall", "get_memory", "whoami"},
 	config.RoleEngineer:     {"get_task", "report", "request_review", "ask", "send_message", "get_inbox", "pong", "reply", "remember", "recall", "get_memory", "whoami"},

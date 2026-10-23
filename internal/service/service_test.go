@@ -128,7 +128,7 @@ func TestRoleMatrix(t *testing.T) {
 	s := newSvc(t, true)
 	all := Tools
 	allowed := map[string][]string{
-		"orch":  {"create_task", "update_task", "get_board", "send_message", "ask_user", "get_inbox", "cancel_task", "finish", "ping", "pong", "reply", "remember", "recall", "get_memory", "whoami"},
+		"orch":  {"create_task", "update_task", "get_board", "send_message", "ask_user", "get_inbox", "cancel_task", "finish", "ping", "pong", "reply", "remember", "recall", "get_memory", "whoami", "clear_context"},
 		"pm":    {"get_board", "get_task", "report", "send_message", "ask", "ask_user", "get_inbox", "pong", "reply", "remember", "recall", "get_memory", "whoami"},
 		"prin":  {"get_board", "review_diff", "approve", "request_changes", "send_message", "ask", "get_inbox", "pong", "reply", "remember", "recall", "get_memory", "whoami"},
 		"eng-1": {"get_task", "report", "request_review", "ask", "send_message", "get_inbox", "pong", "reply", "remember", "recall", "get_memory", "whoami"},

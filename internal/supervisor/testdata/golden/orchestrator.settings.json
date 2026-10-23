@@ -76,7 +76,8 @@
       "mcp__slai__remember",
       "mcp__slai__recall",
       "mcp__slai__get_memory",
-      "mcp__slai__whoami"
+      "mcp__slai__whoami",
+      "mcp__slai__clear_context"
     ],
     "deny": [
       "Bash(git push:*)",
