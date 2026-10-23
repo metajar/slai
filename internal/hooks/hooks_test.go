@@ -443,9 +443,10 @@ func TestClearSessionStartRewritesSessionID(t *testing.T) {
 	if b, _ := os.ReadFile(path); strings.TrimSpace(string(b)) != "new-id" {
 		t.Fatalf("session-id = %q", b)
 	}
-	// the same id again, or an event without one, changes nothing
-	Handle(st, "e1", "SessionStart", Payload{Source: "compact", SessionID: "new-id"}, Options{ProjectDir: proj})
-	Handle(st, "e1", "SessionStart", Payload{Source: "startup"}, Options{ProjectDir: proj})
+	// only /clear moves it: other sources, and an event without an id, change nothing
+	Handle(st, "e1", "SessionStart", Payload{Source: "compact", SessionID: "other"}, Options{ProjectDir: proj})
+	Handle(st, "e1", "SessionStart", Payload{Source: "startup", SessionID: "other"}, Options{ProjectDir: proj})
+	Handle(st, "e1", "SessionStart", Payload{Source: "clear"}, Options{ProjectDir: proj})
 	if b, _ := os.ReadFile(path); strings.TrimSpace(string(b)) != "new-id" {
 		t.Fatalf("session-id = %q", b)
 	}

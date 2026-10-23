@@ -105,7 +105,9 @@ func Handle(st *store.Store, agentID, event string, p Payload, opt Options) (Res
 	case "sessionstart":
 		// /clear starts a new conversation under a new id: the file a revive resumes from
 		// must follow it, or the next revive resumes the conversation that was cleared.
-		if opt.ProjectDir != "" {
+		// Other sources keep the id slai launched with (--session-id / --resume), so the
+		// file is left alone for them.
+		if opt.ProjectDir != "" && p.Source == "clear" {
 			errs = append(errs, SaveSessionID(opt.ProjectDir, agentID, p.SessionID))
 		}
 		_, revived, _ := st.GetKV(KVRevived + agentID) // noteSessionStart consumes it
