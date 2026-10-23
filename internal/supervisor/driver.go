@@ -11,6 +11,7 @@ import (
 
 	"github.com/oorbt/slai/internal/config"
 	"github.com/oorbt/slai/internal/hooks"
+	"github.com/oorbt/slai/internal/roles"
 	"github.com/oorbt/slai/internal/store"
 )
 
@@ -394,9 +395,9 @@ func (s *Supervisor) driveOrchestrator(o store.Agent, agents []store.Agent, task
 			lines = append(lines, fmt.Sprintf("- %s: waits for %s", taskLine(t, now), why[t.ID]))
 		}
 	}
-	_, _ = s.Store.AddMessage(store.Message{From: "slai", To: o.ID, Kind: "note",
-		Body: fmt.Sprintf("Board check from slai: nothing has changed for %s and %d task(s) are still open:\n%s\nYou own getting this to completion. For each task decide the next action now: unblock it (answer the question, send specifics), reassign it, cancel it, split it, or ask_user if a human decision is needed. Don't end your turn just waiting; and don't wait on the focus group or anyone else for more than a few minutes. Proceed with sensible defaults and say what you assumed.",
-			stuckFor.Round(time.Minute), open, strings.Join(lines, "\n"))})
+	body := fmt.Sprintf("Board check from slai: nothing has changed for %s and %d task(s) are still open:\n%s\nYou own getting this to completion. For each task decide the next action now: unblock it (answer the question, send specifics), reassign it, cancel it, split it, or ask_user if a human decision is needed. Don't end your turn just waiting; and don't wait on the focus group or anyone else for more than a few minutes. Proceed with sensible defaults and say what you assumed.",
+		stuckFor.Round(time.Minute), open, strings.Join(lines, "\n"))
+	_, _ = s.Store.AddMessage(store.Message{From: "slai", To: o.ID, Kind: "note", Body: s.withOrchIdentity(o.ID, body)})
 	s.event(o.ID, "digest", map[string]any{"open": open})
 }
 
@@ -515,4 +516,27 @@ func reminderAsk(role string, onlyMsgs bool) string {
 	default:
 		return "Continue now: call get_task, do the work in your worktree, commit it, then call request_review. If you are blocked, call report(blocked) saying exactly what you need. If you already finished, call request_review."
 	}
+}
+
+// kvBoardChecks + orchestrator counts the board checks sent to it, for withOrchIdentity.
+const kvBoardChecks = "drive.boardchecks."
+
+// withOrchIdentity opens every Nth board check (defaults.identity_every_board_checks, default
+// 10) with the orchestrator's identity line: forgetting who it is costs the most there (C7).
+func (s *Supervisor) withOrchIdentity(orch, body string) string {
+	every := s.Team.Defaults.IdentityEvery()
+	if every == 0 {
+		return body
+	}
+	n := atoi(s.kvGet(kvBoardChecks+orch)) + 1
+	_ = s.Store.SetKV(kvBoardChecks+orch, strconv.Itoa(n))
+	if n%every != 0 {
+		return body
+	}
+	line := roles.IdentityLineFor(s.Team, orch)
+	if line == "" {
+		return body
+	}
+	s.event(orch, "identity_reground", map[string]any{"board_checks": n})
+	return line + " " + body
 }

@@ -80,6 +80,21 @@ type Defaults struct {
 	// UpgradeRestartAgents restarts agents (one at a time, when idle) onto a newly
 	// installed slai binary. Unset means true.
 	UpgradeRestartAgents *bool `yaml:"upgrade_restart_agents,omitempty"`
+	// IdentityEveryBoardChecks re-sends the orchestrator's identity line with every Nth board
+	// check slai sends it. Unset means 10; negative turns it off.
+	IdentityEveryBoardChecks int `yaml:"identity_every_board_checks,omitempty"`
+}
+
+// IdentityEvery is how many board checks pass between identity lines for the orchestrator
+// (0 = off).
+func (d Defaults) IdentityEvery() int {
+	switch {
+	case d.IdentityEveryBoardChecks < 0:
+		return 0
+	case d.IdentityEveryBoardChecks == 0:
+		return 10
+	}
+	return d.IdentityEveryBoardChecks
 }
 
 // UpgradeRestart reports whether idle agents are restarted after a slai upgrade.
