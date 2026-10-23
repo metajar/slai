@@ -62,7 +62,7 @@ func upCmd() *cobra.Command {
 			} else if err := spawnDaemon(s.Dir); err != nil {
 				return err
 			}
-			fmt.Println("running — open the dashboard with `slai`")
+			fmt.Println("supervisor running in the background")
 			fmt.Println(goalHint(s.Team))
 			return nil
 		}}
@@ -73,7 +73,8 @@ func upCmd() *cobra.Command {
 	return c
 }
 
-// goalHint is the last line of `slai up`: who to give the goal to, and how.
+// goalHint is the one "next" line of `slai up` (headless: the agents are already running):
+// who to give the goal to, and how.
 func goalHint(t *config.Team) string {
 	orch := "orch"
 	for _, a := range t.Agents {

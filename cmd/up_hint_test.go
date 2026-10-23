@@ -60,3 +60,26 @@ func TestRootHelpPointsAtCommandTable(t *testing.T) {
 		t.Fatalf("subcommand help should not carry the root footer:\n%s", sub.String())
 	}
 }
+
+// `slai up` ends with exactly one next step: the goal command. It must not also
+// point at the dashboard.
+func TestUpPrintsOneNextStep(t *testing.T) {
+	b, err := os.ReadFile("daemon.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := regexp.MustCompile(`(?s)func upCmd\(\).*?\nfunc goalHint`).Find(b)
+	if m == nil {
+		t.Fatal("upCmd not found")
+	}
+	if n := strings.Count(string(m), "goalHint(s.Team)"); n != 2 { // --foreground path and the detached path, one each
+		t.Fatalf("upCmd prints the next step %d times, want once per path (2)", n)
+	}
+	if strings.Contains(string(m), "open the dashboard") {
+		t.Fatal("slai up must not print a second next step pointing at the dashboard")
+	}
+	tm := &config.Team{Agents: []config.Agent{{ID: "orch", Role: config.RoleOrchestrator}}}
+	if n := strings.Count(goalHint(tm), "next:"); n != 1 {
+		t.Fatalf("goalHint has %d next lines", n)
+	}
+}
