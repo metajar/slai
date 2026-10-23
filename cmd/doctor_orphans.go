@@ -22,6 +22,16 @@ func orphanFinder(dir string) orphans.Finder {
 	return orphans.Finder{Clients: clients, Current: orphans.ProjectRoots(dir)}
 }
 
+// cliOrphanFinder is the finder `slai doctor` and the web Doctor page use: the real host's,
+// or nil (no scan) when a test harness sets SLAI_NO_ORPHAN_SCAN.
+func cliOrphanFinder(dir string) *orphans.Finder {
+	if os.Getenv("SLAI_NO_ORPHAN_SCAN") != "" {
+		return nil
+	}
+	f := orphanFinder(dir)
+	return &f
+}
+
 // OtherTeams lists the slai teams that are not the current project's, orphans
 // flagged (the TUI banner uses the same call).
 func OtherTeams(ctx context.Context, dir string) ([]orphans.Team, error) {
@@ -49,12 +59,10 @@ func teamLine(t orphans.Team) string {
 }
 
 // doctorOtherTeams prints the "Other slai teams" section and returns the number
-// of orphans (each is a doctor problem).
-func doctorOtherTeams(ctx context.Context, dir string, all bool, w io.Writer) int {
-	if os.Getenv("SLAI_NO_ORPHAN_SCAN") != "" { // test harnesses: do not look at the host's other teams
-		return 0
-	}
-	teams, err := OtherTeams(ctx, dir)
+// of orphans (each is a doctor problem). f is where teams are looked for: the real
+// host's (orphanFinder) in the CLI, a fixture in tests.
+func doctorOtherTeams(ctx context.Context, f orphans.Finder, all bool, w io.Writer) int {
+	teams, err := f.Teams(ctx)
 	if err != nil {
 		fmt.Fprintf(w, "! warn: could not look for other slai teams: %v\n", err)
 		return 0

@@ -29,7 +29,7 @@ func TestWebDoctorReportIsTheDoctorsText(t *testing.T) {
 		t.Fatal(err)
 	}
 	var want strings.Builder
-	wantFails, _ := runDoctorChecks(context.Background(), d, false, false, &want)
+	wantFails, _ := runDoctorChecks(context.Background(), d, false, false, cliOrphanFinder(d), &want)
 	if got != want.String() || fails != wantFails || got == "" {
 		t.Fatalf("web doctor text differs from slai doctor:\nweb:\n%s\ncli:\n%s", got, want.String())
 	}
