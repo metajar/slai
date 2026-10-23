@@ -126,6 +126,7 @@ func identityScenario(t *testing.T, p *project, agent, role string) {
 	p.assertWhoami(agent, role)
 	flags, _ := first["flags"].(map[string]any)
 	sid, _ := flags["--session-id"].(string)
+	first0 := sid
 	if sid == "" {
 		t.Fatalf("%s first launch has no --session-id: %v", agent, flags)
 	}
@@ -147,7 +148,19 @@ func identityScenario(t *testing.T, p *project, agent, role string) {
 		t.Errorf("%s: want identity_reground events for compact and clear, got %d", agent, len(p.events("identity_reground", agent)))
 	}
 
-	// 3. user restart that resumes the same session (--resume <id>): the launch carries the system
+	// /clear starts a new conversation under a new id, and the SessionStart hook moves the
+	// session-id file to it (T-0040): a later revive resumes the conversation that is live.
+	b, err := os.ReadFile(filepath.Join(p.dir, ".slai", "run", agent, "session-id"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after := strings.TrimSpace(string(b)); after == "" || after == sid {
+		t.Errorf("%s: session-id after /clear = %q, want the new conversation's id (was %s)", agent, after, sid)
+	} else {
+		sid = after
+	}
+
+	// 3. user restart that resumes the live session (--resume <id>): the launch carries the system
 	// prompt again and the first wake line opens with the identity sentence.
 	p.waitFor(30*time.Second, agent+" idle after clear", func() bool { st := p.agentStatus(agent); return st == "idle" || st == "finished" })
 	starts, n := len(p.fakeStarts(agent)), len(p.typedLines(agent))
@@ -175,7 +188,7 @@ func identityScenario(t *testing.T, p *project, agent, role string) {
 	fresh := p.fakeStarts(agent)[starts]
 	p.assertSystemPrompt(fresh, agent)
 	ff, _ := fresh["flags"].(map[string]any)
-	if nsid, _ := ff["--session-id"].(string); nsid == "" || nsid == sid || ff["--resume"] != nil {
+	if nsid, _ := ff["--session-id"].(string); nsid == "" || nsid == sid || nsid == first0 || ff["--resume"] != nil {
 		t.Errorf("%s fresh launch flags = %v, want a new --session-id and no --resume", agent, ff)
 	}
 	// A fresh conversation starts from the system prompt, which names the agent (asserted
