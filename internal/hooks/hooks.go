@@ -121,6 +121,13 @@ func Handle(st *store.Store, agentID, event string, p Payload, opt Options) (Res
 				// the same denial under the name the TUI log and doctor show
 				ld, _ := json.Marshal(map[string]any{"agent": agentID, "tool": p.ToolName, "path": toolTarget(p.ToolInput), "reason": d.Reason})
 				errs = append(errs, st.AddEvent(agentID, "lane_denied", string(ld)))
+				// a denied tool is a sign the agent may not know its own role (C6 signal a)
+				line := ""
+				if opt.IdentityLine != nil {
+					line = opt.IdentityLine(agentID)
+				}
+				_, cerr := st.RecordIdentityCorrection(agentID, "lane_denial", p.ToolName+" "+toolTarget(p.ToolInput), line, time.Now())
+				errs = append(errs, cerr)
 			}
 		}
 	case "userpromptsubmit":

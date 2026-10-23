@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oorbt/slai/internal/config"
+	"github.com/oorbt/slai/internal/roles"
 	"github.com/oorbt/slai/internal/store"
 )
 
@@ -71,6 +73,13 @@ func noteMismatch(project, agent, inherited string) {
 	}
 	if st, err := store.Open(filepath.Join(project, ".slai", "state.db")); err == nil {
 		_ = st.SetKV(kvIdentityMismatch+agent, fmt.Sprintf("%s|%d", inherited, time.Now().Unix()))
+		// C6 signal (iv): an agent whose environment names another agent may have taken that
+		// agent's identity; tell it who it is.
+		line := ""
+		if team, err := config.Load(filepath.Join(project, ".slai", "team.yaml")); err == nil {
+			line = roles.IdentityLineFor(team, agent)
+		}
+		_, _ = st.RecordIdentityCorrection(agent, "env_mismatch", "its environment named "+inherited, line, time.Now())
 		st.Close()
 	}
 }

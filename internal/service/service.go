@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -283,6 +284,9 @@ func summarize(args any) string {
 func (s *Service) begin(caller, tool string, args any) error {
 	s.refreshTeam()
 	if err := s.Authorize(caller, tool); err != nil {
+		if _, known := s.role(caller); known {
+			s.flagIdentity(caller, "role_denial", "called "+tool+", which its role may not use")
+		}
 		return err
 	}
 	s.touch(caller)
@@ -364,8 +368,35 @@ func (s *Service) viewWithDeps(t store.Task) taskView {
 	return v
 }
 
+// flagIdentity records that caller may be confused about who it is and queues its identity line
+// (store.RecordIdentityCorrection). Best effort: it never fails the call that tripped it.
+func (s *Service) flagIdentity(caller, signal, detail string) {
+	if caller == UserCaller || caller == "" {
+		return
+	}
+	_, _ = s.Store.RecordIdentityCorrection(caller, signal, detail, roles.IdentityLineFor(s.team(), caller), s.clock())
+}
+
+// speaksAsOther returns the id of another team member (not the recipient) that body opens with
+// as a signature ("eng-2: ...", "[eng-2] ...", "**eng-2** - ..."), or "". Opening with a
+// teammate's id suggests the sender has adopted that agent's voice. Weak signal: it only
+// flags, it never refuses.
+func (s *Service) speaksAsOther(caller, to, body string) string {
+	for _, ag := range s.team().Agents {
+		if ag.ID == caller || ag.ID == to {
+			continue
+		}
+		re := regexp.MustCompile(`^[\s\[@*_` + "`" + `]*` + regexp.QuoteMeta(ag.ID) + `[\s*_` + "`" + `]*(?::|\]|-|\x{2014}|\x{2013})`)
+		if re.MatchString(body) {
+			return ag.ID
+		}
+	}
+	return ""
+}
+
 func (s *Service) requireAssignee(caller string, t store.Task) error {
 	if t.Assignee != caller {
+		s.flagIdentity(caller, "foreign_task", fmt.Sprintf("acted on %s, which is assigned to %s", t.ID, t.Assignee))
 		return fmt.Errorf("task %s is assigned to %s, not %s", t.ID, t.Assignee, caller)
 	}
 	return nil
@@ -395,6 +426,10 @@ func (s *Service) GetInbox(ctx context.Context, caller string) (any, error) {
 	// order is unchanged, and items with no task count as priority 0).
 	prio := s.Store.TaskPriorities()
 	sort.SliceStable(msgs, func(i, j int) bool { return prio[msgs[i].TaskID] > prio[msgs[j].TaskID] })
+	// an identity correction is read before anything else
+	sort.SliceStable(msgs, func(i, j int) bool {
+		return msgs[i].Kind == store.IdentityMessageKind && msgs[j].Kind != store.IdentityMessageKind
+	})
 	items := make([]InboxItem, 0, len(msgs))
 	for _, m := range msgs {
 		items = append(items, InboxItem{m.ID, m.From, m.Kind, m.TaskID, m.ReplyTo, m.Body, m.CreatedAt})
@@ -1113,6 +1148,9 @@ func (s *Service) SendMessage(ctx context.Context, caller string, a SendMessageA
 	if err := checkText("body", a.Body); err != nil {
 		return nil, err
 	}
+	if other := s.speaksAsOther(caller, a.To, a.Body); other != "" {
+		s.flagIdentity(caller, "speaks_as_other", "a message to "+a.To+" opens with "+other)
+	}
 	var to []string
 	if a.To == "all" {
 		for _, ag := range s.team().Agents {
@@ -1144,6 +1182,9 @@ func (s *Service) Ask(ctx context.Context, caller string, a AskArgs) (any, error
 	if err := checkText("question", a.Question); err != nil {
 		return nil, err
 	}
+	if other := s.speaksAsOther(caller, a.To, a.Question); other != "" {
+		s.flagIdentity(caller, "speaks_as_other", "a question to "+a.To+" opens with "+other)
+	}
 	if !s.agentExists(a.To) || a.To == caller {
 		return nil, fmt.Errorf("unknown recipient %q", a.To)
 	}
@@ -1173,6 +1214,9 @@ func (s *Service) Reply(ctx context.Context, caller string, a ReplyArgs) (any, e
 	}
 	if m.To != caller {
 		return nil, fmt.Errorf("message %d was not addressed to %s", m.ID, caller)
+	}
+	if other := s.speaksAsOther(caller, m.From, a.Body); other != "" {
+		s.flagIdentity(caller, "speaks_as_other", "a reply to "+m.From+" opens with "+other)
 	}
 	id, err := s.Store.AddMessage(store.Message{From: caller, To: m.From, Kind: "reply", ReplyTo: m.ID, TaskID: m.TaskID, Body: a.Body})
 	if err != nil {

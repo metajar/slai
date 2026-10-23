@@ -92,6 +92,8 @@ func (l Lane) describe() string {
 		return "writes are limited to " + l.inProject(".slai/specs/**") + " — write the spec there, in the real project directory, not in another worktree or copy"
 	case config.RolePrincipal:
 		return "writes are limited to " + l.inProject(".slai/decisions.md")
+	case config.RoleOrchestrator:
+		return "this role is read-only: you are the orchestrator, you never write code or edit files, you own getting tasks done. Delegate this with create_task (assign it to an engineer), then follow it on get_board"
 	}
 	return "this role is read-only"
 }

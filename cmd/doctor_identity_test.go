@@ -49,6 +49,11 @@ func TestNoteMismatchLogsAndRecords(t *testing.T) {
 	if v, ok, _ := st.GetKV("identity.mismatch.orch"); !ok || !strings.HasPrefix(v, "pm|") {
 		t.Errorf("KV = %q %v", v, ok)
 	}
+	// C6 signal (iv): the mismatch also records an identity_correction for the pinned agent
+	if evs, _ := st.EventsByKind("orch", "identity_correction", 3); len(evs) != 1 ||
+		!strings.Contains(evs[0].Data, `"signal":"env_mismatch"`) || !strings.Contains(evs[0].Data, "named pm") {
+		t.Errorf("identity_correction events = %+v", evs)
+	}
 }
 
 func TestDoctorIdentityCheck(t *testing.T) {
