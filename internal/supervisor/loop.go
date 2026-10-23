@@ -195,11 +195,14 @@ func (s *Supervisor) SetPriority(taskID, spec string) (int, error) {
 }
 
 // SendUser queues a kind=user message from "user" to an agent.
-func (s *Supervisor) SendUser(to, body string) (int64, error) {
+func (s *Supervisor) SendUser(to, body string) (int64, error) { return s.SendUserReply(to, body, 0) }
+
+// SendUserReply is SendUser with reply_to set (0 = none): `slai reply` passes the ask_user event id.
+func (s *Supervisor) SendUserReply(to, body string, replyTo int64) (int64, error) {
 	if _, ok := s.agentCfg(to); !ok {
 		return 0, fmt.Errorf("unknown agent %q", to)
 	}
-	return s.Store.AddMessage(store.Message{From: "user", To: to, Kind: "user", Body: body})
+	return s.Store.AddMessage(store.Message{From: "user", To: to, Kind: "user", ReplyTo: replyTo, Body: body})
 }
 
 // ---- status: liveness + pane fallback ----

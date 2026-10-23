@@ -13,6 +13,7 @@ Terms such as *orch*, *dashboard*, *worktree* and *integration branch* are defin
 | --- | --- | --- |
 | `slai` (no arguments) | Starts any missing agent sessions and the supervisor, then opens the dashboard, where you talk to `orch`. With no `.slai/team.yaml` yet it runs `slai init` first. | `slai` |
 | `slai send <agent> "msg"` | Queues a message from you to one agent; it shows up in that agent's inbox. Normally send to `orch`. This is also how you answer an agent that asked you something. | `slai send orch "add a --verbose flag to the CLI"` |
+| `slai reply <ask-id> "answer"` | Answers one specific question an agent asked you (`ask_user`). The ask id is printed next to the waiting agent in `slai status` and shown on the web inbox. The answer goes to the asking agent linked to the ask, and the web inbox shows the question as answered. Refuses an unknown id or a question already answered. (Not the same as the agent-side `reply` MCP tool below.) | `slai reply 17 "use the second option"` |
 | `slai status` | Prints the agents and open tasks, and whether the supervisor is running. `--json` for scripts, `--stats` for per-agent merge, rework and spend numbers. | `slai status` |
 | `slai attach <agent>` | Opens that agent's tmux pane to watch it. | `slai attach eng-1` |
 | `slai up` | Like `slai` but headless: starts agents and the supervisor without opening the dashboard. | `slai up` |
@@ -34,7 +35,7 @@ These are MCP tools. Agents call them inside their own Claude sessions; you see 
 | `send_message` | orchestrator, PM, principal, engineer | Note to one agent id, or `all` (everyone except you and focus-group personas). One-way: no answer is expected. | `send_message {"to": "eng-1", "body": "T-0003 is merged, rebase before you continue"}` |
 | `ask` | PM, principal, engineer | Asks another agent a question. The asker keeps working; the answer arrives in its inbox. | `ask {"to": "principal", "question": "Is a new flag OK here, or should this go in team.yaml?"}` |
 | `reply` | all roles (the only tool a focus group has for speaking) | Answers an `ask` that was sent to that agent. | `reply {"message_id": 12, "body": "Put it in team.yaml."}` |
-| `ask_user` | orchestrator, PM | Asks **you** a question and parks that agent as waiting on you. The dashboard shows "<agent> is waiting on you" and the board lists the agent as blocked; answer it with the `space` prompt in the dashboard or with `slai send <agent> "answer"`. | `ask_user {"question": "Should the CLI keep supporting Go 1.21?"}` |
+| `ask_user` | orchestrator, PM | Asks **you** a question and parks that agent as waiting on you. The dashboard shows "<agent> is waiting on you" and the board lists the agent as blocked; answer it with the `space` prompt in the dashboard, with `slai reply <ask-id> "answer"` (the id is in `slai status`), or with `slai send <agent> "answer"`. | `ask_user {"question": "Should the CLI keep supporting Go 1.21?"}` |
 | `get_board` | orchestrator, PM, principal, focus group | The agents' version of `slai status`: tasks with assignee, status and dependencies, plus each agent's liveness. Engineers do not have it; they use `get_task`. | `get_board {}` |
 | `get_task` | engineer, PM | Full details of the agent's own task (description, spec path, review comments). | `get_task {}` |
 | `report` | engineer, PM | Tells `orch` a task is done or blocked. | `report {"status": "done", "summary": "docs/commands.md added"}` |
@@ -49,7 +50,7 @@ These are MCP tools. Agents call them inside their own Claude sessions; you see 
 ## Quick answers
 
 - **I want to tell an agent something:** `slai send <agent> "..."`.
-- **An agent is asking me something:** answer with `slai send <agent> "..."` or in the dashboard. There is no `slai reply`.
+- **An agent is asking me something:** answer with `slai reply <ask-id> "..."` (the id is shown in `slai status`), `slai send <agent> "..."`, or in the dashboard.
 - **I want to see what is going on:** `slai status`, or the dashboard (`slai`).
 - **Why does a pane say `[slai] You have 2 new items`?** An agent was nudged to call `get_inbox`. It is machine traffic.
 
