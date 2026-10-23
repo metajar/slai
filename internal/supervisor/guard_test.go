@@ -2,7 +2,9 @@ package supervisor
 
 import (
 	"context"
+	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -138,5 +140,35 @@ func TestStartAgentResetsGuardRegistration(t *testing.T) {
 	}
 	if s.kvGet(kvLaunchedAt+"eng-1") == "" {
 		t.Fatal("launch time not recorded")
+	}
+}
+
+// A role prompt that renders empty (a blank .slai/prompts override) must not start an
+// ungrounded session: the launch is refused and recorded, and no tmux session appears.
+func TestStartAgentRefusesEmptyRolePrompt(t *testing.T) {
+	s, _ := healthEnv(t)
+	ctx := context.Background()
+	_ = s.Tmux.KillSession(ctx, s.Session("eng-1"))
+	cfg, _ := s.agentCfg("eng-1")
+	if err := os.MkdirAll(filepath.Join(s.Dir, ".slai", "prompts"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(s.Dir, ".slai", "prompts", cfg.Role+".md"), []byte("\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	started, err := s.StartAgent(ctx, cfg)
+	if started || !errors.Is(err, harness.ErrNoIdentity) || !strings.Contains(err.Error(), "eng-1") || !strings.Contains(err.Error(), "system.md") {
+		t.Fatalf("StartAgent = %v, %v", started, err)
+	}
+	if live, _ := s.Tmux.HasSession(ctx, s.Session("eng-1")); live {
+		t.Fatal("a session was started without a role prompt")
+	}
+	evs, _ := s.Store.RecentEvents(50)
+	found := false
+	for _, e := range evs {
+		found = found || (e.Kind == "launch_refused" && e.Agent == "eng-1")
+	}
+	if !found {
+		t.Fatal("no launch_refused event recorded")
 	}
 }

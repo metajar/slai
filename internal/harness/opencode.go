@@ -12,6 +12,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/oorbt/slai/internal/claude"
 	"github.com/oorbt/slai/internal/hooks"
 	"github.com/oorbt/slai/internal/tmux"
 )
@@ -79,6 +80,9 @@ func (h openCodeHarness) bin(s LaunchSpec) string {
 
 // WriteRunFiles writes system.md, plugin.js, opencode.json and the empty xdg/ dir.
 func (h openCodeHarness) WriteRunFiles(s LaunchSpec) error {
+	if err := claude.CheckSystemPrompt(s.ProjectDir, s.AgentID, s.SystemPrompt); err != nil {
+		return err
+	}
 	dir := ocRunDir(s)
 	if err := os.MkdirAll(filepath.Join(dir, "xdg"), 0o755); err != nil {
 		return err
@@ -92,7 +96,6 @@ func (h openCodeHarness) WriteRunFiles(s LaunchSpec) error {
 		return err
 	}
 	for name, body := range map[string][]byte{
-		"system.md":     []byte(s.SystemPrompt),
 		"plugin.js":     plugin,
 		"opencode.json": append(cfg, '\n'),
 	} {
@@ -100,7 +103,7 @@ func (h openCodeHarness) WriteRunFiles(s LaunchSpec) error {
 			return err
 		}
 	}
-	return nil
+	return writeSystemPrompt(s, dir)
 }
 
 // config is the generated opencode.json. Identity is pinned in the MCP entry twice

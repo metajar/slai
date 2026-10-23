@@ -3,6 +3,8 @@ package supervisor
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -163,6 +165,10 @@ func (s *Supervisor) StartAgent(ctx context.Context, a config.Agent) (bool, erro
 		spec.Resume = true // revive: resume this agent's own conversation
 	}
 	if err := h.WriteRunFiles(spec); err != nil {
+		if errors.Is(err, harness.ErrNoIdentity) { // never start a session that does not know who it is
+			d, _ := json.Marshal(map[string]string{"agent": a.ID, "error": err.Error()})
+			_ = s.Store.AddEvent(a.ID, "launch_refused", string(d))
+		}
 		return false, err
 	}
 	_ = os.Remove(harness.GuardReadyPath(s.Dir, a.ID)) // a new launch must register its guard again

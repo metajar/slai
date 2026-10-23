@@ -5,6 +5,7 @@ package claude
 import (
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,6 +33,25 @@ type Spec struct {
 	Resume    bool // revive: resume SessionID rather than start it
 }
 
+// ErrNoIdentity is returned (wrapped) when an agent would be launched with no usable role
+// prompt: a session with no system prompt does not know who it is.
+var ErrNoIdentity = errors.New("no role prompt")
+
+// CheckSystemPrompt refuses a launch whose role prompt is empty or does not name the agent.
+// Every harness passes this text on its system-prompt channel (claude and pi
+// --append-system-prompt "$(cat system.md)", opencode the agent's prompt), so an empty or
+// foreign prompt means an ungrounded session.
+func CheckSystemPrompt(projectDir, agentID, prompt string) error {
+	file := filepath.Join(RunDir(projectDir, agentID), "system.md")
+	if strings.TrimSpace(prompt) == "" {
+		return fmt.Errorf("agent %s: %w: %s would be empty, so the session would not know who it is; refusing to launch (check .slai/prompts/ and team.yaml)", agentID, ErrNoIdentity, file)
+	}
+	if !strings.Contains(prompt, agentID) {
+		return fmt.Errorf("agent %s: %w: the prompt for %s does not name the agent; refusing to launch", agentID, ErrNoIdentity, file)
+	}
+	return nil
+}
+
 // RunDir is where generated files for the agent live.
 func RunDir(projectDir, agentID string) string {
 	return filepath.Join(projectDir, ".slai", "run", agentID)
@@ -51,6 +71,9 @@ func (s Spec) bin() string {
 
 // WriteRunFiles writes system.md, mcp.json and settings.json.
 func (s Spec) WriteRunFiles() error {
+	if err := CheckSystemPrompt(s.ProjectDir, s.AgentID, s.SystemPrompt); err != nil {
+		return err
+	}
 	dir := RunDir(s.ProjectDir, s.AgentID)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err

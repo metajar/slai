@@ -24,7 +24,7 @@ func TestOpenCodePluginLaneGuardEndToEnd(t *testing.T) {
 	p.up()
 	h, _ := harness.For(harness.OpenCode)
 	ls := harness.LaunchSpec{AgentID: "eng-1", Model: "zhipuai-coding-plan/glm-5.3", PermissionMode: "auto", ProjectDir: p.dir,
-		WorkDir: filepath.Join(p.dir, ".slai", "worktrees", "eng-1"), SlaiBin: filepath.Join(binDir, "slai"), SystemPrompt: "x"}
+		WorkDir: filepath.Join(p.dir, ".slai", "worktrees", "eng-1"), SlaiBin: filepath.Join(binDir, "slai"), SystemPrompt: "You are **eng-1**."}
 	if err := h.WriteRunFiles(ls); err != nil {
 		t.Fatal(err)
 	}
