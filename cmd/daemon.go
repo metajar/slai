@@ -207,6 +207,8 @@ type statusAgent struct {
 	CurrentTask string `json:"current_task"`
 	// DeniedCount is the agent's lane denials in the last 24 hours.
 	DeniedCount int `json:"denied_count"`
+	// AskID is the ask_user event the agent is waiting on for you (answer it with `slai reply`).
+	AskID int64 `json:"ask_id,omitempty"`
 }
 
 type statusHold struct {
@@ -288,7 +290,11 @@ func statusCmd() *cobra.Command {
 				if known {
 					model = a.Model
 				}
-				out.Agents = append(out.Agents, statusAgent{ta.ID, ta.Role, model, st, a.CurrentTask, denied[ta.ID]})
+				var askID int64
+				if live && st == "waiting_on_user" {
+					askID = service.OpenAskID(s.Store, ta.ID)
+				}
+				out.Agents = append(out.Agents, statusAgent{ta.ID, ta.Role, model, st, a.CurrentTask, denied[ta.ID], askID})
 			}
 			tasks, err := s.Store.ListTasks("")
 			if err != nil {
@@ -307,6 +313,9 @@ func statusCmd() *cobra.Command {
 			}
 			for _, a := range out.Agents {
 				fmt.Printf("%-12s %-20s %-8s %-16s %s%s\n", a.ID, a.Role, a.Model, a.Status, a.CurrentTask, deniedNote(a.DeniedCount))
+				if a.AskID != 0 {
+					fmt.Printf("  %s is asking you (ask %d). Answer with: slai reply %d \"...\"\n", a.ID, a.AskID, a.AskID)
+				}
 			}
 			if len(out.Tasks) > 0 {
 				fmt.Println("\nopen tasks:")

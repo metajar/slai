@@ -28,15 +28,10 @@ const noticeWindow = 15 * time.Minute
 const waitingWindow = 24 * time.Hour
 
 const (
-	kvAnswered  = "web.answered."  // + ask_user event id: JSON answeredRec
 	kvDismissed = "web.dismissed." // + kind.agent: the escalation's Since it was dismissed at
 )
 
-type answeredRec struct {
-	At     int64  `json:"at"`
-	Msg    int64  `json:"msg"`
-	Answer string `json:"answer"`
-}
+type answeredRec = service.AnswerRec
 
 // Module registers the inbox page and its writes, and the sidebar count.
 func Module(d *server.Deps) []server.Route {
@@ -218,12 +213,7 @@ func questionOf(now time.Time, e store.Event) question {
 }
 
 func (m *mod) answeredRec(eventID int64) (answeredRec, bool) {
-	val, ok, _ := m.d.Store.GetKV(kvAnswered + strconv.FormatInt(eventID, 10))
-	var r answeredRec
-	if !ok || json.Unmarshal([]byte(val), &r) != nil {
-		return r, false
-	}
-	return r, true
+	return service.AskAnswer(m.d.Store, eventID)
 }
 
 // chipOf picks the chip colour for an escalation kind: a rate limit lifts by itself, the
@@ -259,8 +249,6 @@ func (m *mod) page(w http.ResponseWriter, r *http.Request) {
 	m.d.Render(w, r, tpl, templates.Page{Title: "Inbox", Active: "inbox", Data: m.load()})
 }
 
-var errNotOpen = errors.New("that question is not waiting for an answer any more (the agent moved on, or it was already answered)")
-
 func (m *mod) answer(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		m.d.Fail(w, r, err)
@@ -271,45 +259,17 @@ func (m *mod) answer(w http.ResponseWriter, r *http.Request) {
 		m.d.Fail(w, r, errors.New("unknown question"))
 		return
 	}
-	ev, err := m.d.Store.GetEvent(id)
-	if err != nil || ev.Kind != "ask_user" || ev.Agent == "" {
-		m.d.Fail(w, r, errors.New("unknown question: only an agent's ask_user can be answered here"))
-		return
-	}
-	if _, done := m.answeredRec(id); done {
-		m.d.Fail(w, r, errNotOpen)
-		return
-	}
-	ag, err := m.d.Store.AgentByID(ev.Agent)
-	if err != nil || ag.Status != "waiting_on_user" {
-		m.d.Fail(w, r, errNotOpen)
-		return
-	}
-	if newest, _ := m.d.Store.EventsByKind(ev.Agent, "ask_user", 1); len(newest) == 0 || newest[0].ID != id {
-		m.d.Fail(w, r, errNotOpen)
-		return
-	}
-	text := strings.TrimSpace(r.PostForm.Get("answer"))
-	if text == "" {
-		m.d.Fail(w, r, errors.New("the answer is empty"))
-		return
-	}
-	if err := service.CheckText("answer", text); err != nil {
-		m.d.Fail(w, r, err)
-		return
-	}
 	if m.d.Actions == nil {
 		m.d.Fail(w, r, errors.New("this server has no supervisor connection, so it cannot send the answer"))
 		return
 	}
-	msg, err := m.d.Actions.SendUser(ev.Agent, text)
+	// One code path with `slai reply`: service.AnswerAsk checks the ask is open, sends and records it.
+	agent, err := service.AnswerAsk(m.d.Store, m.d.Now(), id, r.PostForm.Get("answer"), m.d.Actions.SendUser)
 	if err != nil {
 		m.d.Fail(w, r, err)
 		return
 	}
-	b, _ := json.Marshal(answeredRec{At: m.d.Now().Unix(), Msg: msg, Answer: text})
-	_ = m.d.Store.SetKV(kvAnswered+strconv.FormatInt(id, 10), string(b))
-	m.done(w, r, "Sent to "+ev.Agent+".")
+	m.done(w, r, "Sent to "+agent+".")
 }
 
 // done answers a successful inbox write: htmx reloads the page, a plain form is redirected.

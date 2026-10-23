@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/oorbt/slai/internal/config"
+	"github.com/oorbt/slai/internal/service"
 	"github.com/oorbt/slai/internal/store"
 	"github.com/oorbt/slai/internal/web/inbox"
 	"github.com/oorbt/slai/internal/web/webtest"
@@ -277,5 +278,24 @@ func TestInboxWritesRecordWebActions(t *testing.T) {
 	acts := h.WebActions()
 	if len(acts) != 2 || acts[0]["action"] != "answer" || acts[1]["action"] != "dismiss_escalation" || acts[1]["target"] != "modal_stuck/eng-1" {
 		t.Fatalf("web_action events: %v", acts)
+	}
+}
+
+// An ask answered from the CLI (`slai reply`, service.AnswerAsk) shows as answered here too:
+// both surfaces share the web.answered.<id> record.
+func TestAskAnsweredByCLIReplyIsNotListedAsOpen(t *testing.T) {
+	h := newH(t, seed(t, "Which port should the demo use?"))
+	var id int64
+	for _, e := range h.AllEvents() {
+		if e.Kind == "ask_user" {
+			id = e.ID
+		}
+	}
+	if _, err := service.AnswerAsk(h.Store, time.Now(), id, "Use 8080.", func(to, body string) (int64, error) { return 7, nil }); err != nil {
+		t.Fatal(err)
+	}
+	page := h.Get("/inbox")
+	if strings.Contains(page.Body, `name="answer"`) || !strings.Contains(page.Body, "You answered") || !strings.Contains(page.Body, "Use 8080.") {
+		t.Fatalf("CLI-answered ask still open:\n%s", page.Body)
 	}
 }
