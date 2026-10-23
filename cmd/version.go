@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"runtime"
 	"runtime/debug"
 
@@ -42,16 +44,24 @@ func readVCS() vcsInfo {
 	return v
 }
 
-func versionString() string {
+// versionInfo is what `slai version` reports, as text or (--json) as one document.
+type versionInfo struct {
+	Version  string `json:"version"`
+	Build    string `json:"build"`
+	Revision string `json:"revision"` // "unknown" when the binary carries no VCS stamp
+	Dirty    bool   `json:"dirty"`
+	Built    string `json:"built"` // "unknown" when the binary carries no VCS stamp
+	OS       string `json:"os"`
+	Arch     string `json:"arch"`
+}
+
+func readVersion() versionInfo {
 	v := readVCS()
 	rev := v.Revision
 	if rev == "" {
 		rev = "unknown"
 	} else if len(rev) > 12 {
 		rev = rev[:12]
-	}
-	if v.Dirty {
-		rev += " (dirty)"
 	}
 	built := v.Time
 	if built == "" {
@@ -61,11 +71,35 @@ func versionString() string {
 	if version != "" {
 		ver = version
 	}
-	return fmt.Sprintf("slai %s\nbuild %s\nrevision %s\nbuilt %s\n%s/%s",
-		ver, buildinfo.ID(), rev, built, runtime.GOOS, runtime.GOARCH)
+	return versionInfo{Version: ver, Build: buildinfo.ID(), Revision: rev, Dirty: v.Dirty, Built: built, OS: runtime.GOOS, Arch: runtime.GOARCH}
+}
+
+func versionString() string {
+	v := readVersion()
+	rev := v.Revision
+	if v.Dirty {
+		rev += " (dirty)"
+	}
+	return fmt.Sprintf("slai %s\nbuild %s\nrevision %s\nbuilt %s\n%s/%s", v.Version, v.Build, rev, v.Built, v.OS, v.Arch)
+}
+
+// writeJSON prints v as one indented JSON document (the style of `slai status --json`).
+func writeJSON(w io.Writer, v any) error {
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	return enc.Encode(v)
 }
 
 func versionCmd() *cobra.Command {
-	return &cobra.Command{Use: "version", Short: "Print the slai version and build", Args: cobra.NoArgs,
-		Run: func(c *cobra.Command, _ []string) { fmt.Fprintln(c.OutOrStdout(), versionString()) }}
+	var asJSON bool
+	c := &cobra.Command{Use: "version", Short: "Print the slai version and build", Args: cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			if asJSON {
+				return writeJSON(c.OutOrStdout(), readVersion())
+			}
+			fmt.Fprintln(c.OutOrStdout(), versionString())
+			return nil
+		}}
+	c.Flags().BoolVar(&asJSON, "json", false, "machine-readable output")
+	return c
 }
