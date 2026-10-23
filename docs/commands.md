@@ -19,6 +19,7 @@ Terms such as *orch*, *dashboard*, *worktree* and *integration branch* are defin
 | `slai up` | Like `slai` but headless: starts agents and the supervisor without opening the dashboard. | `slai up` |
 | `slai hold` / `slai resume` | Stop the whole team from being woken (e.g. overnight) / lift it. | `slai hold` |
 | `slai ground <agent>` | Reminds an agent who it is: queues its identity line (name, role, what it is for), and the next wake-up opens with it, typed only when the agent is idle and its pane is safe. Asking again while one is still waiting changes nothing. `slai status` shows when each agent was last re-grounded (`last_ground_at` in `--json`) and any open identity correction. | `slai ground eng-1` |
+| `slai clear <agent>... \| --role <role> \| --all` | Shrinks agents' context: restarts each in a fresh session, re-grounded (who it is; for the orchestrator, the board). Tasks, branch, worktree, inbox, team memory and spend survive; only the conversation is lost. Never interrupts a turn (a busy agent is `deferred` until idle); `skipped (reason)` for an engineer with uncommitted changes or no commit on its task branch; `cleared` once the agent has called `whoami` in the new session. Needs the supervisor running. | `slai clear eng-1` |
 | `slai priority <task> <n\|up\|down\|top>` | Sets a task's priority; higher runs first. | `slai priority T-0004 top` |
 | `slai commit` | Previews, then commits the team's finished work onto your current branch. | `slai commit` |
 | `slai down` / `slai clean` | Stop everything / also remove slai's runtime state. | `slai down` |
@@ -32,6 +33,7 @@ These are MCP tools. Agents call them inside their own Claude sessions; you see 
 
 | Name | Who may call it | What it does | Example |
 | --- | --- | --- | --- |
+| `clear_context` | orchestrator | Asks slai to clear another agent's context, the same request and guards as `slai clear`; the orchestrator is told by message how it ended. It cannot clear itself, the orchestrator, or the principal while a review is open. | `clear_context {"agent":"eng-1","reason":"context is bloated"}` |
 | `get_inbox` | all roles | Returns and marks as read the agent's unread messages and task assignments. The pane line `[slai] You have N new items` is slai telling the agent to call it; you need do nothing. | `get_inbox {}` |
 | `send_message` | orchestrator, PM, principal, engineer | Note to one agent id, or `all` (everyone except you and focus-group personas). One-way: no answer is expected. | `send_message {"to": "eng-1", "body": "T-0003 is merged, rebase before you continue"}` |
 | `ask` | PM, principal, engineer | Asks another agent a question. The asker keeps working; the answer arrives in its inbox. | `ask {"to": "principal", "question": "Is a new flag OK here, or should this go in team.yaml?"}` |

@@ -521,3 +521,36 @@ func TestOrchestratorFreshReviveTellsTheUser(t *testing.T) {
 		}
 	}
 }
+
+// A deliberate reset: the SessionStart that follows records context_reset (trigger, tokens
+// before), re-grounds the agent, and is never a revive_fresh.
+func TestSessionStartAfterAResetRecordsContextReset(t *testing.T) {
+	st := newStore(t, "idle", "")
+	st.UpsertAgent(store.Agent{ID: "boss", Role: "orchestrator", Status: "idle"})
+	st.SetKV(KVResetMark+"boss", `{"trigger":"user","reason":"slai clear","tokens_before":123456}`)
+	if _, err := Handle(st, "boss", "SessionStart", Payload{Source: "startup", SessionID: "n"}, Options{IdentityLine: identityOf}); err != nil {
+		t.Fatal(err)
+	}
+	var reset, fresh []string
+	evs, _ := st.RecentEvents(50)
+	for _, e := range evs {
+		switch e.Kind {
+		case "context_reset":
+			reset = append(reset, e.Data)
+		case "revive_fresh":
+			fresh = append(fresh, e.Data)
+		}
+	}
+	if len(reset) != 1 || !strings.Contains(reset[0], `"trigger":"user"`) || !strings.Contains(reset[0], `"tokens_before":123456`) || len(fresh) != 0 {
+		t.Fatalf("context_reset=%v revive_fresh=%v", reset, fresh)
+	}
+	if escs, _ := st.OpenEscalations(); len(escs) != 0 {
+		t.Fatalf("a deliberate reset alarmed the user: %+v", escs)
+	}
+	if _, ok, _ := st.GetKV(KVResetMark + "boss"); ok {
+		t.Fatal("mark not consumed")
+	}
+	if _, ok, _ := st.GetKV(KVIdentityPending + "boss"); !ok {
+		t.Fatal("not re-grounded")
+	}
+}

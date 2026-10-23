@@ -63,3 +63,11 @@ func (s *Store) UsageByTask(since int64) (map[string]TaskUsage, error) {
 	}
 	return out, rows.Err()
 }
+
+// LastPromptTokens is the prompt-side token count of agent's most recent recorded usage
+// row: the nearest thing slai keeps to how big its context was (0 when none is recorded).
+func (s *Store) LastPromptTokens(agent string) int64 {
+	var n int64
+	_ = s.db.QueryRow(`SELECT input_tokens FROM usage WHERE agent=? ORDER BY rowid DESC LIMIT 1`, agent).Scan(&n)
+	return n
+}

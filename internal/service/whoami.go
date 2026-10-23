@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/oorbt/slai/internal/roles"
 )
@@ -14,6 +16,7 @@ func (s *Service) Whoami(ctx context.Context, caller string) (any, error) {
 	if err := s.begin(caller, "whoami", struct{}{}); err != nil {
 		return nil, err
 	}
+	_ = s.Store.SetKV(KVWhoami+caller, strconv.FormatInt(time.Now().Unix(), 10)) // proof it re-grounded after a reset
 	id, ok := roles.IdentityOf(s.team(), caller)
 	if !ok {
 		return nil, fmt.Errorf("unknown agent %q", caller)

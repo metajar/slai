@@ -221,6 +221,9 @@ func (s *Supervisor) clearResolved(ctx context.Context, agents []store.Agent, ta
 		case hooks.EscReviveFresh:
 			// stays up long enough for the user to see it, then goes once the agent is working again
 			done = !ok || (s.now().Sub(time.Unix(e.Since, 0)) > ReviveFreshShown && s.progressAfter(a.ID, e.Since))
+		case EscRegroundFailed:
+			at, _ := strconv.ParseInt(s.kvGet(service.KVWhoami+e.Agent), 10, 64)
+			done = !ok || at > e.Since // it called whoami in the end
 		case EscMCPCrash:
 			done = !ok || (lv() != health.Dead && s.progressAfter(a.ID, e.Since))
 		case EscGuardMissing:
