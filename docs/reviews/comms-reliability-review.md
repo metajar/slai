@@ -139,6 +139,11 @@ Real team, `/tmp/minion` (131 messages over 78 minutes, older build): mean creat
 ### C.8 Leaked test supervisors add load (orch data point 2; observed)
 `ps` shows supervisors, `slai mcp` processes and dedicated tmux servers (`tmux -L slai-e2e-...`) left by `internal/e2e` tests: `TestSelfHealOrchDownpi` alive 35 h, `TestSelfHealHungTurnopencode` alive 22 h, and several tests running concurrently right now (`TestRealTmuxSmoke`, `TestMergeConflictResolved`, `TestMemoryPlantedWrongFactGoesStale`). `slai doctor` lists them as "Other slai teams". Each runs a 1 s tick doing several tmux calls per agent. It does not break delivery in a real project but loads the machine the team runs on, and `go test ./...` on a shared box is slow (the e2e package took about 200 s for me).
 
+### C.10 Board check calls working agents "idle" (orch data point 3; code-read, matches orch's observation)
+- `taskLine` (`internal/supervisor/driver.go:149-155`) prints `idle <now - task.UpdatedAt>`: the time since the *task row* last changed, not whether its assignee is in a turn. An engineer 13 minutes into a `go test ./...` has an old `UpdatedAt` and is listed as "idle 13m".
+- The digest fires when the board signature (`task:status:assignee`) has not changed for 10 minutes even though someone is busy (`driver.go:365-371`, `busy && stuckFor < 10*time.Minute` returns only before 10 min), and lists every open task under "Need a decision" (`driver.go:385-390`), including tasks whose owner is `working`/mid-turn. So a normal long turn produces a "decide now" prompt for work that is fine, which trains the orchestrator to ignore real stalls and costs it a billable turn every 4 minutes (`DigestEvery`).
+- Fix (task H-3): label it "no board change for N" instead of "idle", annotate each line with the assignee's liveness from `health.Classify` (busy / idle / stale / blocked), and list under "Need a decision" only tasks whose owner is not busy; busy ones go under "In progress, no action needed".
+
 ### C.9 Lower
 - Mail to a busy agent waits for its turn to end: engineers' long turns gave 480 to 600 s delays for plain notes (minion messages 16, 20, 21). By design; see task P-1 for a mid-turn option.
 - A turn's worth of tmux calls per agent per tick (`loop.go:322-341`); not measured as a problem.
@@ -161,7 +166,7 @@ Each task owns its files exclusively. `cmd/daemon.go` is owned by H-4 only; `int
 - Depends on: H-1 for the kv reason keys (can land after).
 - Verify: `go test ./internal/supervisor -run 'Hooks|Unread|Presence'`.
 
-**H-3 Presence call sites** (S). Files: `internal/supervisor/stuck.go`, `internal/supervisor/driver.go`, `internal/supervisor/redirect.go`. Switch their `ClientCount` checks to the H-2 helper. Depends on H-2. Verify: `go test ./internal/supervisor`.
+**H-3 Presence call sites and honest board check** (S/M). Files: `internal/supervisor/stuck.go`, `internal/supervisor/driver.go`, `internal/supervisor/redirect.go`. Switch their `ClientCount` checks to the H-2 helper; fix `taskLine` and the digest as in C.10. Depends on H-2. Verify: `go test ./internal/supervisor -run 'Digest|Drive|Stuck'`; new test: a busy assignee with an old `UpdatedAt` is not listed under "Need a decision".
 
 **H-4 Say why mail is waiting** (S/M). Files: `cmd/daemon.go` (status), `cmd/doctor.go`, `cmd/doctor_hooks.go`, tests `cmd/status_waiting_test.go`. Show per agent the kv reason from H-1/H-2 ("eng-1: 2 messages waiting, a tmux client is attached; detach or `slai resume`"), the trust-prompt case ("orch is waiting for you to trust this folder: `slai attach orch`"), and the unreadable-hook-log wording. Depends on H-1, H-2. Verify: golden output test per reason; `go test ./cmd`.
 
