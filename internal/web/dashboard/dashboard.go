@@ -123,11 +123,12 @@ func (m *mod) input(ctx context.Context) (Input, error) {
 	gc := service.GateConfigOf(team)
 	gates := service.NewGateSource(d.Store, gc, now)
 	in := Input{Now: now, Team: team, Agents: agents, Tasks: tasks, ReadOnly: d.ReadOnly,
-		Health: map[string]service.Health{}, Identity: map[string]agentrows.Identity{}, Questions: map[string]string{}, SpendBy: map[string]float64{}}
+		Health: map[string]service.Health{}, Identity: map[string]agentrows.Identity{}, Context: map[string]agentrows.Context{}, Questions: map[string]string{}, SpendBy: map[string]float64{}}
 	ids := make([]string, 0, len(agents))
 	for _, a := range agents {
 		ids = append(ids, a.ID)
 		in.Identity[a.ID] = agentrows.IdentityOf(d.Store, a.ID)
+		in.Context[a.ID] = agentrows.ContextOf(d.Store, a.ID, team.Defaults.ContextThreshold())
 		alive := a.Status != "dead" && a.Status != ""
 		in.Health[a.ID] = service.AgentHealthWith(d.Store, a.ID, alive, now, service.InputOpts{Cfg: gc, Gates: gates})
 		if a.Status == "waiting_on_user" {

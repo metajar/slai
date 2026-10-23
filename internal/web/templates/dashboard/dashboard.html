@@ -47,6 +47,7 @@
           <div class="mt-2 small">{{if .Task}}Working on <a href="/tasks/{{.Task}}">{{.Task}}</a>{{else}}No task{{end}}</div>
           <div class="dash-reason">{{.Harness}} · last seen {{.Last}}</div>
           <div class="dash-reason">{{.Grounded}}</div>
+          {{if .Ctx}}<div class="dash-reason">{{.Ctx}} · {{.Reset}}</div>{{end}}
           {{if .Correction}}<div class="dash-reason">identity correction: {{.Correction}}</div>{{end}}
         </div></div></div>{{end}}
       </div>
@@ -54,7 +55,7 @@
         <summary>{{len .Idle}} idle {{if eq (len .Idle) 1}}agent{{else}}agents{{end}} <span class="dash-reason">(healthy: nothing is owed to {{if eq (len .Idle) 1}}it{{else}}them{{end}})</span></summary>
         <ul class="list-group list-group-flush mt-2">{{range .Idle}}<li class="list-group-item d-flex justify-content-between">
           <span><strong>{{.ID}}</strong> <span class="text-secondary">{{.Role}}</span></span>
-          <span class="dash-reason">{{.Harness}} · last seen {{.Last}} · {{.Grounded}}{{if .Correction}} · identity correction: {{.Correction}}{{end}}</span></li>{{end}}</ul>
+          <span class="dash-reason">{{.Harness}} · last seen {{.Last}} · {{.Grounded}}{{if .Ctx}} · {{.Ctx}}{{end}}{{if .Correction}} · identity correction: {{.Correction}}{{end}}</span></li>{{end}}</ul>
       </details>{{end}}
       {{else}}<div class="card"><div class="card-body text-secondary">No agents yet: run <code>slai up</code>.</div></div>{{end}}
     </div>

@@ -15,6 +15,7 @@ import (
 	"github.com/oorbt/slai/internal/config"
 	"github.com/oorbt/slai/internal/store"
 	"github.com/oorbt/slai/internal/supervisor"
+	"github.com/oorbt/slai/internal/usage"
 	"github.com/oorbt/slai/internal/web/agents"
 	"github.com/oorbt/slai/internal/web/webtest"
 )
@@ -643,5 +644,29 @@ func TestListAndDetailShowIdentityGrounding(t *testing.T) {
 				t.Errorf("%s lacks %q", p, want)
 			}
 		}
+	}
+}
+
+// A9: the list and the detail page show each agent's context size and last reset, with the
+// `slai clear` hint when over the threshold.
+func TestListAndDetailShowContextSize(t *testing.T) {
+	h := seed(t, &fakeActions{})
+	if body := h.Get("/agents").Body; strings.Contains(body, "ctx ") {
+		t.Fatalf("no context recorded yet, but the list shows one")
+	}
+	_ = usage.SetContext(h.Store, "eng-1", 142000)
+	_ = usage.SetContext(h.Store, "orch", 162000)
+	_ = h.Store.AddEvent("orch", "context_reset", `{"trigger":"user"}`)
+	list := h.Get("/agents").Body
+	for _, want := range []string{"ctx 142k", "never reset", "ctx 162k (over threshold; run `slai clear orch`)"} {
+		if !strings.Contains(list, want) {
+			t.Errorf("list lacks %q", want)
+		}
+	}
+	if d := h.Get("/agents/orch").Body; !strings.Contains(d, "ctx 162k (over threshold; run") || !strings.Contains(d, "reset ") {
+		t.Errorf("detail lacks the context line")
+	}
+	if d := h.Get("/agents/eng-2").Body; !strings.Contains(d, "not recorded yet") {
+		t.Errorf("detail of an agent with no context should say so")
 	}
 }

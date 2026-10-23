@@ -4,6 +4,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/oorbt/slai/internal/store"
@@ -100,3 +101,57 @@ func TestRecordDelta(t *testing.T) {
 		t.Fatal("empty path")
 	}
 }
+
+// The context size is the prompt side of the LAST turn, not a running total: it grows with the
+// conversation and drops back after a reset or a compaction.
+func TestContextIsTheLatestTurnPromptSize(t *testing.T) {
+	st, err := store.Open(filepath.Join(t.TempDir(), "s.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	tot, err := ParseTranscript("testdata/transcript.jsonl", nil)
+	if err != nil || tot.Last.Prompt() != 10 { // msg_2 is the last real turn; the synthetic one is skipped
+		t.Fatalf("last turn of the fixture = %+v %v", tot.Last, err)
+	}
+	line := func(id string, in, cr, cc int64) string {
+		return `{"message":{"id":"` + id + `","model":"claude-sonnet-5-5","usage":{"input_tokens":` + itoa(in) + `,"cache_read_input_tokens":` + itoa(cr) +
+			`,"cache_creation_input_tokens":` + itoa(cc) + `,"output_tokens":10}}}` + "\n"
+	}
+	tp := filepath.Join(t.TempDir(), "t.jsonl")
+	body := line("m1", 5, 18000, 2000) + line("m2", 5, 70000, 10000) + line("m3", 9, 139000, 2991)
+	if err := os.WriteFile(tp, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, ok := Context(st, "a1"); ok {
+		t.Fatal("a context before any turn was recorded")
+	}
+	if _, err := Record(st, "a1", tp, nil); err != nil {
+		t.Fatal(err)
+	}
+	if n, at, ok := Context(st, "a1"); !ok || n != 142000 || at == 0 {
+		t.Fatalf("context = %d at %d ok=%v, want 142000", n, at, ok)
+	}
+	// an unchanged transcript (nothing new to bill) still reports the same size
+	if _, err := Record(st, "a1", tp, nil); err != nil {
+		t.Fatal(err)
+	}
+	if n, _, _ := Context(st, "a1"); n != 142000 {
+		t.Fatalf("context after a repeat = %d", n)
+	}
+	// a later, smaller turn (after a reset or compaction) lowers it
+	f, _ := os.OpenFile(tp, os.O_APPEND|os.O_WRONLY, 0o644)
+	f.WriteString(line("m4", 3, 0, 29997))
+	f.Close()
+	if _, err := Record(st, "a1", tp, nil); err != nil {
+		t.Fatal(err)
+	}
+	if n, _, _ := Context(st, "a1"); n != 30000 {
+		t.Fatalf("context after a smaller turn = %d, want 30000", n)
+	}
+	if _, _, ok := Context(st, "a2"); ok {
+		t.Fatal("another agent has a context")
+	}
+}
+
+func itoa(n int64) string { return strconv.FormatInt(n, 10) }

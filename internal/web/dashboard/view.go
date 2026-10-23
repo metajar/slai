@@ -22,8 +22,10 @@ type Input struct {
 	Health map[string]service.Health
 	// Identity is each agent's identity grounding (agentrows.IdentityOf); a missing entry reads as never re-grounded.
 	Identity map[string]agentrows.Identity
-	Tasks    []store.Task
-	Esc      []store.Escalation
+	// Context is each agent's context size and last reset (agentrows.ContextOf); a missing entry reads as not recorded.
+	Context map[string]agentrows.Context
+	Tasks   []store.Task
+	Esc     []store.Escalation
 	// Questions maps an agent waiting on the user to its latest ask_user text.
 	Questions map[string]string
 	Heartbeat int64 // supervisor heartbeat (unix), 0 = never
@@ -79,6 +81,8 @@ type AgentCard struct {
 	Chip                                  Chip
 	Grounded                              string // "re-grounded 3m ago" / "never re-grounded"
 	Correction                            string // the open identity correction, "" when none
+	Ctx, Reset                            string // "ctx 142k" (+ clear hint when over), "" when not recorded; "reset 3m ago" / "never reset"
+	CtxOver                               bool
 }
 
 // Spend is the spend card.
@@ -150,6 +154,8 @@ func Build(in Input) View {
 		card := AgentCard{ID: a.ID, Role: a.Role, Task: a.CurrentTask, Status: a.Status, Chip: chipOf(live, h.Reason)}
 		id := in.Identity[a.ID]
 		card.Grounded, card.Correction = id.GroundText(in.Now), id.Correction
+		cx := in.Context[a.ID]
+		card.Ctx, card.CtxOver, card.Reset = cx.Size(), cx.Over(), cx.Reset(in.Now)
 		if c, ok := cfg[a.ID]; ok {
 			card.Harness = c.HarnessKind() + " · " + c.Model
 		}

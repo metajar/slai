@@ -216,6 +216,12 @@ type statusAgent struct {
 	// IdentityCorrection is the open identity correction (slai told the agent who it is after
 	// a sign it was confused), "" when none.
 	IdentityCorrection string `json:"identity_correction,omitempty"`
+	// CtxTokens is the agent's latest-turn prompt size (its context size; 0 = not recorded yet),
+	// CtxOver says it is past defaults.context_reset.threshold_tokens, and LastResetAt is the
+	// latest context reset (unix; 0 = never).
+	CtxTokens   int64 `json:"ctx_tokens"`
+	CtxOver     bool  `json:"ctx_over_threshold"`
+	LastResetAt int64 `json:"last_reset_at"`
 }
 
 type statusHold struct {
@@ -302,7 +308,8 @@ func statusCmd() *cobra.Command {
 					askID = service.OpenAskID(s.Store, ta.ID)
 				}
 				id := agentrows.IdentityOf(s.Store, ta.ID)
-				out.Agents = append(out.Agents, statusAgent{ta.ID, ta.Role, model, st, a.CurrentTask, denied[ta.ID], askID, id.GroundAt, id.Correction})
+				cx := agentrows.ContextOf(s.Store, ta.ID, s.Team.Defaults.ContextThreshold())
+				out.Agents = append(out.Agents, statusAgent{ta.ID, ta.Role, model, st, a.CurrentTask, denied[ta.ID], askID, id.GroundAt, id.Correction, cx.Tokens, cx.Over(), cx.LastResetAt})
 			}
 			tasks, err := s.Store.ListTasks("")
 			if err != nil {
@@ -320,7 +327,7 @@ func statusCmd() *cobra.Command {
 				return enc.Encode(out)
 			}
 			for _, a := range out.Agents {
-				fmt.Printf("%-12s %-20s %-8s %-16s %s%s\n", a.ID, a.Role, a.Model, a.Status, a.CurrentTask, deniedNote(a.DeniedCount)+identityNote(a, time.Now()))
+				fmt.Printf("%-12s %-20s %-8s %-16s %s%s\n", a.ID, a.Role, a.Model, a.Status, a.CurrentTask, deniedNote(a.DeniedCount)+identityNote(a, time.Now())+contextNote(a, s.Team.Defaults.ContextThreshold(), time.Now()))
 				if a.AskID != 0 {
 					fmt.Printf("  %s is asking you (ask %d). Answer with: slai reply %d \"...\"\n", a.ID, a.AskID, a.AskID)
 				}
@@ -476,6 +483,17 @@ func printHealth(s *supervisor.Supervisor, openTasks int) {
 	if running {
 		fmt.Println(nextStep(s.Team, true, openTasks))
 	}
+}
+
+// contextNote is the status-line suffix for an agent's context size ("  ctx 142k", with the
+// `slai clear` hint when over the threshold) and its last reset; nothing when no size is
+// recorded yet, so a team that has not run keeps its plain lines.
+func contextNote(a statusAgent, threshold int, now time.Time) string {
+	if a.CtxTokens <= 0 {
+		return ""
+	}
+	c := agentrows.Context{AgentID: a.ID, Tokens: a.CtxTokens, LastResetAt: a.LastResetAt, Threshold: int64(threshold)}
+	return "  " + c.Size() + ", " + c.Reset(now)
 }
 
 // identityNote is the status-line suffix for identity grounding: when the agent was last

@@ -13,6 +13,7 @@ import (
 	"github.com/oorbt/slai/internal/agentrows"
 	"github.com/oorbt/slai/internal/hooks"
 	"github.com/oorbt/slai/internal/store"
+	"github.com/oorbt/slai/internal/usage"
 )
 
 func groundProject(t *testing.T) (string, *store.Store) {
@@ -139,4 +140,56 @@ func captureStdout(t *testing.T, f func()) string {
 	os.Stdout = old
 	b, _ := io.ReadAll(r)
 	return string(b)
+}
+
+// A9: `slai status` shows each agent's context size and last reset; --json carries
+// ctx_tokens, ctx_over_threshold and last_reset_at; over the threshold the text says what to run.
+func TestStatusShowsContextSizeAndLastReset(t *testing.T) {
+	_, st := groundProject(t)
+	read := func() []statusAgent {
+		c := statusCmd()
+		c.SetArgs([]string{"--json"})
+		out := captureStdout(t, func() {
+			if err := c.Execute(); err != nil {
+				t.Fatal(err)
+			}
+		})
+		var s struct{ Agents []statusAgent }
+		if err := json.Unmarshal([]byte(out), &s); err != nil {
+			t.Fatalf("%v\n%s", err, out)
+		}
+		return s.Agents
+	}
+	byID := func(id string) statusAgent {
+		for _, a := range read() {
+			if a.ID == id {
+				return a
+			}
+		}
+		t.Fatalf("no agent %s", id)
+		return statusAgent{}
+	}
+	if a := byID("eng-1"); a.CtxTokens != 0 || a.CtxOver || a.LastResetAt != 0 {
+		t.Fatalf("nothing recorded yet: %+v", a)
+	}
+	if got := runStatus(t); strings.Contains(got, "ctx") {
+		t.Fatalf("a team with no recorded context keeps plain lines:\n%s", got)
+	}
+	if err := usage.SetContext(st, "eng-1", 142000); err != nil {
+		t.Fatal(err)
+	}
+	if err := usage.SetContext(st, "orch", 162000); err != nil {
+		t.Fatal(err)
+	}
+	_ = st.AddEvent("orch", "context_reset", `{"trigger":"user","tokens_before":170000}`)
+	if a := byID("eng-1"); a.CtxTokens != 142000 || a.CtxOver || a.LastResetAt != 0 {
+		t.Fatalf("eng-1 = %+v", a)
+	}
+	if a := byID("orch"); a.CtxTokens != 162000 || !a.CtxOver || a.LastResetAt == 0 {
+		t.Fatalf("orch = %+v", a)
+	}
+	text := runStatus(t)
+	if !strings.Contains(text, "ctx 142k, never reset") || !strings.Contains(text, "ctx 162k (over threshold; run `slai clear orch`), reset ") {
+		t.Fatalf("status text:\n%s", text)
+	}
 }

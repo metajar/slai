@@ -674,3 +674,25 @@ func TestAgentCardsShowIdentityGrounding(t *testing.T) {
 		t.Errorf("eng-2 card = %+v", c)
 	}
 }
+
+// A9: each agent card shows the context size (with the clear hint when over) and the last reset.
+func TestAgentCardsShowContextSize(t *testing.T) {
+	in := baseInput()
+	in.Agents = []store.Agent{agent("eng-1", "working"), agent("eng-2", "working")}
+	for _, id := range []string{"eng-1", "eng-2"} {
+		in.Health[id] = service.Health{Liveness: "busy", LastActivity: now.Unix() - 30}
+	}
+	in.Context = map[string]agentrows.Context{
+		"eng-1": {AgentID: "eng-1", Tokens: 162000, Threshold: 150000, LastResetAt: now.Unix() - 600},
+	}
+	cards := map[string]AgentCard{}
+	for _, c := range Build(in).Active {
+		cards[c.ID] = c
+	}
+	if c := cards["eng-1"]; c.Ctx != "ctx 162k (over threshold; run `slai clear eng-1`)" || !c.CtxOver || c.Reset != "reset 10m ago" {
+		t.Errorf("eng-1 card = %+v", c)
+	}
+	if c := cards["eng-2"]; c.Ctx != "" || c.CtxOver || c.Reset != "never reset" {
+		t.Errorf("eng-2 card = %+v", c)
+	}
+}

@@ -298,3 +298,22 @@ func TestMemoryPackTokensValidateAndRoundTrip(t *testing.T) {
 		t.Fatal("negative pack_tokens accepted")
 	}
 }
+
+func TestContextResetThresholdDefaultAndYAML(t *testing.T) {
+	team := Preset("solo", "p", "d", "main")
+	if got := team.Defaults.ContextThreshold(); got != 150000 {
+		t.Fatalf("default threshold = %d, want 150000", got)
+	}
+	b, err := yaml.Marshal(team)
+	if err != nil || strings.Contains(string(b), "context_reset") {
+		t.Fatalf("an unset context_reset must not be written: %v\n%s", err, b)
+	}
+	src := strings.Replace(string(b), "defaults:\n", "defaults:\n    context_reset:\n        auto: false\n        threshold_tokens: 120000\n", 1)
+	got, err := Parse([]byte(src))
+	if err != nil {
+		t.Fatalf("defaults.context_reset rejected: %v", err)
+	}
+	if got.Defaults.ContextThreshold() != 120000 || got.Defaults.ContextReset.Auto {
+		t.Fatalf("parsed %+v", got.Defaults.ContextReset)
+	}
+}

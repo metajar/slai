@@ -255,6 +255,8 @@ defaults:
   max_turns_per_task: 40
   max_concurrent_agents: 5
   require_review: true         # needs a principal_engineer
+  context_reset:               # optional: flag an agent whose conversation is getting large
+    threshold_tokens: 150000   # default; past it `slai status` and the dashboard say "run `slai clear <agent>`"
   spend_caps:                  # optional, USD. 0 or omitted = NO cap (not a $0 cap)
     per_agent_usd: 5           # warn at 80%, pause at 100%, per agent
     daily_usd: 25              # same, summed over the whole team per day
