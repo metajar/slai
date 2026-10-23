@@ -23,8 +23,6 @@ slai doctor                                      # verify the toolchain
 cd my-repo
 slai                 # first run: wizard writes .slai/team.yaml; then opens the dashboard
 slai send orch "build X"   # type your goal to the orchestrator; it drives the rest of the team
-slai send engineers "rebase on slai/integration"   # or to a group: all, engineers, focus-group, ...
-slai reply 17 "yes"        # answer the question an agent asked you (ask id from `slai status`)
 slai status --json   # scriptable state
 slai serve           # the team in a browser (local web UI)
 slai status --stats [--since 7d] [--json]   # merges, rework, review rounds and spend per agent and per harness/model
