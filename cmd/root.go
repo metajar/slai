@@ -16,7 +16,10 @@ import (
 	"github.com/oorbt/slai/internal/tmux"
 )
 
-func Execute() {
+// rootHelpFooter ends `slai --help` (root only) with a pointer to the command table.
+const rootHelpFooter = "Which command do I use? See docs/commands.md (CLI commands are for you; MCP tools are for agents)."
+
+func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "slai",
 		Short:         "Turn a repo into a managed AI software team",
@@ -32,6 +35,12 @@ func Execute() {
 	}
 	root.AddCommand(initCmd(), upCmd(), downCmd(), attachCmd(), statusCmd(), doctorCmd(), memoryCmd(), superviseCmd(), sendCmd(), holdCmd(), resumeCmd(), priorityCmd(), revertCmd(), cleanCmd(), commitCmd(), serveCmd())
 	root.AddCommand(mcpCmd(), toolCmd(), hookCmd(), statuslineCmd(), versionCmd())
+	root.SetHelpTemplate(root.HelpTemplate() + "{{if not .HasParent}}\n" + rootHelpFooter + "\n{{end}}")
+	return root
+}
+
+func Execute() {
+	root := newRootCmd()
 	if err := root.ExecuteContext(context.Background()); err != nil {
 		fmt.Fprintln(os.Stderr, "slai:", err)
 		os.Exit(1)
