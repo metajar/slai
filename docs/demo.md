@@ -90,5 +90,5 @@ Spend comes from slai's own usage records (`usage` table in `.slai/state.db`, es
 
 ## Notes from this run
 
-- `slai init` prints "Starting 2 Claude sessions" and `slai status` right after it prints only "supervisor: NOT running"; nothing starts until `slai up` (or `slai`).
-- The "Spend caps: OFF" line on `slai up` was printed even with `per_run_usd: 3` set in this run, so it may only reflect other cap keys; not investigated.
+- Fixed since this run (T-0005): at the time, `slai init` printed "Starting 2 Claude sessions" and `slai status` right after it printed only "supervisor: NOT running", although nothing starts until `slai up` (or `slai`). Init now says "Will start 2 Claude sessions when you run `slai`" and status lists the agents and ends "Next: `slai`".
+- Known bug: the `slai up` cost line ("Spend caps: OFF") only reports the per-agent and daily caps (`cmd/cost.go`). `per_run_usd: 3` was active in this run (it would have paused the team at $3) even though the line said OFF.
