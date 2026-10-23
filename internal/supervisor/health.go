@@ -13,6 +13,7 @@ import (
 	"github.com/oorbt/slai/internal/config"
 	"github.com/oorbt/slai/internal/hooks"
 	"github.com/oorbt/slai/internal/ratelimit"
+	"github.com/oorbt/slai/internal/roles"
 	"github.com/oorbt/slai/internal/service"
 	"github.com/oorbt/slai/internal/store"
 )
@@ -282,6 +283,9 @@ func (s *Supervisor) rateLimitAgent(ctx context.Context, a store.Agent, agents [
 		return
 	}
 	line := "[slai] Your rate limit should have reset. Continue where you left off: call get_inbox, then get_task."
+	if ident := roles.IdentityLineFor(s.Team, a.ID); ident != "" {
+		line = ident + " " + line
+	}
 	if err := s.typeLine(ctx, a, line); err != nil {
 		s.logf("rate-limit wake %s: %v", a.ID, err)
 		return

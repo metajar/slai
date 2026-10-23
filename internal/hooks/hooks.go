@@ -51,6 +51,9 @@ type Options struct {
 	MaxTurnsPerTask int             // <=0 disables the guard
 	Prices          usage.Overrides // user price overrides
 	ProjectDir      string          // enables the PreToolUse lane guard when set
+	// IdentityLine, when set, gives the sentence that opens the line slai types to an agent
+	// after its context was reset (see roles.IdentityLine). Empty = no re-ground.
+	IdentityLine func(agent string) string
 }
 
 // Guard describes a tripped max-turns guard.
@@ -99,7 +102,9 @@ func Handle(st *store.Store, agentID, event string, p Payload, opt Options) (Res
 	stopRecorded := false
 	switch ev {
 	case "sessionstart":
+		_, revived, _ := st.GetKV(KVRevived + agentID) // noteSessionStart consumes it
 		errs = append(errs, noteSessionStart(st, agentID, p.Source))
+		errs = append(errs, noteIdentityGap(st, agentID, p.Source, revived, opt.IdentityLine))
 	case "pretooluse":
 		if strings.HasPrefix(p.ToolName, "mcp__slai__") {
 			// The service stamps lastseen.<agent> when the call arrives; the
@@ -287,6 +292,46 @@ func noteSessionStart(st *store.Store, agent, source string) error {
 		}
 	}
 	return errors.Join(errs...)
+}
+
+// KVIdentityPending is set (+ agent) when a SessionStart showed the agent's context was
+// reset; the supervisor's next wake-up line for it then opens with the identity sentence.
+const KVIdentityPending = "identity.pending."
+
+// identityGap reports whether a SessionStart of this source means the agent may have lost
+// who it is: it resumed, compacted or cleared its conversation, or it started blank right
+// after slai revived it. A plain first start carries the full role prompt and needs nothing.
+func identityGap(source string, revived bool) bool {
+	switch source {
+	case "resume", "compact", "clear":
+		return true
+	case "startup":
+		return revived
+	}
+	return false
+}
+
+// noteIdentityGap re-grounds an agent after a gap: it marks the wake-up line as needing the
+// identity sentence and queues an inbox note that opens with it, so the agent is woken even
+// when it owes nothing.
+func noteIdentityGap(st *store.Store, agent, source string, revived bool, line func(string) string) error {
+	if line == nil || !identityGap(source, revived) {
+		return nil
+	}
+	ident := line(agent)
+	if ident == "" {
+		return nil
+	}
+	data, _ := json.Marshal(map[string]any{"source": source})
+	return errors.Join(
+		st.SetKV(KVIdentityPending+agent, source),
+		st.AddEvent(agent, "identity_reground", string(data)),
+		func() error {
+			_, err := st.AddMessage(store.Message{From: "slai", To: agent, Kind: "note",
+				Body: ident + " Your session started again (" + source + "), so your earlier conversation may be gone: call get_inbox, get_task and recall to pick up where you were."})
+			return err
+		}(),
+	)
 }
 
 // toolTarget names what a tool call touches: its file path, or the command line.

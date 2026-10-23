@@ -1269,7 +1269,7 @@ func (s *Service) AskUser(ctx context.Context, caller string, a AskUserArgs) (an
 // Tools lists every tool name this package implements.
 var Tools = []string{"get_inbox", "get_board", "get_task", "create_task", "update_task", "cancel_task", "report",
 	"request_review", "review_diff", "approve", "request_changes", "send_message", "ask", "reply", "ask_user", "finish", "ping", "pong",
-	"remember", "recall", "get_memory"}
+	"remember", "recall", "get_memory", "whoami"}
 
 // Call dispatches a tool by name with raw JSON arguments (used by `slai tool`).
 func (s *Service) Call(ctx context.Context, caller, tool string, raw json.RawMessage) (any, error) {
@@ -1288,6 +1288,8 @@ func (s *Service) Call(ctx context.Context, caller, tool string, raw json.RawMes
 		return nil
 	}
 	switch tool {
+	case "whoami":
+		return s.Whoami(ctx, caller) // takes no arguments: whatever was passed is ignored
 	case "get_inbox":
 		return s.GetInbox(ctx, caller)
 	case "get_board":
