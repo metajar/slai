@@ -1,5 +1,11 @@
 # slai
 
+> **What it is:** slai runs a team of Claude Code agents (an orchestrator, engineers, optionally a principal reviewer) on one git repo, each a long-lived session in its own tmux pane with its own model, harness and permission settings.  
+> **Who it is for:** a developer who wants to hand a multi-part goal to a team and review what lands, not to drive one agent turn by turn.  
+> **Claude Code subagents / agent teams** run inside one Claude Code session on one checkout; slai gives every engineer its own worktree and one branch per task, plus a task board in SQLite that survives restarts and spend caps (per agent, day, task and run).  
+> **Plain tmux + worktrees** is what you would wire up by hand; slai adds the shared task board, a principal review gate with per-criterion verdicts, merge to `slai/integration` behind your `project.test_command`, and liveness checks that revive dead agents.  
+> **What it is not:** it does not touch your branches or remote until you run `slai commit`, and it never passes `--dangerously-skip-permissions`. New here? Start at [First 10 minutes](#first-10-minutes).
+
 Single-binary Go CLI that turns a git repo into a managed AI software team. **You only talk to the orchestrator (`orch`); every other pane is agents talking to each other, so you can ignore it.** Role-specialised Claude Code agents (orchestrator, product manager, principal engineer, engineers, focus group) each run in their own tmux session with their own model, coordinate through an MCP tool server backed by SQLite, and ship work through git worktrees and a principal-review gate. See `PRD.md` for the full design.
 
 ## Install
@@ -22,6 +28,80 @@ slai serve           # the team in a browser (local web UI)
 slai status --stats [--since 7d] [--json]   # merges, rework, review rounds and spend per agent and per harness/model
 slai down            # stop supervisor and all agent sessions
 ```
+
+## First 10 minutes
+
+From nothing to one merged task, using the `solo` preset (an orchestrator and one engineer: 2 Claude sessions, no principal, so no review gate). Commands you type start with `$`.
+
+**How to read the outputs.** Output marked *(real)* was copied from a run of the binary built from this repo in a scratch repo (paths shortened). Output marked *(illustrative)* shows the shape, not exact text: a real run depends on your goal, models and timing. Output marked *(expected wording)* is what the commands will print once the init/status wording changes land (core-workflow-clarity tasks B and H); today's text differs a little.
+
+1. **Check the toolchain.** *(real, first lines; a `slai doctor` also lists leftover teams from other directories)*
+
+   ```
+   $ slai doctor
+   ✓ tmux    tmux 3.4
+   ✓ git     git version 2.43.0
+   ✓ claude  2.1.309 (Claude Code)
+   ✓ permission modes match `claude --help`
+   ✓ git repository
+   - no .slai/team.yaml (run `slai init`); skipping project checks
+   ```
+
+   A `✗` line says what is missing. Nothing below works without tmux, git and `claude`.
+
+2. **Write the team file.** In your repo, answer the wizard, or skip it with flags. *(expected wording; today's last line reads "Starting 2 Claude sessions." even though nothing has started yet)*
+
+   ```
+   $ cd my-repo
+   $ slai init --yes --preset solo --name demo --description "demo"
+   wrote .../my-repo/.slai/team.yaml (2 agents). Next: run `slai`
+   Will start 2 Claude sessions when you run `slai`. Spend caps: OFF (set defaults.spend_caps in .slai/team.yaml)
+   ```
+
+   Nothing is running yet. **Spend caps: OFF** means no limit: set `defaults.spend_caps` now if you want one (see [What this costs](#what-this-costs)).
+
+3. **Start the team.** *(expected wording for the status line; the dashboard is illustrative)*
+
+   ```
+   $ slai
+   ```
+
+   Bare `slai` starts the agent sessions, makes sure the supervisor is running and opens the dashboard. (`slai up` does the first two without the dashboard, for scripts and servers.) From another terminal, `slai status` now lists `orch` and `eng-1`; before you ran `slai` it would have listed them with `-` and ended `supervisor: not running. Next: slai`.
+
+4. **Give the orchestrator a goal.** Type it in the dashboard, or from any terminal: *(illustrative)*
+
+   ```
+   $ slai send orch "add a --version flag to the CLI that prints the build version"
+   ```
+
+   You only talk to `orch`; the other pane is the engineer, and you can ignore it.
+
+5. **Watch it.** In the dashboard press `b` for the Tasks view, or run `slai serve` for the browser. *(illustrative)*
+
+   ```
+   T-0001  Add --version flag    in_progress   eng-1
+   ```
+
+   If an agent needs an answer from you, it appears under "Questions for you" in the `slai serve` Inbox.
+
+6. **It merges.** With `solo` there is no principal, so when `eng-1` asks for review its commit is queued straight for merge into `slai/integration` (with `project.test_command` set, only if that command passes there). *(illustrative)*
+
+   ```
+   T-0001  Add --version flag    merged        eng-1
+   ```
+
+   With the `squad` and `full` presets a principal reads the diff first; see the [Worked example](#worked-example).
+
+7. **Look, then take it.** Your own branch has not moved. *(output shape in the [Worked example](#worked-example) is real)*
+
+   ```
+   $ slai commit --dry-run     # shows exactly what would be added; changes nothing
+   $ slai commit               # shows the same plan, asks "Apply? [y/N]"
+   ```
+
+8. **Stop.** `slai down` stops the supervisor and every agent session. If something goes wrong on the way, see [If the team goes wrong](#if-the-team-goes-wrong).
+
+Which command does what, for you versus for agents: [docs/commands.md](docs/commands.md). A recorded two-agent run with its measured token cost: [docs/demo.md](docs/demo.md). (Both arrive in separate tasks.)
 
 ## What this costs
 
