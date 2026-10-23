@@ -57,8 +57,7 @@ tmux ls | grep slai_   # none of this team's sessions remain
 
 ## Known limits (as of this check)
 
-- After `/clear`, `.slai/run/<agent>/session-id` still holds the pre-clear session id, so a later `--resume` brings back the cleared conversation (checkpoint 4 resumes it; panes show a "Compacted" summary from before). Identity is unaffected. Tracked as I-2 in the comms review.
-- `slai`'s `SessionStart` event does not store Claude's `source` value on `hook:sessionstart`; `identity_reground` events do.
+- Before I-2 (T-0040) `/clear` left `.slai/run/<agent>/session-id` holding the pre-clear session id, so a later `--resume` brought back the cleared conversation (the result below was recorded before it). Now the file follows the session id reported by `SessionStart`; checkpoint 4 resumes the post-clear conversation, and `go test ./internal/e2e -run Identity` asserts it.
 
 ## Result of the last run
 

@@ -164,13 +164,23 @@ func identityScenario(t *testing.T, p *project, agent, role string) {
 	// prompt again and the first wake line opens with the identity sentence.
 	p.waitFor(30*time.Second, agent+" idle after clear", func() bool { st := p.agentStatus(agent); return st == "idle" || st == "finished" })
 	starts, n := len(p.fakeStarts(agent)), len(p.typedLines(agent))
+	// slai follows the agent's current session id (I-2): after /clear the file names the new
+	// conversation, not the one the agent was launched with, so that is what must be resumed.
+	cur, err := os.ReadFile(filepath.Join(p.dir, ".slai", "run", agent, "session-id"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cur2 := strings.TrimSpace(string(cur))
+	if cur2 == "" || cur2 == sid {
+		t.Fatalf("%s session-id file = %q after /clear, want the new session's id (not %q)", agent, cur2, sid)
+	}
 	p.killSession(agent)
 	p.slai("up") // the user's restart: starts every agent that is not running, resuming its session
 	p.waitFor(healTimeout, agent+" restarted", func() bool { return len(p.fakeStarts(agent)) > starts })
 	resumed := p.fakeStarts(agent)[starts]
 	p.assertSystemPrompt(resumed, agent)
-	if rf, _ := resumed["flags"].(map[string]any); rf["--resume"] != sid {
-		t.Errorf("%s revive flags = %v, want --resume %s", agent, rf, sid)
+	if rf, _ := resumed["flags"].(map[string]any); rf["--resume"] != cur2 {
+		t.Errorf("%s revive flags = %v, want --resume %s", agent, rf, cur2)
 	}
 	p.waitIdentityLine(agent, ident, n, "restart/resume")
 	p.assertWhoami(agent, role)

@@ -274,7 +274,7 @@ func statusCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				return writeStats(os.Stdout, rep, asJSON)
+				return writeStatsWithNudges(os.Stdout, rep, s.Store, time.Now(), asJSON)
 			}
 			agents, err := s.Store.GetAgents()
 			if err != nil {

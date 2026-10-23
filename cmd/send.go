@@ -80,6 +80,7 @@ group name is sent to that agent only.`,
 			var queued []string
 			var msgs []int64
 			for _, id := range ids {
+				s.RecordManualNudge(id) // counted for `slai status --stats` when it moves a silent agent that owes work
 				m, err := s.SendUser(id, args[1])
 				if err != nil {
 					return fmt.Errorf("%s: %w (already queued for: %s)", id, err, strings.Join(queued, ", "))
