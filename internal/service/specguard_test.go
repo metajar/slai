@@ -68,7 +68,7 @@ func TestSpecAppendIsAnAddendumNotARewrite(t *testing.T) {
 	f.WriteString("3. AC 3: added later\n")
 	f.Close()
 	must(s.ReviewDiff(ctx, "prin", TaskRef{TaskID: id}))
-	ap := j(must(s.Approve(ctx, "prin", ApproveArgs{TaskID: id})))
+	ap := j(must(s.Approve(ctx, "prin", ApproveArgs{TaskID: id, ACVerdicts: passBoth})))
 	if ap["status"] != "merge_queued" || ap["spec_addendum"] == nil || ap["spec_rewritten"] != nil {
 		t.Fatalf("approve = %v", ap)
 	}
@@ -107,7 +107,7 @@ func TestSpecRewriteRefusesApproveUnlessOverridden(t *testing.T) {
 			if eventCount(s, "spec_rewritten") != 1 {
 				t.Fatal("want a spec_rewritten event for the refusal")
 			}
-			ap := j(must(s.Approve(ctx, "prin", ApproveArgs{TaskID: id, SpecRewriteOK: true})))
+			ap := j(must(s.Approve(ctx, "prin", ApproveArgs{TaskID: id, SpecRewriteOK: true, ACVerdicts: passBoth})))
 			if ap["status"] != "merge_queued" {
 				t.Fatalf("override did not approve: %v", ap)
 			}

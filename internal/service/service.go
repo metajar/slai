@@ -1057,6 +1057,17 @@ func (s *Service) Approve(ctx context.Context, caller string, a ApproveArgs) (an
 		}
 		s.recordSpec(t.ID, t.SpecPath) // accepted: this is the baseline from now on
 	}
+	// Approving is answering every criterion the engineer claimed: refuse (recording nothing)
+	// while one has no verdict, naming it exactly as claimed so it can be resubmitted verbatim.
+	if missing, err := s.missingVerdicts(t, a.ACVerdicts); err != nil {
+		return nil, err
+	} else if len(missing) > 0 {
+		quoted := make([]string, len(missing))
+		for i, m := range missing {
+			quoted[i] = fmt.Sprintf("%q", m)
+		}
+		return nil, fmt.Errorf("task %s: approve needs a verdict for every criterion the engineer claimed; missing: %s. Call approve again with ac_verdicts {ac, pass, note} using each label exactly as claimed (a paraphrased label does not answer a claim)", t.ID, strings.Join(quoted, ", "))
+	}
 	plan, err := s.planFactVerdicts(ctx, t, a.FactVerdicts, true)
 	if err != nil {
 		return nil, err

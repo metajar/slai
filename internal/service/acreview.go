@@ -117,7 +117,35 @@ func (s *Service) recordVerdicts(t store.Task, caller string, in []ACVerdictArg)
 		return out, err
 	}
 	if len(out.unanswered) > 0 {
-		out.warnings = append(out.warnings, "the engineer's claims with no verdict from you: "+strings.Join(out.unanswered, ", ")+" (pass ac_verdicts for each; this is a warning, not a refusal)")
+		out.warnings = append(out.warnings, "the engineer's claims with no verdict from you: "+strings.Join(out.unanswered, ", ")+" (pass ac_verdicts for each; approve refuses until every claim has one)")
+	}
+	return out, nil
+}
+
+// missingVerdicts lists, verbatim, the criteria the engineer claimed that have no verdict
+// once the ones in this call are counted with those already recorded. Labels match a claim
+// only by ACKey (case and spacing), never by paraphrase.
+func (s *Service) missingVerdicts(t store.Task, in []ACVerdictArg) ([]string, error) {
+	_, claims, err := s.Store.LatestACClaims(t.ID)
+	if err != nil || len(claims) == 0 {
+		return nil, err
+	}
+	have := map[string]bool{}
+	for _, v := range in {
+		have[store.ACKey(v.AC)] = true
+	}
+	stored, err := s.Store.LatestACVerdicts(t.ID)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range stored {
+		have[store.ACKey(v.AC)] = true
+	}
+	var out []string
+	for _, c := range claims {
+		if !have[store.ACKey(c.AC)] {
+			out = append(out, c.AC)
+		}
 	}
 	return out, nil
 }

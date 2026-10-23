@@ -87,30 +87,43 @@ func TestReviewDiffShowsSpecPathAndClaims(t *testing.T) {
 	_ = id2
 }
 
-// AC 3: verdicts are recorded per AC; claims with no verdict are listed (warning).
-func TestApproveRecordsVerdictsAndListsUnansweredClaims(t *testing.T) {
+// AC 3: verdicts are recorded per AC. Approve refuses while a claimed criterion has no
+// verdict, naming it verbatim, and a paraphrased label does not answer a claim.
+func TestApproveRecordsVerdictsAndRefusesUnansweredClaims(t *testing.T) {
 	s := newSvc(t, true)
 	id := specTask(t, s, ".slai/specs/x.md")
 	must(s.RequestReview(ctx, "eng-1", RequestReviewArgs{TaskID: id, Summary: "done", ACClaims: threeClaims}))
-	ap := j(must(s.Approve(ctx, "prin", ApproveArgs{TaskID: id, Notes: "ok", ACVerdicts: []ACVerdictArg{
-		{AC: "AC 1", Pass: true}, {AC: "ac 2", Pass: false, Note: "no test for the edge case"}}})))
-	if ap["status"] != "merge_queued" {
-		t.Fatalf("a missing verdict must not refuse the approval: %v", ap)
+	// AC 3 unanswered: refused, naming it exactly, and nothing is recorded
+	_, err := s.Approve(ctx, "prin", ApproveArgs{TaskID: id, Notes: "ok", ACVerdicts: []ACVerdictArg{
+		{AC: "AC 1", Pass: true}, {AC: "ac 2", Pass: false, Note: "no test for the edge case"}}})
+	wantErr(t, err, `missing: "AC 3"`)
+	// a paraphrased label for AC 3 does not satisfy the claim
+	_, err = s.Approve(ctx, "prin", ApproveArgs{TaskID: id, ACVerdicts: []ACVerdictArg{
+		{AC: "AC 1", Pass: true}, {AC: "AC 2", Pass: true}, {AC: "the third criterion", Pass: true}}})
+	wantErr(t, err, `missing: "AC 3"`)
+	if vs, _ := s.Store.LatestACVerdicts(id); len(vs) != 0 {
+		t.Fatalf("a refused approve stored verdicts: %+v", vs)
 	}
-	if un, _ := ap["unanswered_claims"].([]any); len(un) != 1 || un[0] != "AC 3" {
-		t.Fatalf("unanswered_claims = %v", ap["unanswered_claims"])
+	if st := must(s.Store.GetTask(id)).Status; st != "in_review" {
+		t.Fatalf("status after refusals = %s", st)
+	}
+	// every claim answered (label case and spacing do not matter): approved
+	ap := j(must(s.Approve(ctx, "prin", ApproveArgs{TaskID: id, Notes: "ok", ACVerdicts: []ACVerdictArg{
+		{AC: "AC 1", Pass: true}, {AC: "ac 2", Pass: false, Note: "no test for the edge case"}, {AC: " AC  3 ", Pass: true}}})))
+	if ap["status"] != "merge_queued" || ap["unanswered_claims"] != nil {
+		t.Fatalf("approve = %v", ap)
 	}
 	warns := strings.Join(toStrs(ap["warnings"]), " | ")
-	if !strings.Contains(warns, "no verdict from you: AC 3") || !strings.Contains(warns, "marked fail: ac 2") {
+	if !strings.Contains(warns, "marked fail: ac 2") {
 		t.Fatalf("warnings = %q", warns)
 	}
 	vs, _ := s.Store.LatestACVerdicts(id)
-	if len(vs) != 2 || vs[0].By != "prin" || vs[1].Pass || vs[1].Note != "no test for the edge case" {
+	if len(vs) != 3 || vs[0].By != "prin" || vs[1].Pass || vs[1].Note != "no test for the edge case" {
 		t.Fatalf("stored verdicts = %+v", vs)
 	}
 	// GetTask carries claims and verdicts (the TUI detail reads them)
 	tk := must(s.Store.GetTask(id))
-	if len(tk.ACClaims) != 3 || len(tk.ACVerdicts) != 2 {
+	if len(tk.ACClaims) != 3 || len(tk.ACVerdicts) != 3 {
 		t.Fatalf("task: %d claims, %d verdicts", len(tk.ACClaims), len(tk.ACVerdicts))
 	}
 }
@@ -141,14 +154,12 @@ func TestRequestChangesRecordsVerdictsAndTellsTheEngineer(t *testing.T) {
 	if !found {
 		t.Fatalf("engineer got no changes-requested note: %v", body)
 	}
-	// round two: new claims, verdicts start clean, the unanswered list works again
+	// round two: new claims, verdicts start clean, so approve wants an answer to both again
 	emptyCommit(t, s)
 	must(s.GetTask(ctx, "eng-1", GetTaskArgs{TaskID: id})) // the engineer picks the task up again
 	must(s.RequestReview(ctx, "eng-1", RequestReviewArgs{TaskID: id, Summary: "fixed", ACClaims: threeClaims[:2]}))
-	ap := j(must(s.Approve(ctx, "prin", ApproveArgs{TaskID: id})))
-	if un, _ := ap["unanswered_claims"].([]any); len(un) != 2 {
-		t.Fatalf("round 2 should list both claims as unanswered: %v", ap)
-	}
+	_, err := s.Approve(ctx, "prin", ApproveArgs{TaskID: id})
+	wantErr(t, err, `"AC 1", "AC 2"`)
 }
 
 // Tasks without claims still approve exactly as before.

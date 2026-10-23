@@ -16,7 +16,17 @@ func mergedSpecTask(t *testing.T, s *Service, answers []ACVerdictArg) string {
 		t.Fatal(err)
 	}
 	must(s.RequestReview(ctx, "eng-1", RequestReviewArgs{TaskID: id, Summary: "done", ACClaims: threeClaims[:2]}))
-	must(s.Approve(ctx, "prin", ApproveArgs{TaskID: id, ACVerdicts: answers}))
+	if complete := len(answers) >= 2; complete {
+		must(s.Approve(ctx, "prin", ApproveArgs{TaskID: id, ACVerdicts: answers}))
+	} else if len(answers) > 0 { // approve refuses an unanswered claim: record the partial answers directly
+		var vs []store.ACVerdict
+		for _, a := range answers {
+			vs = append(vs, store.ACVerdict{AC: a.AC, Pass: a.Pass, Note: a.Note})
+		}
+		if err := s.Store.SaveACVerdicts(id, "prin", vs); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if err := s.Store.UpdateTaskStatus(id, store.StatusMerged); err != nil {
 		t.Fatal(err)
 	}
