@@ -33,10 +33,19 @@ func costLine(verb, when string, t *config.Team) string {
 		n += fmt.Sprintf(" + %d on other harnesses", other)
 	}
 	c := t.Defaults.Caps
-	if c.PerAgentUSD <= 0 && c.DailyUSD <= 0 {
+	var set []string
+	for _, x := range []struct {
+		name string
+		usd  float64
+	}{{"daily", c.DailyUSD}, {"per-agent", c.PerAgentUSD}, {"per-task", c.PerTaskUSD}, {"per-run", c.PerRunUSD}} {
+		if x.usd > 0 {
+			set = append(set, x.name+" "+capText(x.usd))
+		}
+	}
+	if len(set) == 0 {
 		return verb + " " + n + when + ". Spend caps: OFF (set defaults.spend_caps in .slai/team.yaml)"
 	}
-	return verb + " " + n + when + ". Spend caps: per-agent " + capText(c.PerAgentUSD) + " / daily " + capText(c.DailyUSD)
+	return verb + " " + n + when + ". Spend caps: " + strings.Join(set, ", ")
 }
 
 func capText(usd float64) string {
