@@ -696,3 +696,39 @@ func TestAgentCardsShowContextSize(t *testing.T) {
 		t.Errorf("eng-2 card = %+v", c)
 	}
 }
+
+// B4: "Who is working" is the first block of the dashboard: each registered agent's state, the
+// last thing it did and the last thing slai or orch did about it.
+func TestWhoIsWorkingBlockIsFirst(t *testing.T) {
+	in := baseInput()
+	in.Agents = []store.Agent{agent("eng-1", "working")}
+	in.Health["eng-1"] = service.Health{Liveness: "busy", LastActivity: now.Unix() - 30}
+	in.Who = []agentrows.Who{{ID: "eng-1", State: "working", Last: "Bash 2m ago", Slai: "slai woke it 3m ago"}}
+	v := Build(in)
+	if len(v.Who) != 1 || v.Who[0] != (WhoRow{ID: "eng-1", State: "working", Last: "Bash 2m ago", Slai: "slai woke it 3m ago"}) {
+		t.Fatalf("who = %+v", v.Who)
+	}
+	if got := Build(baseInput()).Who; len(got) != 0 {
+		t.Fatalf("a team with nothing registered shows %+v", got)
+	}
+}
+
+// B4 on the page: the block renders before the cards, and only once an agent is registered.
+func TestWhoIsWorkingRendersFirstOnThePage(t *testing.T) {
+	h := harness(t, webtest.Setup(func(st *store.Store, team *config.Team) {
+		_ = st.SetSupervisorHeartbeat(1_800_000_000)
+		for _, a := range team.Agents {
+			_ = st.UpsertAgent(store.Agent{ID: a.ID, Role: a.Role, Model: a.Model, TmuxSession: "s-" + a.ID})
+		}
+		_ = st.SetAgentStatus("orch", "working")
+	}))
+	body := h.Get("/").Body
+	who, cards := strings.Index(body, "Who is working"), strings.Index(body, "Agents</h3>")
+	if who < 0 || cards < 0 || who > cards || !strings.Contains(body, "<strong>orch</strong>") {
+		t.Fatalf("the block is missing or not first (who=%d agents=%d)", who, cards)
+	}
+	empty := harness(t, webtest.Setup(func(st *store.Store, team *config.Team) { team.Agents = nil }))
+	if strings.Contains(empty.Get("/").Body, "Who is working") {
+		t.Fatal("a block with no agents")
+	}
+}

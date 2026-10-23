@@ -222,6 +222,17 @@ type statusAgent struct {
 	CtxTokens   int64 `json:"ctx_tokens"`
 	CtxOver     bool  `json:"ctx_over_threshold"`
 	LastResetAt int64 `json:"last_reset_at"`
+	// Waiting says why mail for the agent (or its start) is not moving, with what to do about it;
+	// absent when nothing is held up.
+	Waiting *statusWaiting `json:"waiting,omitempty"`
+}
+
+// statusWho is one line of the "Who is working" block (agentrows.Who).
+type statusWho struct {
+	ID    string `json:"id"`
+	State string `json:"state"`
+	Last  string `json:"last,omitempty"`
+	Slai  string `json:"slai,omitempty"`
 }
 
 type statusHold struct {
@@ -270,10 +281,11 @@ func statusCmd() *cobra.Command {
 				return err
 			}
 			out := struct {
+				Who    []statusWho   `json:"who"` // "Who is working": one line per registered agent
 				Agents []statusAgent `json:"agents"`
 				Tasks  []statusTask  `json:"tasks"`
 				Hold   *statusHold   `json:"hold,omitempty"` // the team hold, while one is in force
-			}{Agents: []statusAgent{}, Tasks: []statusTask{}}
+			}{Who: []statusWho{}, Agents: []statusAgent{}, Tasks: []statusTask{}}
 			denied, _ := s.Store.LaneDenialCounts(time.Now().Add(-24 * time.Hour).Unix())
 			if h, ok := s.CurrentHold(); ok {
 				out.Hold = &statusHold{h.Name, h.Since}
@@ -285,6 +297,14 @@ func statusCmd() *cobra.Command {
 			// Every configured agent is listed, even before anything has started: an agent with
 			// no live session is "dead" if slai ever registered it (it had a session, now gone: after
 			// `slai down`, a crash), and "-" if it is only configured and has never been started.
+			orchID := ""
+			for _, ta := range s.Team.Agents {
+				if ta.Role == config.RoleOrchestrator && orchID == "" {
+					orchID = ta.ID
+				}
+			}
+			health := map[string]service.Health{}
+			var registered []store.Agent
 			for _, ta := range s.Team.Agents {
 				a, known := rows[ta.ID]
 				live := false
@@ -309,7 +329,14 @@ func statusCmd() *cobra.Command {
 				}
 				id := agentrows.IdentityOf(s.Store, ta.ID)
 				cx := agentrows.ContextOf(s.Store, ta.ID, s.Team.Defaults.ContextThreshold())
-				out.Agents = append(out.Agents, statusAgent{ta.ID, ta.Role, model, st, a.CurrentTask, denied[ta.ID], askID, id.GroundAt, id.Correction, cx.Tokens, cx.Over(), cx.LastResetAt})
+				out.Agents = append(out.Agents, statusAgent{ta.ID, ta.Role, model, st, a.CurrentTask, denied[ta.ID], askID, id.GroundAt, id.Correction, cx.Tokens, cx.Over(), cx.LastResetAt, waitingFor(s.Store, ta.ID, orchID, live)})
+				if known {
+					registered = append(registered, a)
+					health[a.ID] = service.AgentHealth(s.Store, a.ID, live, time.Now())
+				}
+			}
+			for _, w := range agentrows.WhoAll(s.Store, s.Team, registered, health, time.Now()) {
+				out.Who = append(out.Who, statusWho{w.ID, w.State, w.Last, w.Slai})
 			}
 			tasks, err := s.Store.ListTasks("")
 			if err != nil {
@@ -326,8 +353,18 @@ func statusCmd() *cobra.Command {
 				enc.SetIndent("", "  ")
 				return enc.Encode(out)
 			}
+			if len(out.Who) > 0 {
+				fmt.Println("Who is working:")
+				for _, w := range out.Who {
+					fmt.Printf("  %-12s %s\n", w.ID, agentrows.Who{State: w.State, Last: w.Last, Slai: w.Slai}.Line())
+				}
+				fmt.Println()
+			}
 			for _, a := range out.Agents {
 				fmt.Printf("%-12s %-20s %-8s %-16s %s%s\n", a.ID, a.Role, a.Model, a.Status, a.CurrentTask, deniedNote(a.DeniedCount)+identityNote(a, time.Now())+contextNote(a, s.Team.Defaults.ContextThreshold(), time.Now()))
+				if a.Waiting != nil {
+					fmt.Printf("  %s\n", a.Waiting.Text)
+				}
 				if a.AskID != 0 {
 					fmt.Printf("  %s is asking you (ask %d). Answer with: slai reply %d \"...\"\n", a.ID, a.AskID, a.AskID)
 				}

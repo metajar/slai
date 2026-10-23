@@ -437,6 +437,28 @@ func projectChecks(ctx context.Context, dir string, fix bool, w io.Writer) int {
 		ids = append(ids, a.ID)
 	}
 	bad += identityCheck(w, st, dir, ids)
+	bad += identityRunChecks(w, st, dir, ids, func(id string) bool {
+		for _, ag := range agents {
+			if ag.ID == id {
+				return liveSet[ag.TmuxSession]
+			}
+		}
+		return false
+	})
+	orchID := ""
+	for _, ta := range team.Agents {
+		if ta.Role == config.RoleOrchestrator && orchID == "" {
+			orchID = ta.ID
+		}
+	}
+	doctorWaiting(w, st, ids, orchID, func(id string) bool {
+		for _, ag := range agents {
+			if ag.ID == id {
+				return liveSet[ag.TmuxSession]
+			}
+		}
+		return false
+	})
 	for _, a := range agents {
 		live := liveSet[a.TmuxSession]
 		switch {

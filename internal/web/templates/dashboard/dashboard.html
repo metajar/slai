@@ -10,6 +10,13 @@
   <p class="dash-sentence" id="dash-sentence" role="status">{{.Sentence}}</p>
   <div id="dash-msg" role="status"></div>
 
+  {{if .Who}}<div class="card mb-3 dash-who"><div class="card-header"><h3 class="card-title">Who is working</h3></div>
+    <ul class="list-group list-group-flush">{{range .Who}}<li class="list-group-item d-flex flex-wrap gap-2">
+      <strong>{{.ID}}</strong> <span>{{.State}}</span>
+      {{if .Last}}<span class="dash-reason">last: {{.Last}}</span>{{end}}
+      {{if .Slai}}<span class="dash-reason">{{.Slai}}</span>{{end}}
+    </li>{{end}}</ul></div>{{end}}
+
   {{range .Banners}}<div class="dash-banner dash-banner-{{.Class}}" role="status">
     <div class="flex-fill"><strong>{{.Title}}.</strong> {{.Text}}</div>
     {{if and .Resume (not $.ReadOnly) $.HasCtl}}<form hx-post="/team/resume" hx-target="#dash-msg" hx-swap="innerHTML"><button class="btn btn-sm btn-primary" type="submit">Resume</button></form>{{end}}
