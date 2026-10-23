@@ -1,6 +1,7 @@
 package supervisor
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -18,6 +19,35 @@ const (
 	// left stalled waiting for a human.
 	LoopHold = 90 * time.Second
 )
+
+// The user is asked about a message loop only when one pair trips the guard LoopAskAfter times
+// within LoopAskWindow; a single trip is just logged (a loop_hold event).
+const (
+	LoopAskAfter  = 3
+	LoopAskWindow = time.Hour
+)
+
+// loopTrips counts the loop_hold events of the pair within LoopAskWindow (including this one).
+func (s *Supervisor) loopTrips(a, b string) int {
+	evs, err := s.Store.EventsByKind("", "loop_hold", 100)
+	if err != nil {
+		return 1
+	}
+	since := s.now().Add(-LoopAskWindow).Unix()
+	n := 0
+	for _, e := range evs {
+		var d struct {
+			Agents []string `json:"agents"`
+		}
+		if json.Unmarshal([]byte(e.Data), &d) != nil || len(d.Agents) != 2 || e.At < since {
+			continue
+		}
+		if (d.Agents[0] == a && d.Agents[1] == b) || (d.Agents[0] == b && d.Agents[1] == a) {
+			n++
+		}
+	}
+	return n
+}
 
 // KVHoldPrefix + agent id holds the unix time a guard hold on that agent ends.
 const KVHoldPrefix = "hold.until."
@@ -58,12 +88,18 @@ func (s *Supervisor) checkLoops() [][2]string {
 			_ = s.PauseAgentQuiet(id)
 			_ = s.Store.SetKV(KVHoldPrefix+id, until)
 		}
-		s.event("", "ask_user", map[string]any{
-			"reason":   "message_loop",
-			"agents":   []string{p.A, p.B},
-			"count":    p.Count,
-			"question": fmt.Sprintf("%s and %s exchanged %d chat messages in %s; holding both for %s to break a possible loop (it releases by itself; `u` or `slai resume` releases it sooner).", p.A, p.B, p.Count, LoopWindow, LoopHold),
-		})
+		// Every trip is logged; the user is only asked when the same pair keeps looping
+		// (LoopAskAfter trips within LoopAskWindow): the hold releases by itself.
+		trip := map[string]any{"agents": []string{p.A, p.B}, "count": p.Count}
+		s.event("", "loop_hold", trip)
+		if s.loopTrips(p.A, p.B) >= LoopAskAfter {
+			s.event("", "ask_user", map[string]any{
+				"reason":   "message_loop",
+				"agents":   []string{p.A, p.B},
+				"count":    p.Count,
+				"question": fmt.Sprintf("%s and %s keep looping: %d chat messages in %s, held for %s again (%d times in the last hour; each hold releases by itself, `u` or `slai resume` releases it sooner). Look at what they are arguing about.", p.A, p.B, p.Count, LoopWindow, LoopHold, LoopAskAfter),
+			})
+		}
 		acted = append(acted, [2]string{p.A, p.B})
 	}
 	return acted

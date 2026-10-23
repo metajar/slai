@@ -9,12 +9,14 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/oorbt/slai/internal/config"
 	"github.com/oorbt/slai/internal/git"
+	"github.com/oorbt/slai/internal/health"
 	"github.com/oorbt/slai/internal/hooks"
 	"github.com/oorbt/slai/internal/roles"
 	"github.com/oorbt/slai/internal/store"
@@ -291,18 +293,25 @@ func (s *Supervisor) wakeTick(ctx context.Context) {
 		}
 	}
 	pending, err := s.Store.PendingWake(s.now().Add(-WakeRetry).Unix())
-	if err != nil || len(pending) == 0 {
+	if err != nil {
+		return
+	}
+	if len(pending) == 0 {
+		s.clearStaleSkips(agents, nil)
 		return
 	}
 	byAgent := map[string][]store.Message{}
 	for _, m := range pending {
 		byAgent[m.To] = append(byAgent[m.To], m)
 	}
+	s.clearStaleSkips(agents, byAgent)
 	paused, _ := s.Store.PausedAgents()
 	gate := s.checkSpend()
+	// A "working" status only holds a slot while the agent shows signs of life: one whose
+	// hooks and tool calls went quiet (a phantom) must not starve the rest of the team.
 	working := 0
 	for _, a := range agents {
-		if a.Status == "working" {
+		if a.Status == "working" && s.now().Sub(time.Unix(s.lastActivity(a), 0)) <= health.StaleAfter {
 			working++
 		}
 	}
@@ -321,8 +330,15 @@ func (s *Supervisor) wakeTick(ctx context.Context) {
 	}
 	sort.SliceStable(agents, func(i, j int) bool { return owed(agents[i].ID) > owed(agents[j].ID) })
 	for _, a := range agents {
-		msgs := byAgent[a.ID]
-		if len(msgs) == 0 || paused[a.ID] || gate.blocked(a.ID) {
+		all := byAgent[a.ID]
+		if len(all) == 0 {
+			continue
+		}
+		// Assignments whose worktree switch failed are held back from get_inbox (see
+		// prepareAssignments); they must not count toward this agent's wake state or line.
+		msgs := s.withoutHeld(all)
+		if paused[a.ID] || gate.blocked(a.ID) {
+			s.skipWake(a.ID, SkipHeld)
 			continue
 		}
 		answer := a.Status == "waiting_on_user" && hasKind(msgs, "user")
@@ -332,28 +348,39 @@ func (s *Supervisor) wakeTick(ctx context.Context) {
 			answer = true
 		}
 		if !idleish(a.Status) && !answer {
+			s.skipWake(a.ID, SkipBusy)
 			continue
 		}
-		if s.wakeHeld(ctx, a, msgs) {
+		if len(msgs) > 0 && s.wakeHeld(ctx, a, msgs) {
+			s.skipWake(a.ID, SkipHeld)
 			continue
 		}
 		if working >= s.Team.Defaults.MaxConcurrentAgents && !hasKind(msgs, "ping") { // a liveness ping must get through
+			s.skipWake(a.ID, SkipSlot)
 			continue
 		}
 		if live, err := s.Tmux.HasSession(ctx, a.TmuxSession); err != nil || !live {
 			continue
 		}
 		if s.Store.Focused(a.ID, s.now()) {
+			s.skipWake(a.ID, SkipFocus)
 			continue // user is typing into this agent in the TUI
 		}
 		if n, err := s.Tmux.ClientCount(ctx, a.TmuxSession); err != nil || n > 0 {
+			s.skipWake(a.ID, SkipAttached)
 			continue // user is attached; never type over them
 		}
-		msgs = s.refreshPending(a.ID, msgs)
-		if !s.prepareAssignments(ctx, a, msgs) {
-			continue
+		all = s.refreshPending(a.ID, all)
+		held := s.prepareAssignmentsHeld(ctx, a, all)
+		msgs = withoutIDs(s.withoutHeld(all), held)
+		if len(msgs) == 0 {
+			if len(held) > 0 {
+				s.skipWake(a.ID, SkipPrepFailed)
+			}
+			continue // nothing deliverable yet; the switch is retried on the next tick
 		}
 		if !s.safeToType(ctx, a) {
+			s.skipWake(a.ID, SkipModal)
 			continue
 		}
 		line := fmt.Sprintf("[slai] You have %d new items. Call get_inbox.", len(msgs))
@@ -391,6 +418,7 @@ func (s *Supervisor) wakeTick(ctx context.Context) {
 		if upgraded {
 			_ = s.Store.DeleteKV(kvUpgraded + a.ID)
 		}
+		s.clearSkip(a.ID)
 		s.wakeSent(a, msgs)
 		s.noteWakeTyped(a, line)
 		ids := make([]int64, 0, len(msgs))
@@ -405,6 +433,58 @@ func (s *Supervisor) wakeTick(ctx context.Context) {
 	}
 }
 
+// Why mail is waiting (H-1). Every branch of the wake tick that leaves an agent's mail
+// unwoken records kv wake.skip.<agent> = "<reason>|<since>"; a wake clears it. `slai status`
+// and `slai doctor` (H-4) show it.
+const (
+	kvWakeSkip     = "wake.skip."  // + agent
+	SkipHeld       = "held"        // paused, spend-capped, loop-guard hold, or too many unanswered wakes
+	SkipSlot       = "slot"        // max_concurrent_agents is full
+	SkipFocus      = "focus"       // the user is typing into the agent in the TUI
+	SkipAttached   = "attached"    // a tmux client is attached
+	SkipModal      = "modal"       // a permission or trust prompt is on screen
+	SkipPrepFailed = "prep_failed" // the worktree switch for its assignment failed
+	SkipBusy       = "busy"        // mid-turn: mail waits for its Stop hook
+)
+
+// skipWake records why agent's mail is not being woken now. The since stamp survives repeated
+// ticks with the same reason.
+func (s *Supervisor) skipWake(agent, reason string) {
+	if cur := strings.SplitN(s.kvGet(kvWakeSkip+agent), "|", 2); cur[0] == reason {
+		return
+	}
+	_ = s.Store.SetKV(kvWakeSkip+agent, fmt.Sprintf("%s|%d", reason, s.now().Unix()))
+}
+
+func (s *Supervisor) clearSkip(agent string) {
+	if s.kvGet(kvWakeSkip+agent) != "" {
+		_ = s.Store.DeleteKV(kvWakeSkip + agent)
+	}
+}
+
+// clearStaleSkips drops the reason of every agent that has nothing pending any more.
+func (s *Supervisor) clearStaleSkips(agents []store.Agent, pending map[string][]store.Message) {
+	for _, a := range agents {
+		if len(pending[a.ID]) == 0 {
+			s.clearSkip(a.ID)
+		}
+	}
+}
+
+// WakeSkipReason returns the recorded reason and since-time (unix) agent's mail is waiting,
+// or "" when it is not.
+func WakeSkipReason(st *store.Store, agent string) (reason string, since int64) {
+	v, _, _ := st.GetKV(kvWakeSkip + agent)
+	f := strings.SplitN(v, "|", 2)
+	if f[0] == "" {
+		return "", 0
+	}
+	if len(f) == 2 {
+		since, _ = strconv.ParseInt(f[1], 10, 64)
+	}
+	return f[0], since
+}
+
 // Wake limits: a wake line costs the agent a billable turn, so an agent that keeps
 // ignoring the same unread items is not poked forever.
 //
@@ -417,6 +497,7 @@ const (
 	MaxUnansweredWakes = 5
 	GiveUpAfter        = 10 * time.Minute // span of counted wakes before "may be stuck"
 	WakeBusyHold       = 5 * time.Minute  // do not re-wake an agent that has not ended a turn since
+	WakeRearmEvery     = 10 * time.Minute // after MaxUnansweredWakes: one more wake this often, never a permanent hold
 	AskUserPatience    = 15 * time.Minute
 	kvWakeTries        = "wake.tries." // + agent: "<oldest pending id>|<counted wakes>|<first at>|<last at>|<last stop event id>|<alerted>"
 )
@@ -471,7 +552,9 @@ func (s *Supervisor) lastStopID(agent string) int64 {
 
 // wakeHeld reports whether a wake must not be sent now. It never changes the
 // wake count; it only emits the "may be stuck" alert, once, when the agent has
-// ignored MaxUnansweredWakes wakes over at least GiveUpAfter.
+// ignored MaxUnansweredWakes wakes over at least GiveUpAfter. A held-out agent is not
+// locked out for good: it is woken again every WakeRearmEvery, and the count is dropped
+// as soon as the agent makes a slai tool call after the last wake (it is alive and reading).
 func (s *Supervisor) wakeHeld(ctx context.Context, a store.Agent, msgs []store.Message) bool {
 	w := s.loadWake(a.ID, oldestID(msgs))
 	if w.n == 0 {
@@ -487,9 +570,21 @@ func (s *Supervisor) wakeHeld(ctx context.Context, a store.Agent, msgs []store.M
 				s.restartForMCP(ctx, a, w)
 				return true
 			}
-			s.notify(s.orchestrator(), msgs[0].TaskID, fmt.Sprintf("%s has ignored %d wake-ups over %d minutes for the same unread items (starting with message %d) and is idle. It may be stuck; check it or reassign its work.", a.ID, w.n, (now-w.firstAt)/60, w.id))
+			text := fmt.Sprintf("%s has ignored %d wake-ups over %d minutes for the same unread items (starting with message %d) and is idle. It may be stuck; check it or reassign its work.", a.ID, w.n, (now-w.firstAt)/60, w.id)
+			if a.ID == s.orchestrator() {
+				// nobody above it to tell: the user hears about it directly
+				s.escalate(escalation{agent: a.ID, kind: EscWakeIgnored, user: true, text: text})
+			} else {
+				s.notify(s.orchestrator(), msgs[0].TaskID, text)
+			}
 		}
-		return true
+		if int64(atoi(s.kvGet(kvLastSeen+a.ID))) > w.lastAt {
+			// it has made a slai tool call since the last wake: alive and reading, not locked out
+			s.saveWake(a.ID, wakeState{id: w.id})
+			_ = s.Store.ClearEscalation(a.ID, EscWakeIgnored)
+			return false
+		}
+		return now-w.lastAt < int64(WakeRearmEvery/time.Second) // backoff: one wake per WakeRearmEvery
 	}
 	// Still in (or queued behind) the turn the last wake landed in.
 	return s.lastStopID(a.ID) == w.lastStop && now-w.lastAt < int64(WakeBusyHold/time.Second)
@@ -635,21 +730,48 @@ func (s *Supervisor) switchWorktree(ctx context.Context, a store.Agent, task sto
 }
 
 // prepareAssignments puts an engineer's worktree on the task branch for fresh
-// assignments. Returns false (and records a wake_error event once) on failure.
+// assignments. It returns false (and records a wake_error event once) when a switch failed.
 //
 // An assignment that is queued does not touch the worktree or current_task: the task
 // still waits on dependencies, or the engineer is mid-way through another task. The
 // note still reaches them; worktreeTick switches once the task is startable and the
 // current one has gone to review.
 func (s *Supervisor) prepareAssignments(ctx context.Context, a store.Agent, msgs []store.Message) bool {
+	return len(s.prepareAssignmentsHeld(ctx, a, msgs)) == 0
+}
+
+// SwitchEscalateAfter is how long a worktree switch may keep failing before the user is told.
+const SwitchEscalateAfter = 5 * time.Minute
+
+// EscSwitchFailed is the user-visible escalation for an assignment that could not be handed over.
+const EscSwitchFailed = "switch_failed"
+
+// EscWakeIgnored is raised for the user when the orchestrator itself ignores its wake-ups.
+const EscWakeIgnored = "wake_ignored"
+
+const kvPrepFail = "wake.prepfail." // + agent: unix time its worktree switch first failed
+
+// prepareAssignmentsHeld is prepareAssignments returning the ids of the assignments that could
+// not be handed over: the one whose switch failed and every later fresh assignment. Those are
+// held back from the agent's get_inbox (it would start them on the wrong branch) and retried
+// on the next tick; the agent's other mail is not affected. After SwitchEscalateAfter of
+// failing the user gets an escalation.
+func (s *Supervisor) prepareAssignmentsHeld(ctx context.Context, a store.Agent, msgs []store.Message) (held []int64) {
 	cfg, isCfg := s.agentCfg(a.ID)
 	engineer := isCfg && cfg.Role == config.RoleEngineer
 	cur := a.CurrentTask
 	if fresh, err := s.Store.AgentByID(a.ID); err == nil {
 		cur = fresh.CurrentTask
 	}
+	var failedTask store.Task
+	var failedErr error
 	for _, m := range msgs {
 		if m.Kind != "assignment" || m.TaskID == "" || m.WokenAt != 0 {
+			continue
+		}
+		if failedErr != nil { // after a failed switch nothing later can be handed over either
+			_ = s.Store.HoldInbox(m.ID)
+			held = append(held, m.ID)
 			continue
 		}
 		task, err := s.Store.GetTask(m.TaskID)
@@ -671,11 +793,60 @@ func (s *Supervisor) prepareAssignments(ctx context.Context, a store.Agent, msgs
 		}
 		if err := s.switchWorktree(ctx, a, task); err != nil {
 			s.reportSwitchError(a, task, m.ID, err)
-			return false
+			failedTask, failedErr = task, err
+			_ = s.Store.HoldInbox(m.ID)
+			held = append(held, m.ID)
+			continue
 		}
+		_ = s.Store.ReleaseInbox(m.ID)
 		cur = task.ID
 	}
-	return true
+	if failedErr == nil {
+		if s.kvGet(kvPrepFail+a.ID) != "" {
+			_ = s.Store.DeleteKV(kvPrepFail + a.ID)
+			_ = s.Store.ClearEscalation(a.ID, EscSwitchFailed)
+		}
+		return nil
+	}
+	since := int64(atoi(s.kvGet(kvPrepFail + a.ID)))
+	if since == 0 {
+		since = s.now().Unix()
+		_ = s.Store.SetKV(kvPrepFail+a.ID, strconv.FormatInt(since, 10))
+	}
+	if s.now().Unix()-since >= int64(SwitchEscalateAfter/time.Second) {
+		s.escalate(escalation{agent: a.ID, kind: EscSwitchFailed, user: true, taskID: failedTask.ID,
+			text: fmt.Sprintf("slai has failed for %d min to put %s's worktree on %s (%v); that assignment is held back and retried every tick, the rest of its mail is delivered.", (s.now().Unix()-since)/60, a.ID, failedTask.ID, failedErr)})
+	}
+	return held
+}
+
+// withoutHeld drops the messages held back from get_inbox.
+func (s *Supervisor) withoutHeld(msgs []store.Message) []store.Message {
+	var out []store.Message
+	for _, m := range msgs {
+		if !s.Store.InboxHeld(m.ID) {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+// withoutIDs drops the messages with the given ids.
+func withoutIDs(msgs []store.Message, ids []int64) []store.Message {
+	if len(ids) == 0 {
+		return msgs
+	}
+	skip := map[int64]bool{}
+	for _, id := range ids {
+		skip[id] = true
+	}
+	var out []store.Message
+	for _, m := range msgs {
+		if !skip[m.ID] {
+			out = append(out, m)
+		}
+	}
+	return out
 }
 
 func (s *Supervisor) reportSwitchError(a store.Agent, task store.Task, msgID int64, err error) {

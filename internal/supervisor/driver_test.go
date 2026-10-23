@@ -245,8 +245,10 @@ func TestWakesAreBoundedAndAskUserHasPatience(t *testing.T) {
 			n++
 		}
 	}
-	if n != MaxUnansweredWakes {
-		t.Fatalf("woke %d times, want exactly %d", n, MaxUnansweredWakes)
+	// MaxUnansweredWakes, then no more until the backoff (WakeRearmEvery) has passed: the last
+	// Tick above is GiveUpAfter later, so it re-arms exactly once.
+	if n != MaxUnansweredWakes+1 {
+		t.Fatalf("woke %d times, want %d plus one re-armed wake", n, MaxUnansweredWakes)
 	}
 	if !hasEvent(s, "wake_gave_up") {
 		t.Fatal("giving up was not recorded")

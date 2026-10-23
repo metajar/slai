@@ -337,7 +337,7 @@ func TestLoopGuard(t *testing.T) {
 		t.Fatalf("should trip: %v", got)
 	}
 	p, _ := s.Store.PausedAgents()
-	if !p["eng-1"] || !p["eng-2"] || p["orch"] || !hasEvent(s, "ask_user") {
+	if !p["eng-1"] || !p["eng-2"] || p["orch"] || !hasEvent(s, "loop_hold") || hasEvent(s, "ask_user") {
 		t.Fatalf("pause/event wrong: %v", p)
 	}
 	// messages involving user/slai never count
