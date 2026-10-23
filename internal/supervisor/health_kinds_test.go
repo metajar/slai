@@ -232,6 +232,24 @@ func kindRows() []kindRow {
 				e.s.healthTick(e.ctx)
 			},
 			progress: func(e *kenv) { e.progressed("eng-1"); e.s.healthTick(e.ctx) }},
+		{kind: EscRegroundFailed, agent: "eng-1", env: healthEnv, holds: allHolds,
+			arm: func(e *kenv) {
+				_ = e.s.Store.SetAgentStatus("eng-1", "idle")
+				if _, queued, err := service.QueueReset(e.s.Store, "eng-1", service.ResetReq{Trigger: service.TriggerUser}); err != nil || !queued {
+					e.t.Fatalf("queue: %v %v", queued, err)
+				}
+				e.s.resetTick(e.ctx) // restarts it in a fresh session; now it must call whoami
+			},
+			fire: func(e *kenv) {
+				*e.now = e.now.Add(ResetResend + time.Second)
+				e.s.resetTick(e.ctx) // the identity line is sent again
+				*e.now = e.now.Add(ResetGiveUp + time.Second)
+				e.s.resetTick(e.ctx) // still nothing: the user is told
+			},
+			progress: func(e *kenv) {
+				_ = e.s.Store.SetKV(service.KVWhoami+"eng-1", itoa64(e.now.Unix()+10)) // it called whoami in the end
+				e.s.healthTick(e.ctx)
+			}},
 		{kind: EscUpgradeFailed, agent: "team", env: upgradeEnvFor, noHold: "supervisor-level: no agent involved",
 			arm: func(e *kenv) {
 				e.s.Exec = func(string, []string, []string) error { return os.ErrPermission }

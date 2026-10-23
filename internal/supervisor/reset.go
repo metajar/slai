@@ -54,6 +54,10 @@ func (s *Supervisor) resetTick(ctx context.Context) {
 			continue
 		}
 		if req.ResetAt != 0 {
+			// a paused, stopped or attended agent cannot be woken, so waiting on it proves nothing
+			if a, err := s.Store.AgentByID(cfg.ID); err == nil && s.holdOff(ctx, a, paused) {
+				continue
+			}
 			s.regroundStep(ctx, cfg, req)
 			continue
 		}
