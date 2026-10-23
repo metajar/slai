@@ -23,7 +23,7 @@ import (
 
 func upCmd() *cobra.Command {
 	var noWatch, foreground, detach bool
-	c := &cobra.Command{Use: "up", Short: "Start all agents and a background supervisor (open the dashboard with `slai`)", Args: cobra.NoArgs,
+	c := &cobra.Command{Use: "up", Short: "Start all agents and the supervisor without the dashboard (`slai` does this and opens it)", Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			s, err := load(c.Context())
 			if err != nil {
@@ -250,6 +250,10 @@ func statusCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if dir, _ := os.Getwd(); !hasTeam(dir) {
+				fmt.Println(noTeamMessage)
+				return nil
+			}
 			s, err := load(c.Context())
 			if err != nil {
 				return err
@@ -275,13 +279,32 @@ func statusCmd() *cobra.Command {
 			if h, ok := s.CurrentHold(); ok {
 				out.Hold = &statusHold{h.Name, h.Since}
 			}
+			_, supUp := supervisor.Running(s.Dir)
+			rows := map[string]store.Agent{}
 			for _, a := range agents {
-				live, _ := s.Tmux.HasSession(c.Context(), a.TmuxSession)
-				st := a.Status
-				if !live {
-					st = "dead"
+				rows[a.ID] = a
+			}
+			// Every configured agent is listed, even before anything has started: an agent with
+			// no live session is "dead" only once a supervisor should have it up, else "-".
+			for _, ta := range s.Team.Agents {
+				a, known := rows[ta.ID]
+				live := false
+				if known {
+					live, _ = s.Tmux.HasSession(c.Context(), a.TmuxSession)
 				}
-				out.Agents = append(out.Agents, statusAgent{a.ID, a.Role, a.Model, st, a.CurrentTask, denied[a.ID]})
+				st := a.Status
+				switch {
+				case live:
+				case supUp && known:
+					st = "dead"
+				default:
+					st = "-"
+				}
+				model := ta.Model
+				if known {
+					model = a.Model
+				}
+				out.Agents = append(out.Agents, statusAgent{ta.ID, ta.Role, model, st, a.CurrentTask, denied[ta.ID]})
 			}
 			tasks, err := s.Store.ListTasks("")
 			if err != nil {
@@ -307,7 +330,7 @@ func statusCmd() *cobra.Command {
 					fmt.Printf("%-8s %-18s %-10s %s\n", t.ID, t.Status, t.Assignee, t.Title)
 				}
 			}
-			printHealth(s)
+			printHealth(s, len(out.Tasks))
 			return nil
 		}}
 	c.Flags().BoolVar(&asJSON, "json", false, "machine-readable output")
@@ -410,7 +433,7 @@ func resumeCmd() *cobra.Command {
 
 // printHealth says plainly why work might be stuck: no supervisor, paused agents,
 // or messages nobody has picked up.
-func printHealth(s *supervisor.Supervisor) {
+func printHealth(s *supervisor.Supervisor, openTasks int) {
 	var problems []string
 	pid, running := supervisor.Running(s.Dir)
 	waiting := 0
@@ -420,7 +443,7 @@ func printHealth(s *supervisor.Supervisor) {
 		}
 	}
 	if !running && waiting > 0 {
-		problems = append(problems, fmt.Sprintf("no supervisor is running, so %d message(s) are waiting and nobody will wake the agents. Run `slai` or `slai up`.", waiting))
+		problems = append(problems, fmt.Sprintf("no supervisor is running, so %d message(s) are waiting and nobody will wake the agents. Run `slai`.", waiting))
 	}
 	if h, ok := s.CurrentHold(); ok {
 		problems = append(problems, fmt.Sprintf("the team is on hold %q since %s: nobody is woken or nudged, sessions stay up. `slai resume` continues.", h.Name, time.Unix(h.Since, 0).Format("Jan 2 15:04")))
@@ -444,10 +467,13 @@ func printHealth(s *supervisor.Supervisor) {
 	if running {
 		fmt.Printf("supervisor: running (pid %d)\n", pid)
 	} else {
-		fmt.Println("supervisor: NOT running")
+		fmt.Println("supervisor: not running. " + nextStep(s.Team, false, openTasks))
 	}
 	for _, p := range problems {
 		fmt.Println("! " + p)
+	}
+	if running {
+		fmt.Println(nextStep(s.Team, true, openTasks))
 	}
 }
 

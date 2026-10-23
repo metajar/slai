@@ -33,7 +33,7 @@ slai down            # stop supervisor and all agent sessions
 
 From nothing to one merged task, using the `solo` preset (an orchestrator and one engineer: 2 Claude sessions, no principal, so no review gate). Commands you type start with `$`.
 
-**How to read the outputs.** Output marked *(real)* was copied from a run of the binary built from this repo in a scratch repo (paths shortened). Output marked *(illustrative)* shows the shape, not exact text: a real run depends on your goal, models and timing. Output marked *(expected wording)* is what the commands will print once the init/status wording changes land (core-workflow-clarity tasks B and H); today's text differs a little.
+**How to read the outputs.** Output marked *(real)* was copied from a run of the binary built from this repo in a scratch repo (paths shortened). Output marked *(illustrative)* shows the shape, not exact text: a real run depends on your goal, models and timing.
 
 1. **Check the toolchain.** *(real, first lines; a `slai doctor` also lists leftover teams from other directories)*
 
@@ -49,7 +49,7 @@ From nothing to one merged task, using the `solo` preset (an orchestrator and on
 
    A `✗` line says what is missing. Nothing below works without tmux, git and `claude`.
 
-2. **Write the team file.** In your repo, answer the wizard, or skip it with flags. *(expected wording; today's last line reads "Starting 2 Claude sessions." even though nothing has started yet)*
+2. **Write the team file.** In your repo, answer the wizard, or skip it with flags. *(real)*
 
    ```
    $ cd my-repo
@@ -60,7 +60,7 @@ From nothing to one merged task, using the `solo` preset (an orchestrator and on
 
    Nothing is running yet. **Spend caps: OFF** means no limit: set `defaults.spend_caps` now if you want one (see [What this costs](#what-this-costs)).
 
-3. **Start the team.** *(expected wording for the status line; the dashboard is illustrative)*
+3. **Start the team.** *(the dashboard is illustrative)*
 
    ```
    $ slai

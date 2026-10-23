@@ -45,7 +45,7 @@ func (s *src) DoctorProbe(_ context.Context, which string) (string, error) {
 const sample = `✓ tmux    tmux 3.4
 ✓ git     git version 2.43.0
 ✓ claude  2.1.307 (Claude Code)
-! warn: integration branch slai/integration missing (created by ` + "`slai up`" + `)
+! warn: integration branch slai/integration missing (created by ` + "`slai`" + `)
 ✓ team.yaml valid (5 agents)
 ! warn: orphan tmux session slai-old-eng-1 (not in team.yaml)
 team health:

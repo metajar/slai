@@ -13,6 +13,7 @@ import (
 
 	"github.com/oorbt/slai/internal/orphans"
 	"github.com/oorbt/slai/internal/reaper"
+	"github.com/oorbt/slai/internal/supervisor"
 	"github.com/oorbt/slai/internal/tmux"
 )
 
@@ -50,7 +51,7 @@ func TestDoctorListsOtherTeamsAndFlagsOrphans(t *testing.T) {
 	t.Setenv("SLAI_NO_ORPHAN_SCAN", "")
 	cur, gone, _ := orphanEnv(t)
 	var buf bytes.Buffer
-	bad := doctorOtherTeams(context.Background(), cur, &buf)
+	bad := doctorOtherTeams(context.Background(), cur, false, &buf)
 	out := buf.String()
 	if bad < 1 || !strings.Contains(out, "Other slai teams:") || !strings.Contains(out, "ORPHAN "+gone) || !strings.Contains(out, "2 session(s)") {
 		t.Fatalf("bad=%d\n%s", bad, out)
@@ -60,7 +61,7 @@ func TestDoctorListsOtherTeamsAndFlagsOrphans(t *testing.T) {
 	}
 	// run from inside an agent's worktree: still the same current project
 	buf.Reset()
-	doctorOtherTeams(context.Background(), filepath.Join(cur, ".slai", "worktrees", "eng-1"), &buf)
+	doctorOtherTeams(context.Background(), filepath.Join(cur, ".slai", "worktrees", "eng-1"), false, &buf)
 	if strings.Contains(buf.String(), cur) {
 		t.Fatalf("worktree cwd listed its own team:\n%s", buf.String())
 	}
@@ -95,5 +96,26 @@ func TestDownOrphansStopsOnlyOrphans(t *testing.T) {
 		if !strings.HasPrefix(n, tmux.SessionName(cur, "")) {
 			t.Fatalf("a non-current session survived or current died: %v (gone=%s)", left, gone)
 		}
+	}
+}
+
+func TestDoctorAllShowsHealthyTeamsOnlyWithFlag(t *testing.T) {
+	t.Setenv("SLAI_NO_ORPHAN_SCAN", "")
+	cur, gone, _ := orphanEnv(t)
+	l, err := supervisor.Acquire(gone) // gone now has a live supervisor: healthy, not an orphan
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Release()
+	var def, all bytes.Buffer
+	if bad := doctorOtherTeams(context.Background(), cur, false, &def); bad != 0 {
+		t.Fatalf("healthy team counted as a problem:\n%s", def.String())
+	}
+	if strings.Contains(def.String(), gone) || !strings.Contains(def.String(), "slai doctor --all") {
+		t.Fatalf("default output lists a healthy team or omits the --all hint:\n%s", def.String())
+	}
+	doctorOtherTeams(context.Background(), cur, true, &all)
+	if !strings.Contains(all.String(), "Other slai teams:") || !strings.Contains(all.String(), gone) {
+		t.Fatalf("--all output:\n%s", all.String())
 	}
 }

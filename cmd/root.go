@@ -35,7 +35,7 @@ func newRootCmd() *cobra.Command {
 	}
 	root.AddCommand(initCmd(), upCmd(), downCmd(), attachCmd(), statusCmd(), doctorCmd(), memoryCmd(), superviseCmd(), sendCmd(), holdCmd(), resumeCmd(), priorityCmd(), revertCmd(), cleanCmd(), commitCmd(), serveCmd())
 	root.AddCommand(mcpCmd(), toolCmd(), hookCmd(), statuslineCmd(), versionCmd())
-	root.SetHelpTemplate(root.HelpTemplate() + "{{if not .HasParent}}\n" + rootHelpFooter + "\n{{end}}")
+	root.SetHelpTemplate(root.HelpTemplate() + "{{if not .HasParent}}\n" + rootHelpFooter + "\n{{slaiNextStep}}\n{{end}}")
 	return root
 }
 
