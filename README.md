@@ -262,11 +262,24 @@ With `notify.command` set, the supervisor runs it (with `sh -c`, in the project 
 
 `events:` limits which of these fire; an unknown name fails validation and lists the allowed ones. Without a `notify:` section nothing changes.
 
-## Autonomy: how a team drives itself to completion
+## How agents get woken and what it costs
 
-The wake loop delivers unread messages. On top of that the supervisor runs a **driver** (disable with `SLAI_NO_DRIVER=1`) that notices the quiet ways a team can stall and re-engages the right agent:
+Agents never poll. Each is an idle Claude session until slai types one line into its tmux pane, and that line is the only thing that starts a turn.
 
-- **Owed work:** an agent that is idle while it still owns an open task (assigned, in progress, changes requested; or in review, for the principal) gets a specific reminder after 90 s, then every 3 min. After four reminders without progress the orchestrator is told which agent is stuck and on what.
+**What wakes an agent.** The supervisor's wake tick types `[slai] You have N new items. Call get_inbox.` into an agent's pane when all of these hold: the agent has unread messages or assignments; it is idle (or finished); it is not paused, held or spend-capped; it is under `max_concurrent_agents`; its session is alive; nobody is attached to or focused on its pane; and the pane is safe to type into (no permission prompt). An agent that is waiting on you (`ask_user`) is woken only when the item is your answer, or after 15 minutes for other work. If the line goes unanswered it is typed again after 60 seconds.
+
+**What that line is.** A nudge, not a message: `N` is how many unread items are waiting, and the agent reads them by calling `get_inbox` ([which command is which](docs/commands.md)). You never need to act on it.
+
+**What a wake costs.** One agent turn: the `get_inbox` call plus whatever the items ask for. An idle agent with nothing owed costs nothing. The one background exception: while tasks are open and nothing is moving, the orchestrator gets a periodic board digest, which is also a turn. Spend is counted per agent and per task; to limit it, see [Spend caps](#spend-caps-per-task-and-per-run) (80% warns once, 100% stops waking that scope and asks you once; `0` or absent means no cap).
+
+**When an agent ignores its inbox.** The **driver** (disable with `SLAI_NO_DRIVER=1`) watches for the quiet ways a team stalls:
+
+- **Owed work:** an agent that is idle while it still owns an open task (assigned, in progress, changes requested; or in review, for the principal) gets "Reminder from slai (k of 4)" after 90 s, then every 3 min. After four reminders without progress the orchestrator is told which agent is stuck and on what (the orchestrator itself: you are told).
+- **What `slai status` and the board call it:** `stale` is an agent that owes work or has unread items and has been silent for 10+ minutes; `gated` is silent because slai is deliberately not waking it (paused, held, spend capped, queued for a slot), so nobody needs to act; `blocked` means a human must act (a permission prompt, or an `ask_user`); `dead` is a session that is gone, and it is revived automatically if it has work (at most 3 times per 10 min).
+- **Stuck mid-turn:** an agent that has been working for 3 min with no activity and an unchanged pane is interrupted and nudged, then killed and revived if that fails.
+
+Other things the driver does:
+
 - **The orchestrator never goes quiet:** while tasks are open and nothing is moving it gets a periodic board digest; when the last task closes it is told to verify the result against the original request, then call `finish` with a summary. `slai status` shows the finished run and its summary.
 - **Crashes:** a dead agent that still has work or unread messages is revived automatically (at most 3 times per 10 min) into its **own** Claude session: each agent gets a persistent session id and revives with `--resume <that id>`, never `--continue` (which resumes whichever conversation in the directory is newest and would cross agents that share the project directory). `slai`'s dashboard respawns the supervisor if it dies, and a panic in one supervisor stage cannot stop the others.
 - **Guards never deadlock the team:** the message-loop guard counts only real chatter (not assignments, reports or review traffic) and holds a pair for 90 s, then releases itself. Wake-ups to an agent that ignores them are capped. An agent parked on `ask_user` still receives other work after 15 min. Leftover uncommitted files in an engineer's worktree are stashed (and the engineer told), not allowed to block the next task.
