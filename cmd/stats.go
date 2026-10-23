@@ -34,7 +34,7 @@ func writeStats(w io.Writer, rep service.StatsReport, asJSON bool) error {
 	fmt.Fprintf(w, "\ntotal spend: $%.2f (all agents)\n", rep.TotalSpendUSD)
 	fmt.Fprintln(w, "\nrounds = request_review calls per merged task; rework = merged tasks that got request_changes;")
 	fmt.Fprintln(w, "refused = merge_refused events; time = median assigned to merged; spend is from recorded usage.")
-	fmt.Fprintln(w, "agents with no merged tasks (orch, pm, ...) show - for the merge-based columns; both tables count all spend.")
+	fmt.Fprintln(w, "a - means no merged task (e.g. orch, pm); both tables count all spend.")
 	return nil
 }
 
