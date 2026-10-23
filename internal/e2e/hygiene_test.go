@@ -149,7 +149,7 @@ func TestAuditKillsAndReportsALeak(t *testing.T) {
 		t.Fatalf("procsMatching = %v, want [%d]", got, cmd.Process.Pid)
 	}
 	desc := reapLeaks(300*time.Millisecond, dir)
-	if len(desc) != 1 || !strings.Contains(desc[0], dir) {
+	if len(desc) != 1 || !strings.Contains(desc[0], "sleep 300") {
 		t.Fatalf("reapLeaks = %v", desc)
 	}
 	if got := procsMatching(dir); len(got) != 0 {
