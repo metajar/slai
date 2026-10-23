@@ -197,6 +197,10 @@ func TestRefusedApproveRecordsNoVerdictsAndRerequestNeedsClaims(t *testing.T) {
 	if r["status"] != "in_review" || r["head_sha"] == nil {
 		t.Fatalf("%v", r)
 	}
+	// the reviewer's earlier review_diff is of the old commit: approve wants a new one
+	_, err = s.Approve(ctx, "prin", ApproveArgs{TaskID: id, ACVerdicts: []ACVerdictArg{{AC: "AC 1", Pass: true}}})
+	wantErr(t, err, "head_moved_ok")
+	must(s.ReviewDiff(ctx, "prin", TaskRef{TaskID: id}))
 	ap := j(must(s.Approve(ctx, "prin", ApproveArgs{TaskID: id, ACVerdicts: []ACVerdictArg{{AC: "AC 1", Pass: true}}})))
 	if ap["approved_sha"] != r["head_sha"] || ap["unanswered_claims"] != nil {
 		t.Fatalf("approve after the re-request: %v (pinned %v)", ap, r["head_sha"])

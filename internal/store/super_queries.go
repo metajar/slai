@@ -204,6 +204,20 @@ func (s *Store) SetAgentTask(id, taskID string) error {
 	return err
 }
 
+// ChargeAgentTo points the agent's usage at taskID ("" stops it) without touching its turn
+// counter, unlike SetAgentTask. A reviewer uses it so its review tokens count toward the task.
+func (s *Store) ChargeAgentTo(id, taskID string) error {
+	_, err := s.db.Exec(`UPDATE agents SET current_task = ? WHERE id = ?`, taskID, id)
+	return err
+}
+
+// AgentTask returns the agent's current task id ("" when none or no such agent).
+func (s *Store) AgentTask(id string) string {
+	var t string
+	_ = s.db.QueryRow(`SELECT current_task FROM agents WHERE id = ?`, id).Scan(&t)
+	return t
+}
+
 // FocusWindow is how long a TUI focus heartbeat keeps wake-ups away from an agent.
 const FocusWindow = 5 * time.Second
 
