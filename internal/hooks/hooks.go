@@ -96,12 +96,18 @@ func Handle(st *store.Store, agentID, event string, p Payload, opt Options) (Res
 
 	data, _ := json.Marshal(map[string]any{
 		"session": p.SessionID, "tool": p.ToolName, "type": p.NotificationType, "status": next,
+		"source": p.Source, // sessionstart: startup | resume | clear | compact ("" for other events)
 	})
 	errs = append(errs, st.AddEvent(agentID, "hook:"+ev, string(data)))
 
 	stopRecorded := false
 	switch ev {
 	case "sessionstart":
+		// /clear starts a new conversation under a new id: the file a revive resumes from
+		// must follow it, or the next revive resumes the conversation that was cleared.
+		if opt.ProjectDir != "" {
+			errs = append(errs, SaveSessionID(opt.ProjectDir, agentID, p.SessionID))
+		}
 		_, revived, _ := st.GetKV(KVRevived + agentID) // noteSessionStart consumes it
 		errs = append(errs, noteSessionStart(st, agentID, p.Source))
 		errs = append(errs, noteIdentityGap(st, agentID, p.Source, revived, opt.IdentityLine))
@@ -281,9 +287,25 @@ func noteSessionStart(st *store.Store, agent, source string) error {
 	if source == "resume" || source == "compact" {
 		return nil
 	}
-	data, _ := json.Marshal(map[string]any{"source": source})
-	errs := []error{st.AddEvent(agent, "revive_fresh", string(data))}
 	ags, _ := st.GetAgents()
+	fresh := map[string]any{"source": source}
+	isOrch := false
+	for _, a := range ags {
+		if a.ID == agent && a.Role == "orchestrator" {
+			isOrch = true
+		}
+	}
+	var errs []error
+	if isOrch {
+		// nobody above the orchestrator can be told: the user is, as an open attention item
+		text := agent + " (the orchestrator) was restarted but its session did not resume, so it lost its conversation context. It is re-grounded and re-reads its inbox and the board; re-brief it if it was mid-goal."
+		fresh["text"], fresh["user"], fresh["escalation"] = text, true, true
+		_ = st.ClearEscalation(agent, EscReviveFresh) // each fresh revive is news again
+		_, err := st.RaiseEscalation(store.Escalation{Agent: agent, Kind: EscReviveFresh, Text: text, Since: time.Now().Unix(), User: true})
+		errs = append(errs, err)
+	}
+	data, _ := json.Marshal(fresh)
+	errs = append(errs, st.AddEvent(agent, "revive_fresh", string(data)))
 	for _, a := range ags {
 		if a.Role == "orchestrator" && a.ID != agent {
 			_, err := st.AddMessage(store.Message{From: "slai", To: a.ID, Kind: "note",
@@ -293,6 +315,11 @@ func noteSessionStart(st *store.Store, agent, source string) error {
 	}
 	return errors.Join(errs...)
 }
+
+// EscReviveFresh is the user-facing escalation raised when the orchestrator comes back
+// from a revive without its conversation. The supervisor clears it once the orchestrator
+// has made progress again.
+const EscReviveFresh = "revive_fresh"
 
 // KVIdentityPending is set (+ agent) when a SessionStart showed the agent's context was
 // reset; the supervisor's next wake-up line for it then opens with the identity sentence.

@@ -402,3 +402,121 @@ func TestSessionStartWithoutIdentitySourceQueuesNothing(t *testing.T) {
 		t.Fatalf("msgs = %v", m)
 	}
 }
+
+func lastSessionStartEvent(t *testing.T, st *store.Store, agent string) map[string]any {
+	t.Helper()
+	evs, _ := st.RecentEvents(50)
+	for _, e := range evs { // newest first
+		if e.Agent == agent && e.Kind == "hook:sessionstart" {
+			var d map[string]any
+			_ = json.Unmarshal([]byte(e.Data), &d)
+			return d
+		}
+	}
+	t.Fatal("no hook:sessionstart event")
+	return nil
+}
+
+func TestSessionStartStoresSource(t *testing.T) {
+	for _, src := range []string{"startup", "resume", "clear", "compact"} {
+		st := newStore(t, "idle", "")
+		if _, err := Handle(st, "e1", "SessionStart", Payload{Source: src, SessionID: "s1"}, Options{}); err != nil {
+			t.Fatal(err)
+		}
+		if got := lastSessionStartEvent(t, st, "e1")["source"]; got != src {
+			t.Errorf("source %q stored as %v", src, got)
+		}
+	}
+}
+
+// /clear starts a conversation under a new id: session-id follows it, so a later revive
+// resumes the new conversation, not the cleared one.
+func TestClearSessionStartRewritesSessionID(t *testing.T) {
+	st := newStore(t, "idle", "")
+	proj := t.TempDir()
+	path := filepath.Join(proj, ".slai", "run", "e1", "session-id")
+	os.MkdirAll(filepath.Dir(path), 0o755)
+	os.WriteFile(path, []byte("old-id\n"), 0o644)
+	if _, err := Handle(st, "e1", "SessionStart", Payload{Source: "clear", SessionID: "new-id"}, Options{ProjectDir: proj}); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(path); strings.TrimSpace(string(b)) != "new-id" {
+		t.Fatalf("session-id = %q", b)
+	}
+	// the same id again, or an event without one, changes nothing
+	Handle(st, "e1", "SessionStart", Payload{Source: "compact", SessionID: "new-id"}, Options{ProjectDir: proj})
+	Handle(st, "e1", "SessionStart", Payload{Source: "startup"}, Options{ProjectDir: proj})
+	if b, _ := os.ReadFile(path); strings.TrimSpace(string(b)) != "new-id" {
+		t.Fatalf("session-id = %q", b)
+	}
+}
+
+// compact and clear re-ground through the trigger T-0029 wired; one note each, not two.
+func TestCompactAndClearReGroundOnce(t *testing.T) {
+	for _, src := range []string{"compact", "clear"} {
+		st := newStore(t, "idle", "")
+		Handle(st, "e1", "SessionStart", Payload{Source: src, SessionID: "x"}, Options{IdentityLine: identityOf})
+		n := 0
+		msgs, _ := st.UndeliveredFor("e1")
+		for _, m := range msgs {
+			if strings.HasPrefix(m.Body, "You are e1") {
+				n++
+			}
+		}
+		if n != 1 {
+			t.Errorf("%s: %d identity notes", src, n)
+		}
+	}
+}
+
+// A fresh (non-resumed) revive of the orchestrator is raised to the user; a resumed one,
+// and a fresh revive of anyone else, is not.
+func TestOrchestratorFreshReviveTellsTheUser(t *testing.T) {
+	setup := func(t *testing.T, role string) *store.Store {
+		st := newStore(t, "idle", "")
+		st.UpsertAgent(store.Agent{ID: "boss", Role: role, Status: "idle"})
+		st.SetKV(KVRevived+"boss", strconv.FormatInt(time.Now().Unix(), 10))
+		return st
+	}
+	userItems := func(st *store.Store) []store.Escalation {
+		var out []store.Escalation
+		escs, _ := st.OpenEscalations()
+		for _, e := range escs {
+			if e.User && e.Kind == EscReviveFresh {
+				out = append(out, e)
+			}
+		}
+		return out
+	}
+	st := setup(t, "orchestrator")
+	Handle(st, "boss", "SessionStart", Payload{Source: "startup"}, Options{})
+	got := userItems(st)
+	if len(got) != 1 || got[0].Agent != "boss" || !strings.Contains(got[0].Text, "orchestrator") {
+		t.Fatalf("escalations = %+v", got)
+	}
+	if d := lastSessionStartEvent(t, st, "boss"); d["source"] != "startup" {
+		t.Fatalf("%v", d)
+	}
+	evs, _ := st.RecentEvents(20)
+	found := false
+	for _, e := range evs {
+		if e.Kind == "revive_fresh" && strings.Contains(e.Data, `"escalation":true`) && strings.Contains(e.Data, `"user":true`) {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("no user-facing revive_fresh event (notify keys on escalation:true)")
+	}
+	if st := setup(t, "orchestrator"); true {
+		Handle(st, "boss", "SessionStart", Payload{Source: "resume"}, Options{})
+		if len(userItems(st)) != 0 {
+			t.Fatal("a resumed revive was raised to the user")
+		}
+	}
+	if st := setup(t, "engineer"); true {
+		Handle(st, "boss", "SessionStart", Payload{Source: "startup"}, Options{})
+		if len(userItems(st)) != 0 {
+			t.Fatal("a non-orchestrator revive was raised to the user")
+		}
+	}
+}

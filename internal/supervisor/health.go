@@ -177,6 +177,9 @@ func (s *Supervisor) healthTick(ctx context.Context) {
 	}
 }
 
+// ReviveFreshShown is how long the "orchestrator restarted without its context" item stays open.
+const ReviveFreshShown = 10 * time.Minute
+
 // clearResolved closes every escalation whose cause has gone away.
 func (s *Supervisor) clearResolved(ctx context.Context, agents []store.Agent, tasks []store.Task) {
 	escs, err := s.Store.OpenEscalations()
@@ -210,6 +213,9 @@ func (s *Supervisor) clearResolved(ctx context.Context, agents []store.Agent, ta
 		case EscHooksFailing:
 			at, _ := s.Store.LastHookEventAt(e.Agent)
 			done = !ok || lv() == health.Dead || at > e.Since || (at != 0 && s.now().Sub(time.Unix(at, 0)) < HooksSilentAfter)
+		case hooks.EscReviveFresh:
+			// stays up long enough for the user to see it, then goes once the agent is working again
+			done = !ok || (s.now().Sub(time.Unix(e.Since, 0)) > ReviveFreshShown && s.progressAfter(a.ID, e.Since))
 		case EscMCPCrash:
 			done = !ok || (lv() != health.Dead && s.progressAfter(a.ID, e.Since))
 		case EscGuardMissing:
