@@ -17,7 +17,7 @@ All cost figures come from slai's own usage records (the `usage` table in `.slai
 - **spend (per agent):** all recorded usage of that agent in the window: every turn it took, task work or not. It includes the orchestrator and the principal.
 - **total spend:** the sum of the spend of every agent. This is "what the run cost".
 - **$/merged:** an agent's own spend divided by the tasks it merged. It exists only for agents that were assigned a task, so it is the *engineer's* cost per merged task. Orchestrator and principal spend is in the total, **not** in any `$/merged`; for the real cost per merged task divide the total by the merged count.
-- **Per task** (`per_task_usd`): each usage record is stamped with the task its agent was working on when the record was written. The assignee's tokens count toward its task. A reviewer's tokens are meant to count too (from `review_diff` until `approve` or `request_changes`); see the gate run below for what actually happened.
+- **Per task** (`per_task_usd`, usage by `task_id`): each turn's usage is stamped with the agent's current task at the end of that turn. The assignee's turns carry the task. A reviewer's turns do not yet: slai clears the reviewer's charge when `approve`/`request_changes` is called, before that turn's usage is recorded (known bug as of 2026-10-23, fix pending). In the measured run below, the principal's $0.96 is therefore per agent only and no part of it is in any task's `per_task_usd`.
 
 ## Run 1: solo (no review gate)
 
