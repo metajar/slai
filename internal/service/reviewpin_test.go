@@ -269,3 +269,47 @@ func TestReviewChargeEndsViaStoreFallback(t *testing.T) {
 		t.Fatal("nothing pending the second time")
 	}
 }
+
+// Several reviews in one turn: the second review_diff takes over the charge the first verdict
+// left waiting for the Stop hook, so the turn's row goes to the newest reviewed task.
+func TestBackToBackReviewsInOneTurnChargeTheNewest(t *testing.T) {
+	curT = t
+	s := newSvc(t, true)
+	var ids []string
+	for i := 0; i < 2; i++ {
+		id := createTask(t, s)
+		must(s.GetTask(ctx, "eng-1", GetTaskArgs{TaskID: id}))
+		commitOnBranch(t, s, "slai/eng-1/"+id)
+		must(s.RequestReview(ctx, "eng-1", RequestReviewArgs{TaskID: id, Summary: "done"}))
+		ids = append(ids, id)
+	}
+	a, b := ids[0], ids[1]
+	stop := func(prompt int64) {
+		t.Helper()
+		if _, err := hooks.Handle(s.Store, "prin", "stop", hooks.Payload{Usage: &hooks.NeutralUsage{Prompt: prompt, Output: 1, Cost: 1}}, hooks.Options{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	must(s.ReviewDiff(ctx, "prin", TaskRef{TaskID: a}))
+	must(s.Approve(ctx, "prin", ApproveArgs{TaskID: a}))
+	must(s.ReviewDiff(ctx, "prin", TaskRef{TaskID: b}))
+	stop(100)
+	u := must(s.Store.UsageByTask(0))
+	if u[b].CostUSD != 1 || u[a].CostUSD != 0 {
+		t.Fatalf("turn row should go to %s only: a=%+v b=%+v", b, u[a], u[b])
+	}
+	if cur := s.Store.AgentTask("prin"); cur != b {
+		t.Fatalf("current_task = %q, want %q (its charge is still live)", cur, b)
+	}
+	if _, ok, _ := s.Store.GetKV(store.KVReviewEndCharge + "prin"); ok {
+		t.Fatal("end-charge key left behind")
+	}
+	must(s.Approve(ctx, "prin", ApproveArgs{TaskID: b}))
+	stop(200)
+	if got := must(s.Store.UsageByTask(0))[b].CostUSD; got != 2 {
+		t.Fatalf("b's spend = %v, want 2", got)
+	}
+	if cur := s.Store.AgentTask("prin"); cur != "" {
+		t.Fatalf("current_task = %q after the last Stop, want empty", cur)
+	}
+}
