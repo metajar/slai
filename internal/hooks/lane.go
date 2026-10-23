@@ -207,6 +207,44 @@ func claudeScratchRoots() []string {
 	return roots
 }
 
+// reviewDir is the detached worktree review_diff puts the commit under review in
+// (service.ReviewDirName); the principal may run tests and write scratch files there.
+func (l Lane) reviewDir() string { return filepath.Join(l.ProjectDir, ".slai", "worktrees", "_review") }
+
+// gitStateCmds change what is checked out or staged; the principal may run them only inside
+// the review checkout, never in the project checkout or an engineer's worktree.
+var gitStateCmds = map[string]bool{"checkout": true, "switch": true, "restore": true, "reset": true, "clean": true,
+	"stash": true, "merge": true, "rebase": true, "cherry-pick": true, "worktree": true}
+
+// principalGit denies a git command that moves a checkout unless it runs in the review checkout.
+func (l Lane) principalGit(args []string) string {
+	dir := l.Cwd
+	if v, ok := l.vars["\x00cwd"]; ok {
+		dir = v
+	}
+	sub := ""
+	for i := 0; i < len(args); i++ {
+		switch a := args[i]; {
+		case a == "-C" && i+1 < len(args):
+			i++
+			dir = l.abs(args[i])
+		case a == "-c" && i+1 < len(args):
+			i++
+		case strings.HasPrefix(a, "-"):
+		default:
+			sub = a
+			i = len(args)
+		}
+	}
+	if !gitStateCmds[sub] {
+		return ""
+	}
+	if dir != "" && within(l.reviewDir(), filepath.Clean(dir)) {
+		return ""
+	}
+	return fmt.Sprintf("%s may not run git %s here: it would move a checkout the engineers or the merge rely on. Run it only inside the review checkout %s (the path review_diff returns as review_checkout)", l.Role, sub, l.reviewDir())
+}
+
 func (l Lane) writable(p string) bool {
 	a := l.abs(p)
 	if a == "" {
@@ -241,7 +279,8 @@ func (l Lane) writable(p string) bool {
 		if r, err := filepath.EvalSymlinks(filepath.Dir(d)); err == nil {
 			d = filepath.Join(r, filepath.Base(d))
 		}
-		return a == d
+		// the review checkout is a throwaway detached copy that no merge reads
+		return a == d || within(l.reviewDir(), a)
 	}
 	return false
 }
@@ -439,6 +478,16 @@ func (l Lane) checkSegment(seg []string) string {
 	}
 	name := filepath.Base(seg[0])
 	args := seg[1:]
+	if name == "cd" && len(args) > 0 { // later segments of the same command run there
+		if d := l.abs(args[0]); d != "" {
+			l.vars["\x00cwd"] = d
+		}
+	}
+	if l.Role == config.RolePrincipal && name == "git" {
+		if r := l.principalGit(args); r != "" {
+			return r
+		}
+	}
 	var targets []string
 	recursive := false
 	for _, a := range args {
