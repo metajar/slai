@@ -113,7 +113,7 @@ func runInitWith(ctx context.Context, f initFlags) error {
 		return err
 	}
 	fmt.Printf("wrote %s (%d agents). Next: run `slai`\n", teamPath, len(team.Agents))
-	fmt.Println(costNotice(team))
+	fmt.Println(initCostNotice(team))
 	printSameReviewerLine(os.Stdout, team)
 	if f.edit && !f.noRestart {
 		return reconcileLive(ctx, os.Stdout)

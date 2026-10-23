@@ -66,7 +66,7 @@ func doctorPanes(ctx context.Context, dir string, tm *tmux.Client, w io.Writer) 
 		fmt.Fprintf(w, "      matched: %q\n", d.Excerpt)
 	}
 	if live == 0 {
-		fmt.Fprintln(w, "  no agent is running here (is the team up? `slai up`)")
+		fmt.Fprintln(w, "  no agent is running here (is the team up? `slai`)")
 	}
 	return nil
 }

@@ -71,7 +71,7 @@ func doctorHarnesses(ctx context.Context, dir string, w io.Writer) int {
 					}
 				}
 				if len(missing) > 0 {
-					fmt.Fprintf(w, "    ! warn: %s: run files not generated yet (%s); `slai up` writes them\n", a.ID, strings.Join(missing, ", "))
+					fmt.Fprintf(w, "    ! warn: %s: run files not generated yet (%s); `slai` writes them\n", a.ID, strings.Join(missing, ", "))
 				}
 			}
 		}

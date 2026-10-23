@@ -14,7 +14,7 @@ import (
 // same runDoctorChecks) and its failure count. It never passes --fix.
 func (a *webActions) DoctorReport(ctx context.Context) (string, int, error) {
 	var b strings.Builder
-	bad, err := runDoctorChecks(ctx, a.Dir, false, &b)
+	bad, err := runDoctorChecks(ctx, a.Dir, false, false, &b)
 	return b.String(), bad, err
 }
 

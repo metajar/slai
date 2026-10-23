@@ -101,7 +101,7 @@ func missingModes(choices []string) []string {
 }
 
 func doctorCmd() *cobra.Command {
-	var fix, panes, lane bool
+	var fix, panes, lane, all bool
 	c := &cobra.Command{Use: "doctor", Short: "Diagnose tmux, claude, git and stale state", Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			if len(args) > 0 && !lane {
@@ -121,7 +121,7 @@ func doctorCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			bad, err := runDoctorChecks(c.Context(), dir, fix, c.OutOrStdout())
+			bad, err := runDoctorChecks(c.Context(), dir, fix, all, c.OutOrStdout())
 			if err != nil {
 				return err
 			}
@@ -132,6 +132,7 @@ func doctorCmd() *cobra.Command {
 		}}
 	c.Flags().BoolVar(&panes, "panes", false, "show what the pane detectors decide for each live agent, and which rule matched")
 	c.Flags().BoolVar(&lane, "lane", false, "self-test each agent's lane guard offline with synthetic payloads (optionally name one agent)")
+	c.Flags().BoolVar(&all, "all", false, "also list other slai teams whose supervisor is running (orphans are always listed)")
 	c.Flags().BoolVar(&fix, "fix", false, "clean stale pidfile and kill orphan tmux sessions")
 	return c
 }
@@ -139,7 +140,7 @@ func doctorCmd() *cobra.Command {
 // runDoctorChecks is `slai doctor`: every check, printed to w, run for the project at dir.
 // It returns the number of failures (warnings do not count). The CLI and the web UI's
 // Doctor page both call it, so they report the same checks.
-func runDoctorChecks(ctx context.Context, dir string, fix bool, w io.Writer) (int, error) {
+func runDoctorChecks(ctx context.Context, dir string, fix, all bool, w io.Writer) (int, error) {
 	bad := 0
 	for _, t := range []check{
 		{"tmux", "install tmux (apt install tmux / brew install tmux)", "-V"},
@@ -178,7 +179,7 @@ func runDoctorChecks(ctx context.Context, dir string, fix bool, w io.Writer) (in
 	bad += projectChecks(ctx, dir, fix, w)
 	bad += doctorMemory(ctx, dir, w)
 	bad += doctorHarnesses(ctx, dir, w)
-	bad += doctorOtherTeams(ctx, dir, w)
+	bad += doctorOtherTeams(ctx, dir, all, w)
 	return bad, nil
 }
 
@@ -186,7 +187,7 @@ func runDoctorChecks(ctx context.Context, dir string, fix bool, w io.Writer) (in
 func projectChecks(ctx context.Context, dir string, fix bool, w io.Writer) int {
 	teamPath := filepath.Join(dir, ".slai", "team.yaml")
 	if _, err := os.Stat(teamPath); err != nil {
-		fmt.Fprintln(w, "- no .slai/team.yaml (run `slai init`); skipping project checks")
+		fmt.Fprintln(w, "- no .slai/team.yaml (run `slai init`, or `slai`, which runs it); skipping project checks")
 		return 0
 	}
 	bad := 0
@@ -201,7 +202,7 @@ func projectChecks(ctx context.Context, dir string, fix bool, w io.Writer) int {
 	if repo.BranchExists(ctx, team.Project.IntegrationBranch) {
 		fmt.Fprintf(w, "✓ integration branch %s\n", team.Project.IntegrationBranch)
 	} else {
-		fmt.Fprintf(w, "! warn: integration branch %s missing (created by `slai up`)\n", team.Project.IntegrationBranch)
+		fmt.Fprintf(w, "! warn: integration branch %s missing (created by `slai`)\n", team.Project.IntegrationBranch)
 	}
 	tm := tmux.New(socketName())
 	inTeam := map[string]bool{}
@@ -243,7 +244,7 @@ func projectChecks(ctx context.Context, dir string, fix bool, w io.Writer) int {
 		}
 		wt := filepath.Join(dir, ".slai", "worktrees", a.ID)
 		if _, err := os.Stat(wt); err != nil {
-			fmt.Fprintf(w, "! warn: worktree for %s missing (%s); `slai up` recreates it\n", a.ID, wt)
+			fmt.Fprintf(w, "! warn: worktree for %s missing (%s); `slai` recreates it\n", a.ID, wt)
 			continue
 		}
 		worktreeIndexCheck(ctx, a.ID, wt, w)
@@ -277,7 +278,7 @@ func projectChecks(ctx context.Context, dir string, fix bool, w io.Writer) int {
 		case a.Status == "dead" && live:
 			fmt.Fprintf(w, "! warn: %s is marked dead in state.db but its tmux session is live (supervisor will correct this)\n", a.ID)
 		case a.Status != "dead" && !live && a.TmuxSession != "":
-			fmt.Fprintf(w, "! warn: %s is %s in state.db but has no tmux session (run `slai up`)\n", a.ID, a.Status)
+			fmt.Fprintf(w, "! warn: %s is %s in state.db but has no tmux session (run `slai`)\n", a.ID, a.Status)
 		}
 		if !inTeam[tmux.SessionName(dir, a.ID)] {
 			fmt.Fprintf(w, "! warn: state.db has agent %s which is not in team.yaml (`slai init --edit` reconciles)\n", a.ID)

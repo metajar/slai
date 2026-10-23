@@ -50,7 +50,7 @@ func teamLine(t orphans.Team) string {
 
 // doctorOtherTeams prints the "Other slai teams" section and returns the number
 // of orphans (each is a doctor problem).
-func doctorOtherTeams(ctx context.Context, dir string, w io.Writer) int {
+func doctorOtherTeams(ctx context.Context, dir string, all bool, w io.Writer) int {
 	if os.Getenv("SLAI_NO_ORPHAN_SCAN") != "" { // test harnesses: do not look at the host's other teams
 		return 0
 	}
@@ -63,13 +63,25 @@ func doctorOtherTeams(ctx context.Context, dir string, w io.Writer) int {
 		fmt.Fprintln(w, "✓ no other slai teams running")
 		return 0
 	}
-	fmt.Fprintln(w, "Other slai teams:")
+	// Orphans are a problem and always shown; teams with a live supervisor are not,
+	// so they only appear with --all.
+	var shown []orphans.Team
 	bad := 0
 	for _, t := range teams {
-		fmt.Fprintln(w, "  "+teamLine(t))
 		if t.Orphan {
 			bad++
 		}
+		if t.Orphan || all {
+			shown = append(shown, t)
+		}
+	}
+	if len(shown) == 0 {
+		fmt.Fprintf(w, "✓ no orphaned slai teams (%d other team(s) running; `slai doctor --all` lists them)\n", len(teams))
+		return 0
+	}
+	fmt.Fprintln(w, "Other slai teams:")
+	for _, t := range shown {
+		fmt.Fprintln(w, "  "+teamLine(t))
 	}
 	if bad > 0 {
 		fmt.Fprintln(w, "  stop the orphans with `slai down --orphans` (`--dry-run` to preview)")
