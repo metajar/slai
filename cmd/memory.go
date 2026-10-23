@@ -161,6 +161,111 @@ func (e *memEnv) ls(ctx context.Context, onlyStale bool) error {
 	return nil
 }
 
+// jsonFact is one row of `slai memory ls --json`.
+type jsonFact struct {
+	ID      string        `json:"id"`
+	Kind    string        `json:"kind"`
+	Status  string        `json:"status"` // the state: fresh, stale, unverified or invalid
+	Reason  string        `json:"reason,omitempty"`
+	Path    string        `json:"path"` // the first cited path, "" when none
+	Paths   []memory.Path `json:"paths"`
+	Age     string        `json:"age"`
+	Created string        `json:"created"`
+	Author  string        `json:"author,omitempty"`
+}
+
+// lsJSON is `slai memory ls --json`: the same facts as the table, invalid files included
+// unless --stale narrows it.
+func (e *memEnv) lsJSON(ctx context.Context, onlyStale bool) error {
+	vs, bad, err := e.views(ctx)
+	if err != nil {
+		return err
+	}
+	out := struct {
+		Facts []jsonFact `json:"facts"`
+	}{Facts: []jsonFact{}}
+	for _, v := range vs {
+		if onlyStale && v.State != factStale {
+			continue
+		}
+		p := v.firstPath()
+		if p == "-" {
+			p = ""
+		}
+		paths := v.Paths
+		if paths == nil {
+			paths = []memory.Path{}
+		}
+		out.Facts = append(out.Facts, jsonFact{ID: v.ID, Kind: v.Kind, Status: v.State, Reason: v.Reason, Path: p,
+			Paths: paths, Age: e.age(v.Created), Created: v.Created, Author: v.Author})
+	}
+	if !onlyStale {
+		for _, b := range bad {
+			out.Facts = append(out.Facts, jsonFact{ID: b.ID, Status: factInvalid, Reason: b.Reason, Paths: []memory.Path{}, Age: "-"})
+		}
+	}
+	return writeJSON(e.out, out)
+}
+
+// showJSON is `slai memory show <id> --json`: the fact, its recorded vs current blobs and its state.
+func (e *memEnv) showJSON(ctx context.Context, id string) error {
+	raw, err := os.ReadFile(filepath.Join(e.mem.Dir, id+".md"))
+	if err != nil {
+		return fmt.Errorf("no memory file for %q (try `slai memory ls`)", id)
+	}
+	type grounding struct {
+		Path     string `json:"path"`
+		Recorded string `json:"recorded"`
+		Current  string `json:"current"` // "" when the file is gone
+		State    string `json:"state"`   // ok, CHANGED or MISSING
+	}
+	out := struct {
+		ID        string      `json:"id"`
+		File      string      `json:"file"`
+		Status    string      `json:"status"` // fresh, stale, unverified or invalid
+		Reason    string      `json:"reason,omitempty"`
+		Kind      string      `json:"kind,omitempty"`
+		Author    string      `json:"author,omitempty"`
+		Verified  string      `json:"verified_by,omitempty"`
+		Created   string      `json:"created,omitempty"`
+		Text      string      `json:"text,omitempty"`
+		Check     string      `json:"check,omitempty"`
+		Against   string      `json:"against"`
+		Grounding []grounding `json:"grounding"`
+	}{ID: id, File: string(raw), Against: e.rev, Grounding: []grounding{}}
+	f, err := e.mem.Get(id)
+	if err != nil {
+		out.Status, out.Reason = factInvalid, err.Error()
+		return writeJSON(e.out, out)
+	}
+	names := make([]string, len(f.Paths))
+	for i, p := range f.Paths {
+		names[i] = p.Path
+	}
+	cur, err := e.repo.LsTree(ctx, e.rev, names)
+	if err != nil {
+		return err
+	}
+	v, err := e.stateOf(ctx, f)
+	if err != nil {
+		return err
+	}
+	for _, p := range f.Paths {
+		now, ok := cur[p.Path]
+		g := grounding{Path: p.Path, Recorded: p.Blob, Current: now, State: "ok"}
+		switch {
+		case !ok:
+			g.State = "MISSING"
+		case now != p.Blob:
+			g.State = "CHANGED"
+		}
+		out.Grounding = append(out.Grounding, g)
+	}
+	out.Status, out.Reason, out.Kind, out.Author, out.Verified, out.Created, out.Text, out.Check =
+		v.State, v.Reason, f.Kind, f.Author, f.VerifiedBy, f.Created, f.Text, f.Check
+	return writeJSON(e.out, out)
+}
+
 func short(s string) string {
 	if len(s) > 12 {
 		return s[:12]
@@ -393,14 +498,26 @@ func memoryCmd() *cobra.Command {
 			return f(c.Context(), e)
 		}
 	}
-	var onlyStale, yes, vYes, allowUnverified bool
+	var onlyStale, yes, vYes, allowUnverified, lsJSON, showJSON bool
 	ls := &cobra.Command{Use: "ls", Short: "List facts with their state (fresh, stale, unverified, invalid)", Args: cobra.NoArgs}
-	ls.RunE = run(func(ctx context.Context, e *memEnv) error { return e.ls(ctx, onlyStale) })
+	ls.RunE = run(func(ctx context.Context, e *memEnv) error {
+		if lsJSON {
+			return e.lsJSON(ctx, onlyStale)
+		}
+		return e.ls(ctx, onlyStale)
+	})
+	ls.Flags().BoolVar(&lsJSON, "json", false, "machine-readable output")
 	ls.Flags().BoolVar(&onlyStale, "stale", false, "only stale facts")
 	show := &cobra.Command{Use: "show <id>", Short: "Print a fact file and its recorded vs current blobs", Args: cobra.ExactArgs(1)}
 	show.RunE = func(c *cobra.Command, args []string) error {
-		return run(func(ctx context.Context, e *memEnv) error { return e.show(ctx, args[0]) })(c, args)
+		return run(func(ctx context.Context, e *memEnv) error {
+			if showJSON {
+				return e.showJSON(ctx, args[0])
+			}
+			return e.show(ctx, args[0])
+		})(c, args)
 	}
+	show.Flags().BoolVar(&showJSON, "json", false, "machine-readable output")
 	verify := &cobra.Command{Use: "verify <id>", Short: "Show the fact's check command, ask, run it; on exit 0 mark it verified by you", Args: cobra.ExactArgs(1)}
 	verify.RunE = func(c *cobra.Command, args []string) error {
 		return run(func(ctx context.Context, e *memEnv) error {

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -101,11 +102,14 @@ func missingModes(choices []string) []string {
 }
 
 func doctorCmd() *cobra.Command {
-	var fix, panes, lane, all bool
+	var fix, panes, lane, all, asJSON bool
 	c := &cobra.Command{Use: "doctor", Short: "Diagnose tmux, claude, git and stale state", Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			if len(args) > 0 && !lane {
 				return fmt.Errorf("unexpected argument %q (an agent id is only accepted with --lane)", args[0])
+			}
+			if asJSON && (lane || panes) {
+				return fmt.Errorf("--json covers the checks only, not --lane or --panes")
 			}
 			if lane {
 				only := ""
@@ -121,6 +125,16 @@ func doctorCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if asJSON {
+				bad, err := doctorJSON(c.Context(), dir, fix, all, c.OutOrStdout())
+				if err != nil {
+					return err
+				}
+				if bad > 0 {
+					return fmt.Errorf("%d problem(s) found", bad)
+				}
+				return nil
+			}
 			bad, err := runDoctorChecks(c.Context(), dir, fix, all, c.OutOrStdout())
 			if err != nil {
 				return err
@@ -133,6 +147,7 @@ func doctorCmd() *cobra.Command {
 	c.Flags().BoolVar(&panes, "panes", false, "show what the pane detectors decide for each live agent, and which rule matched")
 	c.Flags().BoolVar(&lane, "lane", false, "self-test each agent's lane guard offline with synthetic payloads (optionally name one agent)")
 	c.Flags().BoolVar(&all, "all", false, "also list other slai teams whose supervisor is running (orphans are always listed)")
+	c.Flags().BoolVar(&asJSON, "json", false, "machine-readable output: every check with its status, plus orphaned and other teams")
 	c.Flags().BoolVar(&fix, "fix", false, "clean stale pidfile and kill orphan tmux sessions")
 	return c
 }
@@ -181,6 +196,135 @@ func runDoctorChecks(ctx context.Context, dir string, fix, all bool, w io.Writer
 	bad += doctorHarnesses(ctx, dir, w)
 	bad += doctorOtherTeams(ctx, dir, all, w)
 	return bad, nil
+}
+
+// doctorCheck is one line of the doctor report. Status is ok, warn, fail or info (a note that
+// is neither a pass nor a problem, e.g. "no state.db yet").
+type doctorCheck struct {
+	Name    string `json:"name"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
+// doctorTeam is one other slai team, as in the "Other slai teams" section.
+type doctorTeam struct {
+	Project      string `json:"project"`
+	Prefix       string `json:"prefix"`
+	Sessions     int    `json:"sessions"`
+	Processes    int    `json:"processes"`
+	LastActivity string `json:"last_activity,omitempty"` // RFC 3339; absent when unknown
+	Orphan       bool   `json:"orphan"`
+	Reason       string `json:"reason"`
+}
+
+// doctorJSON is `slai doctor --json`: the same checks as the text report (parsed from it, so the
+// two can never disagree), the orphaned teams (always) and the other teams (with --all). It
+// returns the same problem count the text mode does, so the exit code is unchanged.
+func doctorJSON(ctx context.Context, dir string, fix, all bool, w io.Writer) (int, error) {
+	var buf bytes.Buffer
+	bad, err := runDoctorChecks(ctx, dir, fix, all, &buf)
+	if err != nil {
+		return 0, err
+	}
+	out := struct {
+		Checks     []doctorCheck `json:"checks"`
+		Problems   int           `json:"problems"`
+		Orphans    []doctorTeam  `json:"orphans"`
+		OtherTeams []doctorTeam  `json:"other_teams"` // healthy teams, listed only with --all
+	}{Checks: parseDoctorChecks(buf.String()), Problems: bad, Orphans: []doctorTeam{}, OtherTeams: []doctorTeam{}}
+	if os.Getenv("SLAI_NO_ORPHAN_SCAN") == "" {
+		if teams, err := OtherTeams(ctx, dir); err == nil {
+			for _, t := range teams {
+				d := doctorTeam{Project: t.Project, Prefix: t.Prefix, Sessions: len(t.Sessions), Processes: len(t.Procs), Orphan: t.Orphan, Reason: t.Reason}
+				if !t.LastActivity.IsZero() {
+					d.LastActivity = t.LastActivity.UTC().Format(time.RFC3339)
+				}
+				switch {
+				case t.Orphan:
+					out.Orphans = append(out.Orphans, d)
+				case all:
+					out.OtherTeams = append(out.OtherTeams, d)
+				}
+			}
+		}
+	}
+	return bad, writeJSON(w, out)
+}
+
+// parseDoctorChecks turns the text report into checks. A line starts with a marker: ✓ ok,
+// ✗ fail, "! warn:" or ⚠ warn, "- " info; an unmarked indented line under "team health:" is an
+// agent's health row (info). The "Other slai teams" list and its hint are not checks (doctorJSON
+// reports those as data).
+func parseDoctorChecks(text string) []doctorCheck {
+	checks := []doctorCheck{}
+	section := ""
+	for _, raw := range strings.Split(text, "\n") {
+		if strings.TrimSpace(raw) == "" {
+			continue
+		}
+		if raw == "Other slai teams:" {
+			section = "other teams"
+			continue
+		}
+		indented := strings.HasPrefix(raw, " ")
+		if !indented {
+			if strings.HasSuffix(raw, ":") && !strings.HasPrefix(raw, "✓") && !strings.HasPrefix(raw, "✗") && !strings.HasPrefix(raw, "!") {
+				section = strings.TrimSuffix(raw, ":")
+				continue
+			}
+			section = ""
+		}
+		if section == "other teams" {
+			continue
+		}
+		line := strings.TrimSpace(raw)
+		status, msg := "info", line
+		switch {
+		case strings.HasPrefix(line, "✓ "):
+			status, msg = "ok", strings.TrimPrefix(line, "✓ ")
+		case strings.HasPrefix(line, "✗ "):
+			status, msg = "fail", strings.TrimPrefix(line, "✗ ")
+		case strings.HasPrefix(line, "! warn: "):
+			status, msg = "warn", strings.TrimPrefix(line, "! warn: ")
+		case strings.HasPrefix(line, "⚠ "):
+			status, msg = "warn", strings.TrimPrefix(line, "⚠ ")
+		case strings.HasPrefix(line, "- "):
+			msg = strings.TrimPrefix(line, "- ")
+		}
+		msg = strings.Join(strings.Fields(msg), " ")
+		name := section
+		if name == "" {
+			name = doctorCheckName(msg)
+		}
+		checks = append(checks, doctorCheck{Name: name, Status: status, Message: msg})
+	}
+	return checks
+}
+
+// doctorCheckNames gives a stable name to the checks whose first word is not one: matched in
+// order against the start of the message, else the first word names the check.
+var doctorCheckNames = []struct{ prefix, name string }{
+	{"permission modes", "permission-modes"},
+	{"git repository", "git-repository"},
+	{"not a git repository", "git-repository"},
+	{"integration branch", "integration-branch"},
+	{"worktree for", "worktree"},
+	{"orphan tmux session", "orphan-session"},
+	{"stale supervisor pidfile", "supervisor-pidfile"},
+	{"no other slai teams", "other-teams"},
+	{"no orphaned slai teams", "other-teams"},
+	{"could not look for other", "other-teams"},
+	{"no .slai/team.yaml", "team.yaml"},
+	{"no state.db", "state.db"},
+}
+
+func doctorCheckName(msg string) string {
+	for _, n := range doctorCheckNames {
+		if strings.HasPrefix(msg, n.prefix) {
+			return n.name
+		}
+	}
+	return strings.Fields(msg + " ")[0]
 }
 
 // projectChecks inspects .slai state; returns the number of problems (warnings do not count).
