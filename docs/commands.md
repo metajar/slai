@@ -50,7 +50,7 @@ These are MCP tools. Agents call them inside their own Claude sessions; you see 
 ## Quick answers
 
 - **I want to tell an agent (or a group) something:** `slai send <agent|group> "..."`, e.g. `slai send engineers "..."`.
-- **An agent is asking me something:** answer with `slai reply <ask-id> "..."` (the id is shown in `slai status` and on the web inbox), or in the dashboard. `slai send` also reaches the agent but leaves the question open.
+- **An agent is asking me something:** answer with `slai reply <ask-id> "..."` (the id is shown in `slai status` and on the web inbox), or in the dashboard. `slai send` also reaches the agent, but nothing records it as the answer: the web inbox keeps listing the question until the agent reads your message and moves on, and never shows what you answered.
 - **I want to see what is going on:** `slai status`, or the dashboard (`slai`).
 - **Why does a pane say `[slai] You have 2 new items`?** An agent was nudged to call `get_inbox`. It is machine traffic.
 
