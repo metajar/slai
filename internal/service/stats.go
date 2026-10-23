@@ -45,13 +45,16 @@ type StatsReport struct {
 	Since  int64      `json:"since"` // unix seconds; 0 is all time
 	Agents []StatsRow `json:"agents"`
 	Groups []StatsRow `json:"groups"`
+	// TotalSpendUSD is the recorded usage of every agent in the window, including
+	// agents with no merged tasks (orchestrator, PM, principal, focus groups).
+	TotalSpendUSD float64 `json:"total_spend_usd"`
 }
 
 // Stats aggregates per-agent and per-harness+model quality numbers from tasks, events
 // and usage. since filters by assignment time (the task's creation): tasks assigned
 // before it are left out, and spend counts only usage recorded at or after it. The zero
 // time means all time. Every engineer in the team is listed, with zeros when it has no
-// tasks; any other assignee with tasks is listed too. It only reads the store, so it is
+// tasks; any other assignee with tasks, and any agent with recorded usage, is listed too. It only reads the store, so it is
 // safe to call from the TUI on every refresh.
 func (s *Service) Stats(since time.Time) (StatsReport, error) {
 	var from int64
@@ -131,12 +134,30 @@ func (s *Service) Stats(since time.Time) (StatsReport, error) {
 		}
 	}
 
+	// Agents that only spent (orch, pm, principal, focus groups, or ids no longer in
+	// team.yaml) get a row too, so the by-agent spend column adds up to the total.
+	var spenders []string
+	for id := range spend {
+		if rows[id] == nil && spend[id] > 0 {
+			spenders = append(spenders, id)
+		}
+	}
+	sort.Strings(spenders)
+	for _, id := range spenders {
+		role, harness, model := "", config.HarnessClaude, ""
+		if a, ok := byID[id]; ok {
+			role, harness, model = a.Role, a.HarnessKind(), team.ModelFor(a)
+		}
+		add(id, role, harness, model)
+	}
+
 	rep := StatsReport{Since: from, Agents: []StatsRow{}, Groups: []StatsRow{}}
 	groups := map[string]*StatsRow{}
 	var gorder []string
 	for _, id := range order {
 		r := rows[id]
 		r.SpendUSD = spend[id]
+		rep.TotalSpendUSD += r.SpendUSD
 		g := groups[r.Harness+"/"+r.Model]
 		if g == nil {
 			g = &StatsRow{Harness: r.Harness, Model: r.Model}

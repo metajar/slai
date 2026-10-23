@@ -76,7 +76,8 @@ func TestStatsJSONGolden(t *testing.T) {
       "rework_rate": 1,
       "spend_per_merged_usd": 0.5
     }
-  ]
+  ],
+  "total_spend_usd": 0
 }
 `
 	if b.String() != want {
@@ -125,5 +126,36 @@ func TestParseSince(t *testing.T) {
 		if _, err := parseSince(bad, now); err == nil {
 			t.Errorf("%q should be rejected", bad)
 		}
+	}
+}
+
+// An orchestrator with usage but no merged task gets a row with dashes, and the total
+// line equals the sum of the spend column.
+func TestStatsTextShowsSpendOnlyAgentAndTotal(t *testing.T) {
+	eng := service.StatsRow{Agent: "eng-1", Role: "engineer", Harness: "claude", Model: "sonnet",
+		Tasks: 1, Merged: 1, ReviewRounds: 1, MedianSeconds: 60, SpendUSD: 0.20,
+		RoundsPerMerged: 1, SpendPerMerged: 0.20}
+	orch := service.StatsRow{Agent: "orch", Role: "orchestrator", Harness: "claude", Model: "sonnet", SpendUSD: 0.35}
+	grp := service.StatsRow{Agents: []string{"eng-1", "orch"}, Harness: "claude", Model: "sonnet",
+		Tasks: 1, Merged: 1, ReviewRounds: 1, MedianSeconds: 60, SpendUSD: 0.55,
+		RoundsPerMerged: 1, SpendPerMerged: 0.55}
+	rep := service.StatsReport{Agents: []service.StatsRow{eng, orch}, Groups: []service.StatsRow{grp},
+		TotalSpendUSD: eng.SpendUSD + orch.SpendUSD}
+	var b bytes.Buffer
+	if err := writeStats(&b, rep, false); err != nil {
+		t.Fatal(err)
+	}
+	out := b.String()
+	var orchRow string
+	for _, l := range strings.Split(out, "\n") {
+		if strings.HasPrefix(l, "orch ") {
+			orchRow = l
+		}
+	}
+	if !strings.Contains(orchRow, "$0.35") || !strings.Contains(orchRow, " - ") {
+		t.Errorf("orch row = %q\n%s", orchRow, out)
+	}
+	if !strings.Contains(out, "eng-1 ") || !strings.Contains(out, "total spend: $0.55 (all agents)") {
+		t.Errorf("missing eng row or total:\n%s", out)
 	}
 }

@@ -196,3 +196,42 @@ func TestStatsIsReadOnly(t *testing.T) {
 		t.Fatalf("Stats changed the store:\nbefore %s\nafter  %s", before, after)
 	}
 }
+
+// Agents that only spend (orchestrator, an id no longer in team.yaml) get a by-agent row
+// and count toward the total, which therefore equals the sum of the spend column.
+func TestStatsIncludesSpendOnlyAgents(t *testing.T) {
+	s := seedStats(t)
+	for _, u := range []struct {
+		id  string
+		usd float64
+	}{{"orch", 0.35}, {"gone", 0.25}} {
+		if err := s.Store.AddUsage(u.id, 1, 1, u.usd); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rep, err := s.Stats(time.Time{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	o := statsRow(t, rep.Agents, "orch")
+	if o.SpendUSD != 0.35 || o.Merged != 0 || o.Tasks != 0 {
+		t.Errorf("orch row = %+v", o)
+	}
+	if g := statsRow(t, rep.Agents, "gone"); g.SpendUSD != 0.25 {
+		t.Errorf("gone row = %+v", g)
+	}
+	var sum float64
+	for _, r := range rep.Agents {
+		sum += r.SpendUSD
+	}
+	if diff := rep.TotalSpendUSD - sum; diff > 1e-9 || diff < -1e-9 || rep.TotalSpendUSD < 4.09 {
+		t.Errorf("total = %v, sum of rows = %v", rep.TotalSpendUSD, sum)
+	}
+	var gsum float64
+	for _, g := range rep.Groups {
+		gsum += g.SpendUSD
+	}
+	if diff := gsum - rep.TotalSpendUSD; diff > 1e-9 || diff < -1e-9 {
+		t.Errorf("group spend %v != total %v", gsum, rep.TotalSpendUSD)
+	}
+}
