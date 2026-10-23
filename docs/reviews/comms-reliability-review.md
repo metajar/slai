@@ -198,3 +198,22 @@ Order: H-1, H-2 and I-2 can start now in parallel; H-3 and H-4 after H-2/H-1; H-
 - Resume with a *changed* `system.md`; pi and opencode behaviour after `/clear`/`/compact`.
 - The raw `source` value of SessionStart (slai discards it).
 - My repro teams were torn down with `slai down`; the repro scratch directory is under the session scratchpad, not in the repo.
+
+## P-1 result (T-0044): mail reaches a busy agent between tool calls
+
+**Claude Code 2.1.309 honours `additionalContext` returned from a `PostToolUse` hook.** Test, scratch repo outside this tree: a `PostToolUse` command hook printed `{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"... SECRET-CODEWORD is PINEAPPLE-7731 ..."}}`; the model (haiku, `claude -p`) ran one `echo hello` and, asked for the codeword it had been given after the tool ran, answered `PINEAPPLE-7731` (and the stream-json log shows the text in the turn). Without the hook the codeword cannot be known, so the context really reaches the model mid-turn.
+
+**What shipped.** `PostToolUse` is now one of `HookEvents` (`internal/claude/launch.go`), and `slai hook posttooluse` (`cmd/hook_midturn.go`, called from `cmd/hook.go`) answers with `[slai] You have N new items. Call get_inbox.` when mail arrived while the agent was in its turn. It records no event and changes no status, delivers nothing (only `get_inbox` does), and:
+- announces each message at most once (kv `postnotice.<agent>` = highest id announced);
+- skips mail the wake loop already typed into the pane (`woken_at != 0`), and any tool call that is the agent's own `get_inbox`;
+- never bypasses a hold: paused agent, global pause, team hold, loop-guard hold, or the wake loop's own `held` skip reason (covers spend caps);
+- opens with the identity sentence when a context gap left `identity.pending` set (then clears it), like a wake-up line.
+
+**Measured** (scratch repo, solo preset, eng-1 on sonnet doing six sequential 12 s tool calls; a probe message sent 22 s in; "read" = the time `get_inbox` marked it delivered):
+
+| build | probe read after | what happened |
+|---|---|---|
+| before (integration) | **67 s** | waited for the turn's Stop hook (+65 s), then the wake line, read 2 s later |
+| after (this change) | **13 s** | read at the agent's next tool call, mid-turn |
+
+One earlier run of each (with a first message that told the agent to call `get_inbox` at the end) was discarded: it measured the agent's own final `get_inbox` (65 s and 52 s), not delivery. Limits: one sample per build; the agent still decides when to act on the notice (here it did so at once); a hook process now also runs after every tool call (PreToolUse already did), a few tens of milliseconds each.
