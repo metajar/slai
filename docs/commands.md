@@ -12,7 +12,7 @@ Terms such as *orch*, *dashboard*, *worktree* and *integration branch* are defin
 | Name | What it does | Example |
 | --- | --- | --- |
 | `slai` (no arguments) | Starts any missing agent sessions and the supervisor, then opens the dashboard, where you talk to `orch`. With no `.slai/team.yaml` yet it runs `slai init` first. | `slai` |
-| `slai send <agent> "msg"` | Queues a message from you to one agent; it shows up in that agent's inbox. Normally send to `orch`. This is also how you answer an agent that asked you something. | `slai send orch "add a --verbose flag to the CLI"` |
+| `slai send <agent\|group> "msg"` | Queues a message from you to one agent, or to a group (`all`, or a role: `orchestrator`, `product-manager`, `principal-engineer`, `engineers`, `focus-group`; one message per member, and it prints who it was queued for). Normally send to `orch`. It is the free-form path; to answer a specific question an agent asked you, use `slai reply`. | `slai send orch "add a --verbose flag to the CLI"` |
 | `slai reply <ask-id> "answer"` | Answers one specific question an agent asked you (`ask_user`). The ask id is printed next to the waiting agent in `slai status` and shown on the web inbox. The answer goes to the asking agent linked to the ask, and the web inbox shows the question as answered. Refuses an unknown id or a question already answered. (Not the same as the agent-side `reply` MCP tool below.) | `slai reply 17 "use the second option"` |
 | `slai status` | Prints the agents and open tasks, and whether the supervisor is running. `--json` for scripts, `--stats` for per-agent merge, rework and spend numbers. | `slai status` |
 | `slai attach <agent>` | Opens that agent's tmux pane to watch it. | `slai attach eng-1` |
@@ -23,7 +23,7 @@ Terms such as *orch*, *dashboard*, *worktree* and *integration branch* are defin
 | `slai down` / `slai clean` | Stop everything / also remove slai's runtime state. | `slai down` |
 | `slai doctor` | Diagnoses tmux, claude, git and stale state. | `slai doctor` |
 
-There is no `slai reply`: `reply` below is an agent tool. Every CLI command and its flags: `slai --help` and `slai <command> --help`.
+`slai reply` (above) is for you; the `reply` tool below is the agent-side one. Every CLI command and its flags: `slai --help` and `slai <command> --help`.
 
 ## Agent-only: you never type these
 
@@ -49,8 +49,8 @@ These are MCP tools. Agents call them inside their own Claude sessions; you see 
 
 ## Quick answers
 
-- **I want to tell an agent something:** `slai send <agent> "..."`.
-- **An agent is asking me something:** answer with `slai reply <ask-id> "..."` (the id is shown in `slai status`), `slai send <agent> "..."`, or in the dashboard.
+- **I want to tell an agent (or a group) something:** `slai send <agent|group> "..."`, e.g. `slai send engineers "..."`.
+- **An agent is asking me something:** answer with `slai reply <ask-id> "..."` (the id is shown in `slai status` and on the web inbox), or in the dashboard. `slai send` also reaches the agent but leaves the question open.
 - **I want to see what is going on:** `slai status`, or the dashboard (`slai`).
 - **Why does a pane say `[slai] You have 2 new items`?** An agent was nudged to call `get_inbox`. It is machine traffic.
 
