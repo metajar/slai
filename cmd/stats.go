@@ -31,8 +31,10 @@ func writeStats(w io.Writer, rep service.StatsReport, asJSON bool) error {
 	statsTable(w, rep.Agents, func(r service.StatsRow) string { return r.Agent + " " + r.Harness + "/" + r.Model })
 	fmt.Fprintln(w, "\nby harness/model:")
 	statsTable(w, rep.Groups, func(r service.StatsRow) string { return r.Harness + "/" + r.Model })
+	fmt.Fprintf(w, "\ntotal spend: $%.2f (all agents)\n", rep.TotalSpendUSD)
 	fmt.Fprintln(w, "\nrounds = request_review calls per merged task; rework = merged tasks that got request_changes;")
 	fmt.Fprintln(w, "refused = merge_refused events; time = median assigned to merged; spend is from recorded usage.")
+	fmt.Fprintln(w, "agents with no merged tasks (orch, pm, ...) show - for the merge-based columns; both tables count all spend.")
 	return nil
 }
 
