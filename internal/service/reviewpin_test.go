@@ -313,3 +313,46 @@ func TestBackToBackReviewsInOneTurnChargeTheNewest(t *testing.T) {
 		t.Fatalf("current_task = %q after the last Stop, want empty", cur)
 	}
 }
+
+// review_diff checks the reviewed commit out in .slai/worktrees/_review and says where; the
+// checkout follows the branch head when the engineer pushes more and never touches the
+// project checkout.
+func TestReviewDiffChecksOutTheReviewedCommit(t *testing.T) {
+	curT = t
+	s := newSvc(t, true)
+	id := createTask(t, s)
+	must(s.GetTask(ctx, "eng-1", GetTaskArgs{TaskID: id}))
+	commitOnBranch(t, s, "slai/eng-1/"+id)
+	must(s.RequestReview(ctx, "eng-1", RequestReviewArgs{TaskID: id, Summary: "done"}))
+	before := gitOut(t, s.Dir, "rev-parse", "--abbrev-ref", "HEAD")
+
+	out := j(must(s.ReviewDiff(ctx, "prin", TaskRef{TaskID: id})))
+	dir, _ := out["review_checkout"].(string)
+	sha, _ := out["reviewed_sha"].(string)
+	if dir != filepath.Join(s.Dir, ".slai", "worktrees", "_review") || sha == "" || out["review_checkout_sha"] != sha {
+		t.Fatalf("response lacks the review checkout: %v", out)
+	}
+	if got := gitOut(t, dir, "rev-parse", "HEAD"); got != sha {
+		t.Fatalf("_review is at %s, want the reviewed commit %s", got, sha)
+	}
+	if b := gitOut(t, dir, "rev-parse", "--abbrev-ref", "HEAD"); b != "HEAD" {
+		t.Fatalf("_review is on branch %s, want a detached HEAD", b)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "b.txt")); err != nil {
+		t.Fatalf("the reviewed change is not in the checkout: %v", err)
+	}
+	if after := gitOut(t, s.Dir, "rev-parse", "--abbrev-ref", "HEAD"); after != before {
+		t.Fatalf("the project checkout moved from %s to %s", before, after)
+	}
+
+	// the engineer pushes another commit and the principal reviews again: the checkout follows
+	os.WriteFile(filepath.Join(dir, "scratch.txt"), []byte("left by a test run"), 0o644)
+	sha2 := commitMore(t, s, "slai/eng-1/"+id, "c.txt")
+	out = j(must(s.ReviewDiff(ctx, "prin", TaskRef{TaskID: id})))
+	if out["reviewed_sha"] != sha2 || gitOut(t, dir, "rev-parse", "HEAD") != sha2 {
+		t.Fatalf("checkout did not follow the new head %s: %v", sha2, out["review_checkout_sha"])
+	}
+	if _, err := os.Stat(filepath.Join(dir, "scratch.txt")); err == nil {
+		t.Fatal("scratch files from the previous review survived")
+	}
+}

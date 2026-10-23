@@ -979,9 +979,20 @@ func (s *Service) ReviewDiff(ctx context.Context, caller string, a TaskRef) (any
 		_ = s.Store.ChargeAgentTo(caller, t.ID)
 		_ = s.Store.DeleteKV(store.KVReviewEndCharge + caller)
 	}
+	// the reviewed commit, checked out where the reviewer may run its tests
+	reviewDir, reviewErr := "", error(nil)
+	if head != "" {
+		reviewDir, reviewErr = s.reviewCheckout(ctx, head)
+	}
 	out := map[string]any{"task_id": t.ID, "branch": t.Branch, "integration_branch": s.integration(), "base_sha": base,
 		"integration_sha": tip, "reviewed_sha": head, "files": files, "truncated": d.Truncated, "patch": d.Patch,
 		"spec_path": t.SpecPath, "review_no": reviewNo, "ac_claims": claims}
+	if reviewDir != "" {
+		out["review_checkout"], out["review_checkout_sha"] = reviewDir, head
+		out["review_checkout_note"] = "run go test / go vet / go build here, in this directory: it is the exact commit under review, detached and recreated by every review_diff; do not use the engineer's worktree"
+	} else if reviewErr != nil {
+		out["review_checkout_error"] = reviewErr.Error()
+	}
 	for k, v := range s.specNote(caller, t, s.checkSpec(t), false) {
 		out[k] = v
 	}
