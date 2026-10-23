@@ -23,6 +23,8 @@ slai doctor                                      # verify the toolchain
 cd my-repo
 slai                 # first run: wizard writes .slai/team.yaml; then opens the dashboard
 slai send orch "build X"   # type your goal to the orchestrator; it drives the rest of the team
+slai send engineers "rebase on slai/integration"   # or to a group: all, engineers, focus-group, ...
+slai reply 17 "yes"        # answer the question an agent asked you (ask id from `slai status`)
 slai status --json   # scriptable state
 slai serve           # the team in a browser (local web UI)
 slai status --stats [--since 7d] [--json]   # merges, rework, review rounds and spend per agent and per harness/model
@@ -110,7 +112,7 @@ Pick a preset; this walk-through uses `solo`:
    T-0001  Add --version flag    in_progress   eng-1
    ```
 
-   If an agent needs an answer from you, it appears under "Questions for you" in the `slai serve` Inbox.
+   If an agent needs an answer from you, it appears under "Questions for you" in the `slai serve` Inbox, and `slai status` shows its ask id. Answer it with `slai reply <ask-id> "..."` (for example `slai reply 17 "use the second option"`; the id here is the example from `slai reply --help`).
 
 6. **It merges.** With `solo` there is no principal, so when `eng-1` asks for review its commit is queued straight for merge into `slai/integration` (with `project.test_command` set, only if that command passes there). *(illustrative)*
 
@@ -211,7 +213,14 @@ slai send orch "add a --version flag to the CLI that prints the build version"
   (dry run: nothing changed)
   ```
 - If you already ran `slai commit`, undo it like any other commit of yours (`git reset` / `git revert` on your branch); `slai revert` only works on the integration branch, not on commits already on yours.
-- To stop spending while you decide, `slai down`.
+- To stop spending while you decide, `slai down`. To redirect the team instead of stopping it, message a whole group at once: `slai send engineers "..."` (or `slai send all "stop and commit what you have"`, from `slai send --help`). *(real, in a `squad` team)*:
+
+  ```
+  $ slai send engineers "rebase on slai/integration"
+  queued for engineers: eng-1 (message 1), eng-2 (message 2)
+  ```
+
+- If an agent has asked you a question and is waiting, `slai status` shows its ask id: answer it with `slai reply <ask-id> "..."`.
 
 ## Glossary
 
@@ -228,7 +237,7 @@ slai send orch "add a --version flag to the CLI that prints the build version"
 
 `slai up` starts the agents and a detached supervisor without the dashboard (`--foreground` keeps the supervisor in this terminal) and ends by telling you who to send your goal to. Plain `slai` starts missing agents and runs the supervisor inside the TUI.
 
-Other commands: `slai init --edit` (change the team; only agents whose config changed are restarted), `slai send <agent> "msg"`, `slai attach <agent>`, `slai hold [name]` (stop the whole team from being woken, nudged or restarted, e.g. overnight; sessions stay up and the hold survives a restart) and `slai resume` (lift it, and release agents held by the message-loop guard; `slai resume <agent>` releases just that agent), `slai commit`, `slai clean`, `slai doctor [--fix]`, `slai version`. `slai up --no-watch` starts the agents without any supervisor loop.
+Other commands: `slai init --edit` (change the team; only agents whose config changed are restarted), `slai send <agent|group> "msg"` (group: `all`, or a role such as `engineers`, `orchestrator`, `product-manager`, `principal-engineer`, `focus-group`; see `slai send --help`), `slai reply <ask-id> "text"` (answer one specific question an agent asked you), `slai attach <agent>`, `slai hold [name]` (stop the whole team from being woken, nudged or restarted, e.g. overnight; sessions stay up and the hold survives a restart) and `slai resume` (lift it, and release agents held by the message-loop guard; `slai resume <agent>` releases just that agent), `slai commit`, `slai clean`, `slai doctor [--fix]`, `slai version`. `slai up --no-watch` starts the agents without any supervisor loop.
 
 Non-interactive: `slai init --yes --preset squad --name app --description "..."`, and `slai init --edit --yes --set-model eng-1=haiku --permission-mode plan`. Add `--check-models` to test each model with a one-line `claude -p` call (warn only).
 
@@ -350,7 +359,7 @@ You only talk to `orch`. The other panes are machine traffic: agents hand each o
 | engineer | `.slai/worktrees/<id>` | own worktree | get_task, report, request_review, ask, send_message, get_inbox, reply |
 | focus_group | repo root | nothing | get_inbox, reply, get_board |
 
-Every role can also answer a liveness check, and every role except focus_group can write to the team's shared memory with `remember` (all roles can `recall` and `get_memory`; see [Team memory](#team-memory)). `reply` is the way any agent answers an `ask` sent to it; you answer an agent with `slai send`.
+Every role can also answer a liveness check, and every role except focus_group can write to the team's shared memory with `remember` (all roles can `recall` and `get_memory`; see [Team memory](#team-memory)). `reply` is the way any agent answers an `ask` sent to it. You answer a specific question an agent asked you with `slai reply <ask-id> "..."` (the id is shown next to the waiting agent in `slai status` and on the web inbox); `slai send` is the free-form path for everything else.
 
 ## TUI
 
@@ -491,7 +500,7 @@ Integration tests use a real tmux server in a temp dir and `testdata/fakeclaude`
 ## Troubleshooting
 
 - `slai doctor` reports tool versions, `--permission-mode` drift versus `claude --help`, orphan tmux sessions, stale supervisor pidfile, missing worktrees/integration branch, and agent rows that disagree with tmux. `slai doctor --fix` removes the stale pidfile and kills orphan sessions.
-- Agent shows `needs you` (amber `▲`): it is at a permission prompt or asked a question; press `g` to jump to it, `enter` to focus it and answer (or `space` for a one-line answer).
+- Agent shows `needs you` (amber `▲`): it is at a permission prompt or asked a question; press `g` to jump to it, `enter` to focus it and answer (or `space` for a one-line answer). If it asked you a question, `slai reply <ask-id> "..."` answers that exact question from any terminal.
 - Agents are on tmux socket `slai`: `tmux -L slai ls`, or `slai attach <id>`.
 - A hook's `hook.log` is at `.slai/run/<agent>/hook.log`; the supervisor log at `.slai/run/supervisor.log`.
 - A wake-up is skipped while you are attached to that agent's session.
