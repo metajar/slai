@@ -48,10 +48,9 @@ func hermetic(c *tmux.Client, cur string) orphans.Finder {
 }
 
 func TestDoctorListsOtherTeamsAndFlagsOrphans(t *testing.T) {
-	t.Setenv("SLAI_NO_ORPHAN_SCAN", "")
-	cur, gone, _ := orphanEnv(t)
+	cur, gone, c := orphanEnv(t)
 	var buf bytes.Buffer
-	bad := doctorOtherTeams(context.Background(), cur, false, &buf)
+	bad := doctorOtherTeams(context.Background(), hermetic(c, cur), false, &buf)
 	out := buf.String()
 	if bad < 1 || !strings.Contains(out, "Other slai teams:") || !strings.Contains(out, "ORPHAN "+gone) || !strings.Contains(out, "2 session(s)") {
 		t.Fatalf("bad=%d\n%s", bad, out)
@@ -61,7 +60,7 @@ func TestDoctorListsOtherTeamsAndFlagsOrphans(t *testing.T) {
 	}
 	// run from inside an agent's worktree: still the same current project
 	buf.Reset()
-	doctorOtherTeams(context.Background(), filepath.Join(cur, ".slai", "worktrees", "eng-1"), false, &buf)
+	doctorOtherTeams(context.Background(), hermetic(c, filepath.Join(cur, ".slai", "worktrees", "eng-1")), false, &buf)
 	if strings.Contains(buf.String(), cur) {
 		t.Fatalf("worktree cwd listed its own team:\n%s", buf.String())
 	}
@@ -100,22 +99,34 @@ func TestDownOrphansStopsOnlyOrphans(t *testing.T) {
 }
 
 func TestDoctorAllShowsHealthyTeamsOnlyWithFlag(t *testing.T) {
-	t.Setenv("SLAI_NO_ORPHAN_SCAN", "")
-	cur, gone, _ := orphanEnv(t)
+	cur, gone, c := orphanEnv(t)
 	l, err := supervisor.Acquire(gone) // gone now has a live supervisor: healthy, not an orphan
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer l.Release()
 	var def, all bytes.Buffer
-	if bad := doctorOtherTeams(context.Background(), cur, false, &def); bad != 0 {
+	if bad := doctorOtherTeams(context.Background(), hermetic(c, cur), false, &def); bad != 0 {
 		t.Fatalf("healthy team counted as a problem:\n%s", def.String())
 	}
 	if strings.Contains(def.String(), gone) || !strings.Contains(def.String(), "slai doctor --all") {
 		t.Fatalf("default output lists a healthy team or omits the --all hint:\n%s", def.String())
 	}
-	doctorOtherTeams(context.Background(), cur, true, &all)
+	doctorOtherTeams(context.Background(), hermetic(c, cur), true, &all)
 	if !strings.Contains(all.String(), "Other slai teams:") || !strings.Contains(all.String(), gone) {
 		t.Fatalf("--all output:\n%s", all.String())
+	}
+}
+
+// The one test that looks at the real host: opt in with SLAI_REAL_ORPHAN_SCAN=1. It only
+// checks that the real scan runs and prints a section, since the host's teams are unknown.
+func TestDoctorRealHostScan(t *testing.T) {
+	if os.Getenv("SLAI_REAL_ORPHAN_SCAN") == "" {
+		t.Skip("set SLAI_REAL_ORPHAN_SCAN=1 to scan the real host")
+	}
+	var buf bytes.Buffer
+	doctorOtherTeams(context.Background(), orphanFinder(t.TempDir()), true, &buf)
+	if !strings.Contains(buf.String(), "slai teams") {
+		t.Fatalf("no section printed:\n%s", buf.String())
 	}
 }

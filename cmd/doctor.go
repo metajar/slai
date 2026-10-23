@@ -194,7 +194,9 @@ func runDoctorChecks(ctx context.Context, dir string, fix, all bool, w io.Writer
 	bad += projectChecks(ctx, dir, fix, w)
 	bad += doctorMemory(ctx, dir, w)
 	bad += doctorHarnesses(ctx, dir, w)
-	bad += doctorOtherTeams(ctx, dir, all, w)
+	if os.Getenv("SLAI_NO_ORPHAN_SCAN") == "" { // test harnesses set it: do not look at the host's other teams
+		bad += doctorOtherTeams(ctx, orphanFinder(dir), all, w)
+	}
 	return bad, nil
 }
 
