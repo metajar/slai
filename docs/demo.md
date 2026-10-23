@@ -1,15 +1,25 @@
-# Demo: a 2-agent `solo` run with measured cost
+# Demo: what a tiny goal costs, with and without the review gate
 
-A tiny, repeatable goal on the `solo` preset (an orchestrator and one engineer), with what it cost.
+Two runs of the same tiny goal, with what each cost and what each number includes:
+
+1. a 2-agent `solo` team (orchestrator + one engineer, no review gate);
+2. a 3-agent team (orchestrator + **principal** + one engineer, review gate on), so the principal's review is part of the cost.
 
 - **Run date:** 2026-10-23
-- **Models:** the preset's defaults: orch on `opus` (recorded by Claude Code as `claude-opus-5-5`), eng-1 on `sonnet` (`claude-sonnet-5-5`)
-- **slai:** built from `slai/integration` at 719c46f
-- **Goal:** add `Add(a, b int) int` and a table-driven test to a one-file Go package.
+- **slai:** built from `slai/integration` at 91e7ea9 (includes `slai status --stats` with spend of every agent, and T-0017)
+- **Models:** the preset defaults: orch on `opus` (recorded as `claude-opus-5-5`), eng-1 on `sonnet` (`claude-sonnet-5-5`), principal on `fable` (`claude-fable-5-1`)
+- **Goal (both runs):** add `Add(a, b int) int` and a table-driven test to a one-file Go package.
 
-## Run it
+## What the cost numbers mean
 
-Needs `tmux`, `git`, `go` and `claude` (check with `slai doctor`). Everything below runs in a throwaway directory.
+All cost figures come from slai's own usage records (the `usage` table in `.slai/state.db`): slai estimates them from each agent's transcript with its price table, so they are slai's figures, not an invoice. Each record counts the whole context the model read, so token counts are large and not proportional to the goal.
+
+- **spend (per agent):** all recorded usage of that agent in the window: every turn it took, task work or not. It includes the orchestrator and the principal.
+- **total spend:** the sum of the spend of every agent. This is "what the run cost".
+- **$/merged:** an agent's own spend divided by the tasks it merged. It exists only for agents that were assigned a task, so it is the *engineer's* cost per merged task. Orchestrator and principal spend is in the total, **not** in any `$/merged`; for the real cost per merged task divide the total by the merged count.
+- **Per task** (`per_task_usd`, usage by `task_id`): each turn's usage is stamped with the agent's current task at the end of that turn. The assignee's turns carry the task. A reviewer's turns do not yet: slai clears the reviewer's charge when `approve`/`request_changes` is called, before that turn's usage is recorded (known bug as of 2026-10-23, fix pending). In the measured run below, the principal's $0.96 is therefore per agent only and no part of it is in any task's `per_task_usd`.
+
+## Run 1: solo (no review gate)
 
 ```sh
 mkdir demo && cd demo && git init -q
@@ -27,7 +37,7 @@ Optional safety net: add a spend cap under `defaults:` in `.slai/team.yaml` (thi
     per_run_usd: 3
 ```
 
-Start the team and give orch the goal. Plain `slai` is the normal way to start (it starts the agents and supervisor and opens the dashboard). This demo uses the headless `slai up` instead, which does the same start without the dashboard, so every step is a copyable command; run `slai` if you would rather watch:
+Start the team and give orch the goal. Plain `slai` is the normal way to start (it starts the agents and supervisor and opens the dashboard). This demo uses the headless `slai up`, which does the same without the dashboard, so every step is a copyable command:
 
 ```sh
 slai up
@@ -39,56 +49,72 @@ Claude Code asks "trust this folder?" once for the orchestrator. Run `slai attac
 slai send orch 'Goal: in demo.go add a function Add(a, b int) int that returns a+b, and a table-driven test in demo_test.go. go test ./... must pass. Keep it minimal; one task for eng-1.'
 ```
 
-Wait for `slai status` to show both agents `finished` (this run: about 2 minutes 15 seconds from sending the goal), then check the result:
+Wait for `slai status` to show the run finished (this run: under a minute), then:
 
 ```sh
 slai status
 slai status --stats
 git log --oneline slai/integration
-git show slai/integration:demo.go slai/integration:demo_test.go
 sqlite3 -readonly .slai/state.db \
   "select agent, count(*), sum(input_tokens), sum(output_tokens), round(sum(cost_usd),4) from usage group by agent"
 slai down
 ```
 
-## What I saw
-
-`slai status` ended with the orchestrator's summary:
+What happened: one task (T-0001), merged by eng-1, no review (`solo` has no principal), no rework.
 
 ```
-orch         orchestrator         opus     finished
-eng-1        engineer             sonnet   finished
+by agent:
+                               merged can/rev rounds rework refused    spend $/merged    time
+eng-1 claude/sonnet                 1     0/0    1.0     0%       0    $0.20    $0.20     16s
+orch claude/opus                    0     0/0      -      -       0    $0.32        -       -
 
-run finished. Final summary from the orchestrator:
-  Built: `func Add(a, b int) int` in demo.go ... and a table-driven TestAdd in demo_test.go with 5 cases ...
-  Lives on branch slai/integration (T-0001 merged, commit 638ec43) ...
+total spend: $0.52 (all agents)
 ```
-
-`git log --oneline slai/integration` showed one task, merged:
-
-```
-58e0780 Merge [T-0001] Add Add(a, b int) int with table-driven test
-638ec43 [T-0001] Add Add(a, b int) int with table-driven test
-165d1e6 init
-```
-
-`go test ./...` in the `slai/integration` checkout printed `ok  demo`.
-
-## Measured cost
-
-Spend comes from slai's own usage records (`usage` table in `.slai/state.db`, estimated by slai from the agents' transcripts and its price table, so it is slai's figure, not an invoice):
 
 | agent | records | input tokens | output tokens | cost |
 |-------|---------|--------------|---------------|------|
-| orch (opus) | 2 | 351,700 | 1,192 | $0.35 |
-| eng-1 (sonnet) | 2 | 350,892 | 1,141 | $0.20 |
-| **total** | | 702,592 | 2,333 | **$0.55** |
+| orch (opus) | 2 | 301,487 | 1,051 | $0.32 |
+| eng-1 (sonnet) | 2 | 351,526 | 1,065 | $0.20 |
+| **total** | | 653,013 | 2,116 | **$0.52** |
 
-- `slai status --stats` showed only eng-1 ($0.20): it lists agents that merged a task, so the orchestrator's $0.35 appears only in the raw table above.
-- The input-token counts are large because each record counts the whole context the model read, not new text. Do not expect them to be proportional to the size of the goal.
-- A single run is one sample. Cost varies with the goal, the models and how many review rounds happen. Here there was one task, one review round, no rework.
+- Everything above is for the whole run: the orchestrator's planning and checking, the engineer's task, and nothing else. $0.52 per merged task is the honest number here (one task); eng-1's `$/merged` of $0.20 is only the engineer's part.
 
-## Notes from this run
+## Run 2: orchestrator + principal + engineer (review gate on)
 
-- Fixed since this run (T-0005): at the time, `slai init` printed "Starting 2 Claude sessions" and `slai status` right after it printed only "supervisor: NOT running", although nothing starts until `slai up` (or `slai`). Init now says "Will start 2 Claude sessions when you run `slai`" and status lists the agents and ends "Next: `slai`".
-- Fixed since this run (T-0010): the `slai up` cost line ("Spend caps: OFF") only reported the per-agent and daily caps (`cmd/cost.go`), so `per_run_usd: 3`, which was active in this run (it would have paused the team at $3), showed as OFF. The line now lists every cap that is set and prints OFF only when all four are unset; with `per_run_usd: 3` it ends "Spend caps: per-run $3".
+Same repo and goal. The team is the `squad` preset cut down to `orch`, `principal` and `eng-1` (delete the other agents from `.slai/team.yaml`), with `require_review: true` (the squad default) and a run cap of $5:
+
+```sh
+slai init --yes --preset squad --name demo --description "tiny demo"
+# edit .slai/team.yaml: keep only the agents orch, principal and eng-1, and under defaults add:
+#   spend_caps:
+#     per_run_usd: 5
+slai up        # then trust the folder once, as above
+slai send orch 'Goal: in demo.go add a function Add(a, b int) int that returns a+b, and a table-driven test in demo_test.go. go test ./... must pass. Keep it minimal; one task for eng-1.'
+```
+
+What happened: eng-1 built T-0001 and called `request_review`; the principal ran `review_diff`, checked the tests and approved on the first round ("Add is correct; TestAdd is table-driven ... all met"); the supervisor merged it. About 80 seconds from sending the goal to the orchestrator's final summary. One review round, no rework.
+
+```
+by agent:
+                               merged can/rev rounds rework refused    spend $/merged    time
+eng-1 claude/sonnet                 1     0/0    1.0     0%       0    $0.20    $0.20     53s
+orch claude/opus                    0     0/0      -      -       0    $0.39        -       -
+principal claude/claude-fable…      0     0/0      -      -       0    $0.96        -       -
+
+total spend: $1.56 (all agents)
+```
+
+| agent | records | input tokens | output tokens | cost | of which charged to T-0001 |
+|-------|---------|--------------|---------------|------|----------------------------|
+| orch (opus) | 3 | 406,605 | 1,605 | $0.39 | $0 |
+| eng-1 (sonnet) | 2 | 351,938 | 1,069 | $0.20 | $0.20 |
+| principal (fable) | 2 | 497,481 | 2,335 | $0.96 | $0 |
+| **total** | | 1,256,024 | 5,009 | **$1.56** | $0.20 |
+
+- **The review gate roughly tripled the cost of this tiny task** ($0.52 without it, $1.56 with it), almost entirely the principal ($0.96, more than the engineer who wrote the code). On a bigger task the gate is a smaller share; this sample only shows it is not free.
+- **The principal's review tokens were not charged to the task.** Usage records are written when a turn ends, but `approve` ends the charge in the middle of that turn, so the review turn's $0.66 was recorded with no task. The principal's other $0.30 is the next turn (the wake after the merge). Until that is fixed, `per_task_usd` in practice counts the assignee only, even for reviewed tasks. The total and the per-agent spend are unaffected.
+- One `lane_denied` event was recorded on the principal's second turn (after the merge); it did not affect the run.
+
+## Reading the result
+
+A single run is one sample: cost varies with the goal, the models and the number of review rounds. These runs had one task, one review round and no rework. To cap what you spend, set `defaults.spend_caps` in `.slai/team.yaml` before `slai up`; `0` or leaving a cap out means no cap.
