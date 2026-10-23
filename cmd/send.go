@@ -52,7 +52,7 @@ func sendTargets(t *config.Team, name string) ([]string, error) {
 	return nil, fmt.Errorf("unknown agent or group %q (agents: %s; groups: %s)", name, strings.Join(agents, ", "), strings.Join(gl, ", "))
 }
 
-func sendGroupCmd() *cobra.Command {
+func sendCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   `send <agent|group> "message"`,
 		Short: "Send a message from you to an agent, a role group or everyone",

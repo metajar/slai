@@ -78,7 +78,7 @@ func TestSendTargetsAgentIDWinsOverGroup(t *testing.T) {
 
 func runSend(t *testing.T, args ...string) (string, error) {
 	t.Helper()
-	c := sendGroupCmd()
+	c := sendCmd()
 	c.SetArgs(args)
 	c.SilenceUsage, c.SilenceErrors = true, true
 	r, w, _ := os.Pipe()

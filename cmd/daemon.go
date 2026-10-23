@@ -199,23 +199,6 @@ func printTeardown(rep supervisor.TeardownReport) {
 	}
 }
 
-func sendCmd() *cobra.Command {
-	return &cobra.Command{Use: `send <agent> "message"`, Short: "Send a message from you to an agent", Args: cobra.ExactArgs(2),
-		RunE: func(c *cobra.Command, args []string) error {
-			s, err := load(c.Context())
-			if err != nil {
-				return err
-			}
-			defer s.Store.Close()
-			id, err := s.SendUser(args[0], args[1])
-			if err != nil {
-				return err
-			}
-			fmt.Printf("queued message %d for %s\n", id, args[0])
-			return nil
-		}}
-}
-
 type statusAgent struct {
 	ID          string `json:"id"`
 	Role        string `json:"role"`
