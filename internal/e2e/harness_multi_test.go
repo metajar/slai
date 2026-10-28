@@ -156,6 +156,18 @@ func TestFakeHarnessesJoinThroughRunFiles(t *testing.T) {
 				t.Fatal(err)
 			}
 			hp.tool("orch", "create_task", `{"title":"fake task","description":"do it","assignee":"eng-1"}`)
+			// This fixture starts no supervisor. Prepare the branch and release the
+			// assignment as the supervisor would before the fake calls get_inbox.
+			st = hp.db()
+			tasks, err := st.ListTasks("")
+			if err != nil || len(tasks) != 1 {
+				t.Fatalf("created task: %+v, %v", tasks, err)
+			}
+			hp.mustGit("-C", hp.worktree, "switch", "-c", tasks[0].Branch, "slai/integration")
+			if err := st.ReleaseTaskAssignments("eng-1", tasks[0].ID); err != nil {
+				t.Fatal(err)
+			}
+			st.Close()
 
 			out, log := hp.run(nil, "[slai] You have 3 new items. Call get_inbox.")
 
@@ -211,7 +223,7 @@ func TestFakeHarnessesJoinThroughRunFiles(t *testing.T) {
 			if !gotReply {
 				t.Errorf("no reply from eng-1 to principal in %v", msgs)
 			}
-			tasks, _ := st.ListTasks("")
+			tasks, _ = st.ListTasks("")
 			if len(tasks) != 1 || tasks[0].Status != "in_review" {
 				for _, r := range recsOf(log, "tool") {
 					t.Logf("tool %v %v => %v %v", r["name"], r["args"], r["result"], r["error"])
