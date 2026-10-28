@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/oorbt/slai/internal/config"
+	"github.com/oorbt/slai/internal/store"
 	"github.com/oorbt/slai/internal/tmux"
 )
 
@@ -211,13 +212,23 @@ func TestRealTmuxSmoke(t *testing.T) {
 		t.Errorf("window height = %d, want %d", ph, 50-2-2-1)
 	}
 
-	// quick prompt (space) delivers without focusing
+	// The quick prompt queues mail, and the supervisor sends a safe wake. The
+	// fake Claude process only echoes input; it cannot call get_inbox itself.
 	keys("Space")
 	waitFor("quick prompt", "to eng-1:")
 	typeText("smoke-hello")
 	keys("Enter")
-	waitAgent("eng-1", "echo: smoke-hello")
-	waitFor("echo in preview", "echo: smoke-hello")
+	waitAgent("eng-1", "echo: [slai] You have 1 new items. Call get_inbox.")
+	waitFor("wake in preview", "Call get_inbox.")
+	st, err := store.Open(filepath.Join(repo, ".slai", "state.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	msgs, err := st.UndeliveredFor("eng-1")
+	if err != nil || len(msgs) != 1 || msgs[0].Body != "smoke-hello" {
+		t.Fatalf("queued quick prompt: %+v, %v", msgs, err)
+	}
 	gone("quick prompt", "to eng-1:")
 	keys("Space") // esc cancels
 	waitFor("quick prompt 2", "to eng-1:")

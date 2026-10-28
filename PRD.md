@@ -129,7 +129,7 @@ Agents never type into each other's panes. A message or task assignment is a row
 
 > `[slai] You have 2 new items. Call get_inbox.`
 
-If the agent is `working`, the wake-up waits until its next `Stop` hook. This keeps panes readable and context small: the agent pulls the details through the `get_inbox` tool.
+If the agent is `working`, a PostToolUse hook can add a short notice about claimable mail to its current turn; no pane input is sent. Otherwise the wake-up waits until it is safe to type. User quick prompts also enter the inbox before the supervisor wakes the recipient. This keeps panes readable and context small: the agent pulls the details through the `get_inbox` tool. Engineer assignments are held out of the inbox until the supervisor prepares their task branch; dependency-blocked assignments are readable as explicit wait notices, while startable work queued behind an active task stays held until its branch is selected. The precise cross-component delivery contract is in `ARCHITECTURE.md`.
 
 ### 3.5 Git worktrees and merging
 

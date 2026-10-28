@@ -425,8 +425,10 @@ func (s *Supervisor) wakeTick(ctx context.Context) {
 		s.noteWakeTyped(a, line)
 		ids := make([]int64, 0, len(msgs))
 		for _, m := range msgs {
-			_ = s.Store.MarkWoken(m.ID)
 			ids = append(ids, m.ID)
+		}
+		if err := s.Store.MarkWoken(ids...); err != nil {
+			s.logf("mark woken %s: %v", a.ID, err)
 		}
 		// Optimistic; hooks overwrite this as soon as the agent reacts.
 		_, _ = s.Store.CompareAndSetStatus(a.ID, "working", a.Status)
@@ -646,20 +648,24 @@ func hasKind(ms []store.Message, k string) bool {
 // prepareAssignments has put its worktree on the task branch, and the agent would commit on
 // the previous task's branch.
 func (s *Supervisor) refreshPending(agent string, msgs []store.Message) []store.Message {
-	all, err := s.Store.PendingWake(s.now().Add(-WakeRetry).Unix())
+	all, err := s.Store.PendingWakeFor(agent, s.now().Add(-WakeRetry).Unix())
 	if err != nil {
 		return msgs
 	}
-	var fresh []store.Message
+	// Merge by id, not length: an older item may have been claimed while a new
+	// assignment arrived, leaving a shorter fresh list that still needs preparing.
+	out := append([]store.Message(nil), msgs...)
+	seen := make(map[int64]bool, len(msgs))
+	for _, m := range msgs {
+		seen[m.ID] = true
+	}
 	for _, m := range all {
-		if m.To == agent {
-			fresh = append(fresh, m)
+		if !seen[m.ID] {
+			out = append(out, m)
+			seen[m.ID] = true
 		}
 	}
-	if len(fresh) < len(msgs) {
-		return msgs // never wake for less than was already decided
-	}
-	return fresh
+	return out
 }
 
 // TaskBranch is the conventional branch name for a task (PRD 3.5).
@@ -728,7 +734,7 @@ func (s *Supervisor) switchWorktree(ctx context.Context, a store.Agent, task sto
 		_ = s.Store.UpdateTaskFields(task.ID, store.Task{Branch: branch})
 	}
 	_ = s.Store.SetAgentTask(a.ID, task.ID)
-	return nil
+	return s.Store.ReleaseTaskAssignments(a.ID, task.ID)
 }
 
 // prepareAssignments puts an engineer's worktree on the task branch for fresh
@@ -779,18 +785,21 @@ func (s *Supervisor) prepareAssignmentsHeld(ctx context.Context, a store.Agent, 
 		task, err := s.Store.GetTask(m.TaskID)
 		if err != nil {
 			_ = s.Store.SetAgentTask(a.ID, m.TaskID)
+			_ = s.Store.ReleaseInbox(m.ID)
 			continue
 		}
 		if !engineer {
 			_ = s.Store.SetAgentTask(a.ID, m.TaskID)
+			_ = s.Store.ReleaseInbox(m.ID)
 			continue
 		}
 		if waiting, _ := s.Store.WaitingOn(task.ID); len(waiting) > 0 || task.Status == store.StatusBlocked {
-			continue // queued behind its dependencies
+			_ = s.Store.ReleaseInbox(m.ID)
+			continue // queued notice: do not start until dependencies clear
 		}
 		if cur != "" && cur != task.ID {
 			if ct, err := s.Store.GetTask(cur); err == nil && busyStatus(ct.Status) {
-				continue // mid-way through another task: worktreeTick switches later
+				continue // keep held until worktreeTick switches to this task
 			}
 		}
 		if err := s.switchWorktree(ctx, a, task); err != nil {
@@ -824,9 +833,16 @@ func (s *Supervisor) prepareAssignmentsHeld(ctx context.Context, a store.Agent, 
 
 // withoutHeld drops the messages held back from get_inbox.
 func (s *Supervisor) withoutHeld(msgs []store.Message) []store.Message {
+	if len(msgs) == 0 {
+		return nil
+	}
+	held, err := s.Store.HeldInboxFor(msgs[0].To)
+	if err != nil {
+		return nil // fail closed: do not wake for an assignment we cannot check
+	}
 	var out []store.Message
 	for _, m := range msgs {
-		if !s.Store.InboxHeld(m.ID) {
+		if !held[m.ID] {
 			out = append(out, m)
 		}
 	}
@@ -957,6 +973,7 @@ func (s *Supervisor) reconcileWorktree(ctx context.Context, a store.Agent, tasks
 		}
 		if taskBranchOf(a, t) == here {
 			_ = s.Store.SetAgentTask(a.ID, t.ID) // already on it: only the board was behind; never stash
+			_ = s.Store.ReleaseTaskAssignments(a.ID, t.ID)
 			return
 		}
 		prev := a.CurrentTask

@@ -167,31 +167,21 @@ func (m *Model) resizeCmd(agent string, w, h int) tea.Cmd {
 	}
 }
 
-// sendCmd is the quick prompt: text + Enter into the pane, recorded as a user
-// message (already delivered, so no wake-up is injected on top of it).
+// sendCmd queues the quick prompt through the same guarded wake path as slai send.
+// The supervisor, not the TUI, decides when it is safe to type into the pane.
 func (m *Model) sendCmd(target, text string, waitingOnUser bool) tea.Cmd {
-	o := m.opts
-	io := m.io
-	sess := m.session(target)
+	st := m.opts.Store
 	return func() tea.Msg {
-		ctx, cancel := ctx3()
-		defer cancel()
-		if io != nil {
-			if err := io.SendKeys(ctx, sess, text, true); err != nil {
-				return actionMsg{err: err}
-			}
+		if st == nil {
+			return actionMsg{err: fmt.Errorf("cannot queue a prompt without the state store")}
 		}
-		if o.Store != nil {
-			id, err := o.Store.AddMessage(store.Message{From: "user", To: target, Kind: "user", Body: text})
-			if err != nil {
-				return actionMsg{err: err}
-			}
-			_ = o.Store.MarkDelivered(id)
+		if _, err := st.AddMessage(store.Message{From: "user", To: target, Kind: "user", Body: text}); err != nil {
+			return actionMsg{err: err}
 		}
 		if waitingOnUser {
-			return actionMsg{text: "answered " + target}
+			return actionMsg{text: "queued reply to " + target}
 		}
-		return actionMsg{text: "sent to " + target}
+		return actionMsg{text: "queued for " + target}
 	}
 }
 

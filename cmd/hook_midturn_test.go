@@ -109,6 +109,23 @@ func TestMidTurnNoticeSkips(t *testing.T) {
 	}
 }
 
+func TestMidTurnNoticeSkipsInboxHeldAssignment(t *testing.T) {
+	dir, st := midturnProject(t)
+	id := addMail(t, st, "assignment waiting for branch")
+	if err := st.HoldInbox(id); err != nil {
+		t.Fatal(err)
+	}
+	if out := postHook(t, dir, "Bash"); out != "" {
+		t.Fatalf("held item announced before it can be claimed: %q", out)
+	}
+	if err := st.ReleaseInbox(id); err != nil {
+		t.Fatal(err)
+	}
+	if got := noticeText(t, postHook(t, dir, "Bash")); !strings.Contains(got, "1 new items") {
+		t.Fatalf("released item not announced: %q", got)
+	}
+}
+
 func TestMidTurnNoticeRespectsHolds(t *testing.T) {
 	for name, hold := range map[string]func(*store.Store){
 		"agent paused": func(st *store.Store) { _ = st.SetAgentPaused("eng-1", true) },

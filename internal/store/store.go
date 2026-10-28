@@ -502,6 +502,30 @@ func (s *Store) AddMessage(m Message) (int64, error) {
 	if m.Kind == "" {
 		m.Kind = "note"
 	}
+	// An engineer must not claim a fresh assignment before the supervisor has
+	// prepared its worktree. Insert the message and its inbox hold in one write
+	// transaction so concurrent get_inbox calls never see an unheld assignment.
+	if m.Kind == "assignment" && m.TaskID != "" {
+		tx, err := s.db.Begin()
+		if err != nil {
+			return 0, err
+		}
+		defer tx.Rollback()
+		res, err := tx.Exec(`INSERT INTO messages(from_agent, to_agent, kind, task_id, reply_to, body, created_at) VALUES(?,?,?,?,?,?,?)`,
+			m.From, m.To, m.Kind, m.TaskID, m.ReplyTo, m.Body, s.ts())
+		if err != nil {
+			return 0, err
+		}
+		id, err := res.LastInsertId()
+		if err != nil {
+			return 0, err
+		}
+		if _, err := tx.Exec(`INSERT INTO kv(key, value) SELECT ?, '1' WHERE EXISTS (SELECT 1 FROM agents WHERE id=? AND role='engineer')`,
+			KVInboxHold+strconv.FormatInt(id, 10), m.To); err != nil {
+			return 0, err
+		}
+		return id, tx.Commit()
+	}
 	res, err := s.db.Exec(`INSERT INTO messages(from_agent, to_agent, kind, task_id, reply_to, body, created_at) VALUES(?,?,?,?,?,?,?)`,
 		m.From, m.To, m.Kind, m.TaskID, m.ReplyTo, m.Body, s.ts())
 	if err != nil {
@@ -529,6 +553,21 @@ FROM messages WHERE to_agent=? AND delivered_at=0 ORDER BY id`, agent)
 	return out, rows.Err()
 }
 
+const claimableInboxSQL = `SELECT id, from_agent, to_agent, kind, task_id, reply_to, body, created_at, delivered_at, woken_at
+FROM messages WHERE to_agent=? AND delivered_at=0
+AND NOT EXISTS (SELECT 1 FROM kv WHERE key='inbox.hold.' || messages.id) ORDER BY id`
+
+// ClaimableFor lists undelivered items that get_inbox could actually return.
+// A mid-turn notice must not invite an agent to read an assignment still held
+// for branch preparation.
+func (s *Store) ClaimableFor(agent string) ([]Message, error) {
+	rows, err := s.db.Query(claimableInboxSQL, agent)
+	if err != nil {
+		return nil, err
+	}
+	return scanMessages(rows)
+}
+
 // MarkDelivered marks messages delivered (idempotent).
 func (s *Store) MarkDelivered(ids ...int64) error {
 	if len(ids) == 0 {
@@ -547,10 +586,24 @@ func (s *Store) MarkDelivered(ids ...int64) error {
 	return tx.Commit()
 }
 
-// MarkWoken records that a wake-up nudge was sent for the message.
-func (s *Store) MarkWoken(id int64) error {
-	_, err := s.db.Exec(`UPDATE messages SET woken_at=? WHERE id=?`, s.ts(), id)
-	return err
+// MarkWoken records that a wake-up nudge was sent for these messages.
+func (s *Store) MarkWoken(ids ...int64) error {
+	for len(ids) > 0 {
+		chunk := ids
+		if len(chunk) > 500 {
+			chunk = ids[:500]
+		}
+		args := make([]any, 0, len(chunk)+1)
+		args = append(args, s.ts())
+		for _, id := range chunk {
+			args = append(args, id)
+		}
+		if _, err := s.db.Exec(`UPDATE messages SET woken_at=? WHERE id IN (`+strings.TrimSuffix(strings.Repeat("?,", len(chunk)), ",")+`)`, args...); err != nil {
+			return err
+		}
+		ids = ids[len(chunk):]
+	}
+	return nil
 }
 
 // ClaimInbox atomically returns and marks delivered all undelivered messages for agent.
@@ -560,8 +613,7 @@ func (s *Store) ClaimInbox(agent string) ([]Message, error) {
 		return nil, err
 	}
 	defer tx.Rollback()
-	rows, err := tx.Query(`SELECT id, from_agent, to_agent, kind, task_id, reply_to, body, created_at, delivered_at, woken_at
-FROM messages WHERE to_agent=? AND delivered_at=0 AND NOT EXISTS (SELECT 1 FROM kv WHERE key = 'inbox.hold.' || messages.id) ORDER BY id`, agent)
+	rows, err := tx.Query(claimableInboxSQL, agent)
 	if err != nil {
 		return nil, err
 	}

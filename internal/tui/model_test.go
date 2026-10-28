@@ -313,24 +313,36 @@ func TestQuickPrompt(t *testing.T) {
 		t.Fatal("enter should close + send")
 	}
 	msg := cmd()
-	if am, ok := msg.(actionMsg); !ok || am.err != nil || !strings.Contains(am.text, "answered") {
+	if am, ok := msg.(actionMsg); !ok || am.err != nil || !strings.Contains(am.text, "queued") {
 		t.Fatalf("%+v", msg)
 	}
-	if len(fp.lines) != 1 || fp.lines[0] != "sess_eng-2|yes do it|true" {
-		t.Fatalf("sent = %v", fp.lines)
+	if len(fp.lines) != 0 {
+		t.Fatalf("quick prompt bypassed supervisor safety checks: %v", fp.lines)
 	}
 	if m.mode == mFocus {
 		t.Fatal("quick prompt must not focus")
 	}
-	if un, _ := s.UndeliveredFor("eng-2"); len(un) != 0 {
-		t.Fatal("kind=user message should be recorded as delivered")
+	if un, _ := s.UndeliveredFor("eng-2"); len(un) != 1 || un[0].Kind != "user" || un[0].Body != "yes do it" {
+		t.Fatalf("quick prompt should queue a user message: %+v", un)
 	}
 	// esc cancels
 	m.Update(key("space"))
 	m.Update(key("z"))
 	m.Update(key("esc"))
-	if m.mode != mList || len(fp.lines) != 1 {
+	if m.mode != mList || len(fp.lines) != 0 {
 		t.Fatal("esc should cancel")
+	}
+}
+
+func TestQuickPromptWithoutStoreDoesNotType(t *testing.T) {
+	m, fp, _ := paneModel(t)
+	m.opts.Store = nil
+	msg := m.sendCmd("eng-2", "hello", false)()
+	if am, ok := msg.(actionMsg); !ok || am.err == nil {
+		t.Fatalf("missing store should fail rather than send unrecorded input: %+v", msg)
+	}
+	if len(fp.lines) != 0 {
+		t.Fatalf("typed without persisting: %v", fp.lines)
 	}
 }
 

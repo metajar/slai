@@ -41,7 +41,7 @@ func postToolNotice(st *store.Store, team *config.Team, agent, tool string, now 
 	if heldFromWaking(st, agent, now) {
 		return nil
 	}
-	msgs, err := st.UndeliveredFor(agent)
+	msgs, err := st.ClaimableFor(agent)
 	if err != nil {
 		return nil
 	}
