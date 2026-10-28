@@ -553,6 +553,21 @@ FROM messages WHERE to_agent=? AND delivered_at=0 ORDER BY id`, agent)
 	return out, rows.Err()
 }
 
+const claimableInboxSQL = `SELECT id, from_agent, to_agent, kind, task_id, reply_to, body, created_at, delivered_at, woken_at
+FROM messages WHERE to_agent=? AND delivered_at=0
+AND NOT EXISTS (SELECT 1 FROM kv WHERE key='inbox.hold.' || messages.id) ORDER BY id`
+
+// ClaimableFor lists undelivered items that get_inbox could actually return.
+// A mid-turn notice must not invite an agent to read an assignment still held
+// for branch preparation.
+func (s *Store) ClaimableFor(agent string) ([]Message, error) {
+	rows, err := s.db.Query(claimableInboxSQL, agent)
+	if err != nil {
+		return nil, err
+	}
+	return scanMessages(rows)
+}
+
 // MarkDelivered marks messages delivered (idempotent).
 func (s *Store) MarkDelivered(ids ...int64) error {
 	if len(ids) == 0 {
@@ -598,8 +613,7 @@ func (s *Store) ClaimInbox(agent string) ([]Message, error) {
 		return nil, err
 	}
 	defer tx.Rollback()
-	rows, err := tx.Query(`SELECT id, from_agent, to_agent, kind, task_id, reply_to, body, created_at, delivered_at, woken_at
-FROM messages WHERE to_agent=? AND delivered_at=0 AND NOT EXISTS (SELECT 1 FROM kv WHERE key = 'inbox.hold.' || messages.id) ORDER BY id`, agent)
+	rows, err := tx.Query(claimableInboxSQL, agent)
 	if err != nil {
 		return nil, err
 	}

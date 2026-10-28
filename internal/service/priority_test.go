@@ -33,6 +33,17 @@ func TestPriorityOrdersBoardAndInbox(t *testing.T) {
 	if !json.Valid(raw) || !strings.Contains(string(raw), `"priority":1`) || !strings.Contains(string(raw), `"priority":0`) {
 		t.Fatalf("board JSON lacks priority: %s", raw)
 	}
+	// The supervisor prepares/releases the engineer's assignment messages before
+	// they become claimable. Simulate that handoff in this service-only test.
+	pending, err := s.Store.UndeliveredFor("eng-1")
+	if err != nil || len(pending) != 2 {
+		t.Fatalf("queued assignments: %+v, %v", pending, err)
+	}
+	for _, m := range pending {
+		if err := s.Store.ReleaseInbox(m.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
 	items := j(must(s.GetInbox(ctx, "eng-1")))["items"].([]any)
 	if first := items[0].(map[string]any)["task_id"]; first != b {
 		t.Fatalf("inbox lists %v first, want the high-priority task %s", first, b)
