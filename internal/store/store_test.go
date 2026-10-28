@@ -242,6 +242,31 @@ func TestTwoConnectionConcurrency(t *testing.T) {
 	}
 }
 
+func TestMigration0008MessageIndexesUpDownUp(t *testing.T) {
+	s, _ := open(t)
+	indexes := func() int {
+		var n int
+		_ = s.db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE name IN
+('idx_messages_wake','idx_messages_owed','idx_messages_reply_to','idx_messages_answer')`).Scan(&n)
+		return n
+	}
+	if indexes() != 4 {
+		t.Fatalf("up: %d message indexes", indexes())
+	}
+	if err := s.MigrateDown(7); err != nil {
+		t.Fatal(err)
+	}
+	if v, _ := s.SchemaVersion(); v != 7 || indexes() != 0 {
+		t.Fatalf("down: version %d, indexes %d", v, indexes())
+	}
+	if err := s.migrate(); err != nil {
+		t.Fatal(err)
+	}
+	if v, _ := s.SchemaVersion(); v != 8 || indexes() != 4 {
+		t.Fatalf("re-up: version %d, indexes %d", v, indexes())
+	}
+}
+
 func TestMigration0003UpDownUp(t *testing.T) {
 	s, err := Open(filepath.Join(t.TempDir(), "s.db"))
 	if err != nil {
@@ -253,7 +278,7 @@ func TestMigration0003UpDownUp(t *testing.T) {
 		_ = s.db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE name IN ('task_deps','idx_task_deps_dep')`).Scan(&n)
 		return n == 2
 	}
-	if v, _ := s.SchemaVersion(); v != 7 || !hasTable() {
+	if v, _ := s.SchemaVersion(); v != 8 || !hasTable() {
 		t.Fatalf("up: version %d table=%v", v, hasTable())
 	}
 	if _, err := s.db.Exec(`INSERT INTO task_deps(task_id, dep_id) VALUES('T-2','T-1')`); err != nil {
@@ -281,7 +306,7 @@ func TestMigration0003UpDownUp(t *testing.T) {
 	if err := s.migrate(); err != nil {
 		t.Fatal(err)
 	}
-	if v, _ := s.SchemaVersion(); v != 7 || !hasTable() {
+	if v, _ := s.SchemaVersion(); v != 8 || !hasTable() {
 		t.Fatalf("up again: version %d table=%v", v, hasTable())
 	}
 	var rows int
@@ -309,7 +334,7 @@ func TestMigration0004UpDownUp(t *testing.T) {
 		_ = s.db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE name IN ('task_ac_claims','task_ac_verdicts')`).Scan(&n)
 		return n
 	}
-	if v, _ := s.SchemaVersion(); v != 7 || tables() != 2 {
+	if v, _ := s.SchemaVersion(); v != 8 || tables() != 2 {
 		t.Fatalf("up: version %d, tables %d", v, tables())
 	}
 	tk, _ := s.CreateTask(Task{Title: "t", Assignee: "eng-1", CreatedBy: "orch"})
@@ -335,7 +360,7 @@ func TestMigration0004UpDownUp(t *testing.T) {
 	if err := s.migrate(); err != nil {
 		t.Fatal(err)
 	}
-	if v, _ := s.SchemaVersion(); v != 7 || tables() != 2 {
+	if v, _ := s.SchemaVersion(); v != 8 || tables() != 2 {
 		t.Fatalf("up again: version %d, tables %d", v, tables())
 	}
 	if n, c, _ := s.LatestACClaims(tk.ID); n != 0 || len(c) != 0 {

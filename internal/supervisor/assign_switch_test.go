@@ -173,6 +173,34 @@ func TestUnblockedTaskWaitsForCurrentTaskToReachReview(t *testing.T) {
 	}
 }
 
+func TestStartableAssignmentStaysHeldBehindActiveTaskUntilSwitch(t *testing.T) {
+	e := newSwitchEnv(t)
+	n := newTask(t, e, store.StatusAssigned)
+	id, err := e.s.Store.AddMessage(store.Message{From: "orch", To: "eng-1", Kind: "assignment", TaskID: n.ID, Body: "start"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !e.s.prepareAssignments(context.Background(), store.Agent{ID: "eng-1", Worktree: e.wt}, []store.Message{{ID: id, Kind: "assignment", TaskID: n.ID, To: "eng-1"}}) {
+		t.Fatal("preparing a queued task should not fail")
+	}
+	if got, err := e.s.Store.ClaimInbox("eng-1"); err != nil || len(got) != 0 {
+		t.Fatalf("assignment visible on the previous task's branch: %+v, %v", got, err)
+	}
+	if e.branch(t) != e.a.Branch {
+		t.Fatalf("switched away from active task: %s", e.branch(t))
+	}
+	if err := e.s.Store.UpdateTaskStatus(e.a.ID, store.StatusInReview); err != nil {
+		t.Fatal(err)
+	}
+	e.tick()
+	if e.branch(t) != n.Branch {
+		t.Fatalf("queued task not switched: %s", e.branch(t))
+	}
+	if got, err := e.s.Store.ClaimInbox("eng-1"); err != nil || len(got) != 2 || got[0].ID != id || got[1].Kind != "note" {
+		t.Fatalf("assignment and switch notice not released after switch: %+v, %v", got, err)
+	}
+}
+
 // AC 4: changes requested on a task whose branch is not checked out.
 func TestChangesRequestedSwitchesBackOnlyWhenClean(t *testing.T) {
 	setup := func(t *testing.T) *switchEnv {

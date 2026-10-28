@@ -734,7 +734,7 @@ func (s *Supervisor) switchWorktree(ctx context.Context, a store.Agent, task sto
 		_ = s.Store.UpdateTaskFields(task.ID, store.Task{Branch: branch})
 	}
 	_ = s.Store.SetAgentTask(a.ID, task.ID)
-	return nil
+	return s.Store.ReleaseTaskAssignments(a.ID, task.ID)
 }
 
 // prepareAssignments puts an engineer's worktree on the task branch for fresh
@@ -799,8 +799,7 @@ func (s *Supervisor) prepareAssignmentsHeld(ctx context.Context, a store.Agent, 
 		}
 		if cur != "" && cur != task.ID {
 			if ct, err := s.Store.GetTask(cur); err == nil && busyStatus(ct.Status) {
-				_ = s.Store.ReleaseInbox(m.ID)
-				continue // queued notice: worktreeTick switches later
+				continue // keep held until worktreeTick switches to this task
 			}
 		}
 		if err := s.switchWorktree(ctx, a, task); err != nil {
@@ -974,6 +973,7 @@ func (s *Supervisor) reconcileWorktree(ctx context.Context, a store.Agent, tasks
 		}
 		if taskBranchOf(a, t) == here {
 			_ = s.Store.SetAgentTask(a.ID, t.ID) // already on it: only the board was behind; never stash
+			_ = s.Store.ReleaseTaskAssignments(a.ID, t.ID)
 			return
 		}
 		prev := a.CurrentTask

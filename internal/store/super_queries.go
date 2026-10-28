@@ -254,6 +254,15 @@ func (s *Store) ReleaseInbox(id int64) error {
 	return s.DeleteKV(KVInboxHold + strconv.FormatInt(id, 10))
 }
 
+// ReleaseTaskAssignments makes held assignments claimable after a worktree switch
+// has put the recipient on that task's branch.
+func (s *Store) ReleaseTaskAssignments(agent, taskID string) error {
+	_, err := s.db.Exec(`DELETE FROM kv WHERE key IN (
+SELECT 'inbox.hold.' || id FROM messages
+WHERE to_agent=? AND task_id=? AND kind='assignment' AND delivered_at=0)`, agent, taskID)
+	return err
+}
+
 // HeldInboxFor returns held, undelivered message ids for one recipient in one query.
 func (s *Store) HeldInboxFor(agent string) (map[int64]bool, error) {
 	rows, err := s.db.Query(`SELECT m.id FROM messages m JOIN kv k ON k.key='inbox.hold.' || m.id
