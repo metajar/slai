@@ -105,6 +105,9 @@ func TestBlockedAssignmentLeavesWorktreeAlone(t *testing.T) {
 	e := newSwitchEnv(t)
 	e.dirty(t)
 	e.assignB(t)
+	if got, err := e.s.Store.ClaimInbox("eng-1"); err != nil || len(got) != 1 || got[0].TaskID != e.b.ID {
+		t.Fatalf("queued task notice must be readable: %+v, %v", got, err)
+	}
 	if got := e.branch(t); got != e.a.Branch {
 		t.Fatalf("worktree moved to %s", got)
 	}
@@ -342,6 +345,22 @@ func TestSwitchNoteNeverHasAnEmptyPreviousTask(t *testing.T) {
 	}
 }
 
+func TestRefreshPendingKeepsLateAssignmentWhenEarlierMailWasClaimed(t *testing.T) {
+	e := newSwitchEnv(t)
+	e.finishA(t)
+	oldID, _ := e.s.Store.AddMessage(store.Message{From: "slai", To: "eng-1", Kind: "note", Body: "earlier"})
+	snapshot := []store.Message{{ID: oldID, To: "eng-1", Kind: "note"}}
+	if _, err := e.s.Store.ClaimInbox("eng-1"); err != nil {
+		t.Fatal(err)
+	}
+	n := newTask(t, e, store.StatusAssigned)
+	aid, _ := e.s.Store.AddMessage(store.Message{From: "orch", To: "eng-1", Kind: "assignment", TaskID: n.ID, Body: "x"})
+	got := e.s.refreshPending("eng-1", snapshot)
+	if len(got) != 2 || got[1].ID != aid {
+		t.Fatalf("late assignment lost when earlier mail was claimed: %+v", got)
+	}
+}
+
 // T-0112: a wake pass's snapshot can be stale on a loaded machine. An assignment that arrived
 // after it is picked up just before the agent is woken, so its worktree is switched before the
 // agent's get_inbox can show it the task.
@@ -352,6 +371,9 @@ func TestRefreshPendingPicksUpAnAssignmentThatArrivedAfterTheSnapshot(t *testing
 	snapshot := []store.Message{{ID: oldID, To: "eng-1", Kind: "note", TaskID: e.a.ID}}
 	n := newTask(t, e, store.StatusAssigned)
 	aid, _ := e.s.Store.AddMessage(store.Message{From: "orch", To: "eng-1", Kind: "assignment", TaskID: n.ID, Body: "x"})
+	if !e.s.Store.InboxHeld(aid) {
+		t.Fatal("assignment inserted during wake refresh must be held until prepared")
+	}
 
 	got := e.s.refreshPending("eng-1", snapshot)
 	if len(got) != 2 || got[1].ID != aid {
@@ -364,7 +386,7 @@ func TestRefreshPendingPicksUpAnAssignmentThatArrivedAfterTheSnapshot(t *testing
 		t.Fatalf("worktree on %s before the agent could read the assignment, want %s", e.branch(t), n.Branch)
 	}
 	// never fewer than the pass already decided on
-	if got := e.s.refreshPending("eng-1", append(snapshot, store.Message{ID: 9998, To: "eng-1"}, store.Message{ID: 9999, To: "eng-1"})); len(got) != 3 {
-		t.Errorf("a shorter fresh list replaced the snapshot: %+v", got)
+	if got := e.s.refreshPending("eng-1", append(snapshot, store.Message{ID: 9998, To: "eng-1"}, store.Message{ID: 9999, To: "eng-1"})); len(got) != 4 || got[3].ID != aid {
+		t.Errorf("refresh dropped the snapshot or late assignment: %+v", got)
 	}
 }

@@ -172,7 +172,18 @@ func TestLifecycleApprove(t *testing.T) {
 	if task.Status != "assigned" || task.Branch != "slai/eng-1/T-0001" || task.CreatedBy != "orch" {
 		t.Fatalf("%+v", task)
 	}
-	// assignment queued
+	// An engineer cannot claim an assignment until the supervisor has prepared
+	// its branch; this unit test simulates that handoff without running a supervisor.
+	if in := j(must(s.GetInbox(ctx, "eng-1")))["items"].([]any); len(in) != 0 {
+		t.Fatalf("unprepared assignment visible: %v", in)
+	}
+	pending, _ := s.Store.UndeliveredFor("eng-1")
+	if len(pending) != 1 {
+		t.Fatalf("assignment not queued: %+v", pending)
+	}
+	if err := s.Store.ReleaseInbox(pending[0].ID); err != nil {
+		t.Fatal(err)
+	}
 	in := j(must(s.GetInbox(ctx, "eng-1")))["items"].([]any)
 	if len(in) != 1 || in[0].(map[string]any)["kind"] != "assignment" {
 		t.Fatalf("inbox %v", in)

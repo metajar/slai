@@ -502,6 +502,30 @@ func (s *Store) AddMessage(m Message) (int64, error) {
 	if m.Kind == "" {
 		m.Kind = "note"
 	}
+	// An engineer must not claim a fresh assignment before the supervisor has
+	// prepared its worktree. Insert the message and its inbox hold in one write
+	// transaction so concurrent get_inbox calls never see an unheld assignment.
+	if m.Kind == "assignment" && m.TaskID != "" {
+		tx, err := s.db.Begin()
+		if err != nil {
+			return 0, err
+		}
+		defer tx.Rollback()
+		res, err := tx.Exec(`INSERT INTO messages(from_agent, to_agent, kind, task_id, reply_to, body, created_at) VALUES(?,?,?,?,?,?,?)`,
+			m.From, m.To, m.Kind, m.TaskID, m.ReplyTo, m.Body, s.ts())
+		if err != nil {
+			return 0, err
+		}
+		id, err := res.LastInsertId()
+		if err != nil {
+			return 0, err
+		}
+		if _, err := tx.Exec(`INSERT INTO kv(key, value) SELECT ?, '1' WHERE EXISTS (SELECT 1 FROM agents WHERE id=? AND role='engineer')`,
+			KVInboxHold+strconv.FormatInt(id, 10), m.To); err != nil {
+			return 0, err
+		}
+		return id, tx.Commit()
+	}
 	res, err := s.db.Exec(`INSERT INTO messages(from_agent, to_agent, kind, task_id, reply_to, body, created_at) VALUES(?,?,?,?,?,?,?)`,
 		m.From, m.To, m.Kind, m.TaskID, m.ReplyTo, m.Body, s.ts())
 	if err != nil {

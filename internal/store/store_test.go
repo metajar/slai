@@ -45,6 +45,35 @@ func TestCanTransition(t *testing.T) {
 	}
 }
 
+func TestEngineerAssignmentIsHeldAtomicallyUntilPrepared(t *testing.T) {
+	s, _ := open(t)
+	if err := s.UpsertAgent(Agent{ID: "eng-1", Role: "engineer"}); err != nil {
+		t.Fatal(err)
+	}
+	id, err := s.AddMessage(Message{From: "orch", To: "eng-1", Kind: "assignment", TaskID: "T-0001", Body: "start"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !s.InboxHeld(id) {
+		t.Fatal("assignment was visible before branch preparation")
+	}
+	if got, err := s.ClaimInbox("eng-1"); err != nil || len(got) != 0 {
+		t.Fatalf("unprepared assignment claimed: %+v, %v", got, err)
+	}
+	if _, err := s.AddMessage(Message{From: "orch", To: "eng-1", Kind: "note", Body: "other mail"}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.ClaimInbox("eng-1"); err != nil || len(got) != 1 || got[0].Kind != "note" {
+		t.Fatalf("unrelated mail blocked: %+v, %v", got, err)
+	}
+	if err := s.ReleaseInbox(id); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.ClaimInbox("eng-1"); err != nil || len(got) != 1 || got[0].ID != id {
+		t.Fatalf("prepared assignment not claimed: %+v, %v", got, err)
+	}
+}
+
 func TestMigrationsIdempotent(t *testing.T) {
 	s, p := open(t)
 	if _, err := s.CreateTask(Task{Title: "a"}); err != nil {

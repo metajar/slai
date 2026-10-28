@@ -650,16 +650,20 @@ func (s *Supervisor) refreshPending(agent string, msgs []store.Message) []store.
 	if err != nil {
 		return msgs
 	}
-	var fresh []store.Message
+	// Merge by id, not length: an older item may have been claimed while a new
+	// assignment arrived, leaving a shorter fresh list that still needs preparing.
+	out := append([]store.Message(nil), msgs...)
+	seen := make(map[int64]bool, len(msgs))
+	for _, m := range msgs {
+		seen[m.ID] = true
+	}
 	for _, m := range all {
-		if m.To == agent {
-			fresh = append(fresh, m)
+		if m.To == agent && !seen[m.ID] {
+			out = append(out, m)
+			seen[m.ID] = true
 		}
 	}
-	if len(fresh) < len(msgs) {
-		return msgs // never wake for less than was already decided
-	}
-	return fresh
+	return out
 }
 
 // TaskBranch is the conventional branch name for a task (PRD 3.5).
@@ -779,18 +783,22 @@ func (s *Supervisor) prepareAssignmentsHeld(ctx context.Context, a store.Agent, 
 		task, err := s.Store.GetTask(m.TaskID)
 		if err != nil {
 			_ = s.Store.SetAgentTask(a.ID, m.TaskID)
+			_ = s.Store.ReleaseInbox(m.ID)
 			continue
 		}
 		if !engineer {
 			_ = s.Store.SetAgentTask(a.ID, m.TaskID)
+			_ = s.Store.ReleaseInbox(m.ID)
 			continue
 		}
 		if waiting, _ := s.Store.WaitingOn(task.ID); len(waiting) > 0 || task.Status == store.StatusBlocked {
-			continue // queued behind its dependencies
+			_ = s.Store.ReleaseInbox(m.ID)
+			continue // queued notice: do not start until dependencies clear
 		}
 		if cur != "" && cur != task.ID {
 			if ct, err := s.Store.GetTask(cur); err == nil && busyStatus(ct.Status) {
-				continue // mid-way through another task: worktreeTick switches later
+				_ = s.Store.ReleaseInbox(m.ID)
+				continue // queued notice: worktreeTick switches later
 			}
 		}
 		if err := s.switchWorktree(ctx, a, task); err != nil {
