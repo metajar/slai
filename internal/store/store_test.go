@@ -74,6 +74,33 @@ func TestEngineerAssignmentIsHeldAtomicallyUntilPrepared(t *testing.T) {
 	}
 }
 
+func TestPendingWakeForAndBatchedMarkWoken(t *testing.T) {
+	s, _ := open(t)
+	var ids []int64
+	for i := 0; i < 501; i++ {
+		id, err := s.AddMessage(Message{To: "eng-1", Body: "item"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, id)
+	}
+	if _, err := s.AddMessage(Message{To: "eng-2", Body: "other"}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.PendingWakeFor("eng-1", 1); err != nil || len(got) != len(ids) {
+		t.Fatalf("pending for eng-1: %d, %v", len(got), err)
+	}
+	if err := s.MarkWoken(ids...); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.PendingWakeFor("eng-1", 1); err != nil || len(got) != 0 {
+		t.Fatalf("woken messages still pending: %d, %v", len(got), err)
+	}
+	if got, err := s.PendingWakeFor("eng-2", 1); err != nil || len(got) != 1 {
+		t.Fatalf("other recipient lost: %d, %v", len(got), err)
+	}
+}
+
 func TestMigrationsIdempotent(t *testing.T) {
 	s, p := open(t)
 	if _, err := s.CreateTask(Task{Title: "a"}); err != nil {

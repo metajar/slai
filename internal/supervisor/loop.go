@@ -425,8 +425,10 @@ func (s *Supervisor) wakeTick(ctx context.Context) {
 		s.noteWakeTyped(a, line)
 		ids := make([]int64, 0, len(msgs))
 		for _, m := range msgs {
-			_ = s.Store.MarkWoken(m.ID)
 			ids = append(ids, m.ID)
+		}
+		if err := s.Store.MarkWoken(ids...); err != nil {
+			s.logf("mark woken %s: %v", a.ID, err)
 		}
 		// Optimistic; hooks overwrite this as soon as the agent reacts.
 		_, _ = s.Store.CompareAndSetStatus(a.ID, "working", a.Status)
@@ -646,7 +648,7 @@ func hasKind(ms []store.Message, k string) bool {
 // prepareAssignments has put its worktree on the task branch, and the agent would commit on
 // the previous task's branch.
 func (s *Supervisor) refreshPending(agent string, msgs []store.Message) []store.Message {
-	all, err := s.Store.PendingWake(s.now().Add(-WakeRetry).Unix())
+	all, err := s.Store.PendingWakeFor(agent, s.now().Add(-WakeRetry).Unix())
 	if err != nil {
 		return msgs
 	}
@@ -658,7 +660,7 @@ func (s *Supervisor) refreshPending(agent string, msgs []store.Message) []store.
 		seen[m.ID] = true
 	}
 	for _, m := range all {
-		if m.To == agent && !seen[m.ID] {
+		if !seen[m.ID] {
 			out = append(out, m)
 			seen[m.ID] = true
 		}
@@ -832,9 +834,16 @@ func (s *Supervisor) prepareAssignmentsHeld(ctx context.Context, a store.Agent, 
 
 // withoutHeld drops the messages held back from get_inbox.
 func (s *Supervisor) withoutHeld(msgs []store.Message) []store.Message {
+	if len(msgs) == 0 {
+		return nil
+	}
+	held, err := s.Store.HeldInboxFor(msgs[0].To)
+	if err != nil {
+		return nil // fail closed: do not wake for an assignment we cannot check
+	}
 	var out []store.Message
 	for _, m := range msgs {
-		if !s.Store.InboxHeld(m.ID) {
+		if !held[m.ID] {
 			out = append(out, m)
 		}
 	}

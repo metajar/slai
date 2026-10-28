@@ -571,10 +571,24 @@ func (s *Store) MarkDelivered(ids ...int64) error {
 	return tx.Commit()
 }
 
-// MarkWoken records that a wake-up nudge was sent for the message.
-func (s *Store) MarkWoken(id int64) error {
-	_, err := s.db.Exec(`UPDATE messages SET woken_at=? WHERE id=?`, s.ts(), id)
-	return err
+// MarkWoken records that a wake-up nudge was sent for these messages.
+func (s *Store) MarkWoken(ids ...int64) error {
+	for len(ids) > 0 {
+		chunk := ids
+		if len(chunk) > 500 {
+			chunk = ids[:500]
+		}
+		args := make([]any, 0, len(chunk)+1)
+		args = append(args, s.ts())
+		for _, id := range chunk {
+			args = append(args, id)
+		}
+		if _, err := s.db.Exec(`UPDATE messages SET woken_at=? WHERE id IN (`+strings.TrimSuffix(strings.Repeat("?,", len(chunk)), ",")+`)`, args...); err != nil {
+			return err
+		}
+		ids = ids[len(chunk):]
+	}
+	return nil
 }
 
 // ClaimInbox atomically returns and marks delivered all undelivered messages for agent.

@@ -76,34 +76,17 @@ const (
 )
 
 func (s *Supervisor) owedMessages(a config.Agent) []store.Task {
-	msgs, err := s.Store.RecentMessages(300)
+	now := s.now()
+	msgs, err := s.Store.OwedMessages(a.ID, now.Add(-OwedReplyMax).Unix(), now.Add(-OwedReplyAfter).Unix())
 	if err != nil {
 		return nil
 	}
-	replied := map[int64]bool{}
-	for _, m := range msgs {
-		if m.Kind == "reply" && m.ReplyTo != 0 {
-			replied[m.ReplyTo] = true
-		}
-	}
-	// A direct send_message from the asked agent to the asker, sent after the ask,
-	// is an answer too (agents without a reply tool, or that simply wrote back).
-	answeredBy := func(ask store.Message) bool {
-		for _, n := range msgs {
-			if n.ID > ask.ID && n.From == ask.To && n.To == ask.From && n.Kind != "ask" && n.Kind != "ping" && n.Kind != "pong" {
-				return true
-			}
-		}
-		return false
-	}
-	now := s.now()
 	var out []store.Task
 	for _, m := range msgs {
+		// Preserve the exact duration bounds even though message timestamps have
+		// only second precision.
 		age := now.Sub(time.Unix(m.CreatedAt, 0))
-		if m.To != a.ID || (m.Kind != "ask" && m.Kind != "ping") || age < OwedReplyAfter || age > OwedReplyMax {
-			continue
-		}
-		if replied[m.ID] || (m.Kind == "ask" && answeredBy(m)) || (m.Kind == "ping" && s.kvGet("pong."+strconv.FormatInt(m.ID, 10)) != "") {
+		if age < OwedReplyAfter || age > OwedReplyMax {
 			continue
 		}
 		verb := "reply to the ask from " + m.From + ": " + firstLine(m.Body, 60)

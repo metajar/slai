@@ -1239,6 +1239,24 @@ func TestSendMessageToTheAskerClearsAnOwedReply(t *testing.T) {
 	}
 }
 
+func TestOwedReplySurvivesUnrelatedMessageFlood(t *testing.T) {
+	s, now := healthEnv(t)
+	cfg, _ := s.agentCfg("eng-1")
+	ask, err := s.Store.AddMessage(store.Message{From: "orch", To: "eng-1", Kind: "ask", Body: "still waiting?"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 301; i++ {
+		if _, err := s.Store.AddMessage(store.Message{From: "slai", To: "pm", Kind: "note", Body: "unrelated"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	*now = now.Add(OwedReplyAfter + time.Minute)
+	if got := s.owedMessages(cfg); len(got) != 1 || got[0].ID != "msg-"+strconv.FormatInt(ask, 10) {
+		t.Fatalf("old unanswered ask lost behind unrelated traffic: %+v", got)
+	}
+}
+
 // Every reminder names only tools its recipient has.
 func TestReminderNamesOnlyToolsTheRoleHas(t *testing.T) {
 	var union []string

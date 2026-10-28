@@ -102,6 +102,16 @@ FROM messages WHERE delivered_at=0 AND (woken_at=0 OR woken_at<?) ORDER BY id`, 
 	return out, rows.Err()
 }
 
+// PendingWakeFor refreshes only one recipient's undelivered wake candidates.
+func (s *Store) PendingWakeFor(agent string, wokenBefore int64) ([]Message, error) {
+	rows, err := s.db.Query(`SELECT id, from_agent, to_agent, kind, task_id, reply_to, body, created_at, delivered_at, woken_at
+FROM messages WHERE to_agent=? AND delivered_at=0 AND (woken_at=0 OR woken_at<?) ORDER BY id`, agent, wokenBefore)
+	if err != nil {
+		return nil, err
+	}
+	return scanMessages(rows)
+}
+
 // EventsAfter returns events of kind (any kind if "") with id > afterID, oldest first.
 func (s *Store) EventsAfter(afterID int64, kind string, limit int) ([]Event, error) {
 	q := `SELECT id, at, agent, kind, data FROM events WHERE id>?`
@@ -242,6 +252,25 @@ func (s *Store) HoldInbox(id int64) error { return s.SetKV(KVInboxHold+strconv.F
 // ReleaseInbox lets a held message through again.
 func (s *Store) ReleaseInbox(id int64) error {
 	return s.DeleteKV(KVInboxHold + strconv.FormatInt(id, 10))
+}
+
+// HeldInboxFor returns held, undelivered message ids for one recipient in one query.
+func (s *Store) HeldInboxFor(agent string) (map[int64]bool, error) {
+	rows, err := s.db.Query(`SELECT m.id FROM messages m JOIN kv k ON k.key='inbox.hold.' || m.id
+WHERE m.to_agent=? AND m.delivered_at=0`, agent)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	held := map[int64]bool{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		held[id] = true
+	}
+	return held, rows.Err()
 }
 
 // InboxHeld reports whether message id is held back.
